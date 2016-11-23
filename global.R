@@ -24,6 +24,10 @@ neutral_color <- "black"
 
 examples_dir <- "example"
 
+conj <- function(x) apply(x,1,function(i) !(F %in% i))
+
+disj <- function(x) apply(x,1,function(i) (T %in% i))
+
 chunk <- function(d,n) split(d, ceiling(seq_along(d)/n))
 
 hillm <- function(s,t,n=1,a=1,b=0) (t^n)/(s^n + t^n)

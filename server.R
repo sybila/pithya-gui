@@ -23,14 +23,6 @@ options(scipen=999)
 options(shiny.maxRequestSize=1000*1024^2)
 
 
-conj <- function(x) {
-    apply(x,1,function(i) !(F %in% i))
-}
-
-disj <- function(x) {
-    apply(x,1,function(i) (T %in% i))
-}
-
 #jsResetCode <- "shinyjs.reset = function() {history.go(0);}"
 
 shinyServer(function(input,output,session) {
