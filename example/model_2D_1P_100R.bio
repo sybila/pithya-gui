@@ -1,0 +1,11 @@
+VARS: x,y
+CONSTS: k1,1; k2,1
+PARAMS: deg_x,0,1; deg_y,0,1
+
+EQ: x = k1*hillm(y,5,5,1,0) - deg_x*x
+EQ: y = k2*hillm(x,5,5,1,0) - deg_y*y
+
+VAR_POINTS: x: 2500, 10; y: 2500, 10
+
+THRES: x: 0, 15
+THRES: y: 0,4,8, 15
