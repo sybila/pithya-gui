@@ -2477,21 +2477,21 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
         
         # create current set of globals
         checkpoint <- list(selectors=list(x=input[[paste0("param_selector_x_",plot_index)]], y=input[[paste0("param_selector_y_",plot_index)]]),
-                           #boundaries=boundaries,
+                           boundaries=boundaries,
+                           density=input$density_coeficient,
+                           coverage=input$coverage_check,
                            param_ss_clicked_point=param_ss_clicked$point[[plot_index]],
                            formula=chosen_ps_formulae_clean(),
-                           grey_shade=grey_shade(),
                            counter=input$process_run,
                            sliders=list() )
-        #if(length(params) > 2) {
-            for(x in 1:length(params)) {
-                if(!params[[x]] %in% c(name_x,name_y)) {
-                    checkpoint$sliders[[params[[x]] ]] <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]]
-                }
+        for(x in 1:length(params)) {
+            if(!params[[x]] %in% c(name_x,name_y)) {
+                checkpoint$sliders[[params[[x]] ]] <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]]
             }
-        #}
+        }
         # check for any change in globals for particular plot
         if(is.na(param_space$globals[[plot_index]]) || !identical(param_space$globals[[plot_index]],checkpoint) ) {
+            
             
             if(length(param_ss_clicked$point[[plot_index]]) == 0) {
                 ps <- copy(satisfiable_param_space_for_formula())
@@ -2503,7 +2503,8 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
             #ps <- copy(satisfiable_ps$data[[plot_index]])
             suppressWarnings(setnames(ps,c(paste0("V",index_x*2-1),paste0("V",index_x*2)),c("x1","x2")))
             suppressWarnings(setnames(ps,c(paste0("V",index_y*2-1),paste0("V",index_y*2)),c("y1","y2")))
-            ps[, color:=ps_grey_colors(ps$cov,grey_range,grey_shade())]
+            #ps[, color:=ps_grey_colors(ps$cov,grey_range,grey_shade())]
+            ps[, cov:=1 ]
             
             #### Layers !!!!!!!!!
             ids <- ps$row_id    # all ids at first
@@ -2512,16 +2513,68 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
                     thr <- param_ranges_sat_for_formula()[[x]]
                     sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param_id in dimension x
                     ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= thr[sid] & get(paste0("V",x*2)) > thr[sid],row_id])
+                } else {
+                    if(x == index_x) {
+                        if(!F %in% (!boundaries[[name_x]] %in% c(Inf,-Inf)))
+                            ids <- intersect(ids, ps[x1 < boundaries[[name_x]][2] & x2 >= boundaries[[name_x]][2] |
+                                                     x1 <= boundaries[[name_x]][1] & x2 > boundaries[[name_x]][1] |
+                                                     x1 >= boundaries[[name_x]][1] & x2 <= boundaries[[name_x]][2], row_id])
+                    } else {
+                        if(!F %in% (!boundaries[[name_y]] %in% c(Inf,-Inf)))
+                            ids <- intersect(ids, ps[y1 < boundaries[[name_y]][2] & y2 >= boundaries[[name_y]][2] |
+                                                     y1 <= boundaries[[name_y]][1] & y2 > boundaries[[name_y]][1] |
+                                                     y1 >= boundaries[[name_y]][1] & y2 <= boundaries[[name_y]][2], row_id])
+                    }
                 }
             }        # incremental intersection of ids in order to get right ids
             ps <- ps[row_id %in% ids]
-            param_space$data[[plot_index]] <- ps
+            
+            if(input$coverage_check) {
+                num <- input$density_coeficient
+                nesh <- meshgrid(seq(boundaries[[name_x]][1],boundaries[[name_x]][2],length.out = num),
+                                 seq(boundaries[[name_y]][1],boundaries[[name_y]][2],length.out = num))
+                dt <- data.table(x1=unlist(as.list(nesh$X[1:(num-1),1:(num-1)])),x2=unlist(as.list(nesh$X[2:num,2:num])),
+                                 y1=unlist(as.list(nesh$Y[1:(num-1),1:(num-1)])),y2=unlist(as.list(nesh$Y[2:num,2:num])))
+                dt[,x:=x1+(x2-x1)*0.5]
+                dt[,y:=y1+(y2-y1)*0.5]
+    
+    #             timing <- system.time(dt[,cov:=sapply(1:nrow(dt),function(r) ps[x1 < dt[r,x] & x2 > dt[r,x] & 
+    #                                                                             y1 < dt[r,y] & y2 > dt[r,y],length(unique(id))]) ])
+    #             print(timing)
+    #             dt <- dt[cov != 0,.(x1=x1, x2=x2, y1=y1, y2=y2, cov)]
+    
+                uniq_x <- unique(ps[,.(x1,x2)])
+                uniq_y <- unique(ps[,.(y1,y2)])
+                #print(paste0("unique in y:",nrow(uniq_y)))
+                #print(paste0("unique in x:",nrow(uniq_x)))
+                timing <- system.time({
+                    rang_x <- range(uniq_x)
+                    rang_y <- range(uniq_y)
+                    dt <- dt[x <= rang_x[2] & x >= rang_x[1] & y <= rang_y[2] & y >= rang_y[1] ]
+                    if(nrow(uniq_x) < nrow(uniq_y)) {    # merge over the axis which has less unique intervals: (x1,x2) or (y1,y2)
+                        setkey(ps,x1,x2)
+                        one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps,by.x = c("x","xe"),type="within")[y1<=y & y2>=y,.(cov=length(unique(id))),by=.(x,y)]
+                    } else {
+                        setkey(ps,y1,y2)
+                        one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps,by.x = c("y","ye"),type="within")[x1<=x & x2>=x,.(cov=length(unique(id))),by=.(x,y)]
+                    }
+                    dt <- merge(dt,one,by.x=c("x","y"),by.y=c("x","y"))
+                    rm(one)
+                })
+                print(timing)
+                print(paste0("uniq cov: ",paste0(unique(dt$cov),collapse = ", ")))
+    
+                param_space$data[[plot_index]] <- dt
+            } else {
+                param_space$data[[plot_index]] <- ps
+            }
         }
         
         plot(range_x, range_y, type="n", xlab=name_x, ylab=name_y, xaxs="i", yaxs="i",
              xlim=boundaries[[name_x]], ylim=boundaries[[name_y]])
         
         ps <- param_space$data[[plot_index]]
+
         # TODO: implement smt ratios by polygon() function
         if(!is.null(loading_ps_file()$ratios)) {
             rs <- loading_ps_file()$ratios[id %in% ids]
@@ -2530,9 +2583,8 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
             setnames(rs,c(paste0("V",rs_id*2-1),paste0("V",rs_id*2)),c("r1","r2"))
             # rs[,.(r1,r2)]
         } else {
-            rect(ps$x1, ps$y1, ps$x2, ps$y2,
-                 border=ps$color, # or just NA for no border
-                 col=ps$color)
+            range_cov <- range(ps$cov)
+            ps[,rect(x1, y1, x2, y2, col=rgb(0,0.5,0,alpha = (cov/range_cov[2])*ifelse(input$coverage_check, grey_shade(), 1)), border=NA)]
         }
 
         ##======= draw point due to click inside a plot =========================
@@ -2558,11 +2610,12 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
         
         # create current set of globals
         checkpoint <- list(selectors=list(x=input[[paste0("param_selector_x_",plot_index)]], y=input[[paste0("param_selector_y_",plot_index)]]),
-                           #boundaries=boundaries,
+                           boundaries=boundaries,
                            param_ss_clicked_point=param_ss_clicked$point[[plot_index]],
                            formula=chosen_ps_formulae_clean(),
-                           grey_shade=grey_shade(),
+                           coverage=input$coverage_check,
                            counter=input$process_run,
+                           density=input$density_coeficient,
                            sliders=list() )
         for(x in 1:length(params)) {
             if(!params[[x]] %in% c(name_x)) {
@@ -2580,8 +2633,8 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
                 ps <- merge(loading_ps_file()$params, ps, by.x="id", by.y="param")
             }
             setnames(ps,c(paste0("V",index_x*2-1),paste0("V",index_x*2)),c("x1","x2"))
-            #ps[, color:=ifelse( is.null(chosen_ps_states_clean()), ps_grey_colors(ps$cov,grey_range,grey_shade()), ps_grey_colors(1,grey_range,grey_shade()) )]
-            ps[, color:=ps_grey_colors(ps$cov,grey_range,grey_shade())]
+            #ps[, color:=ps_grey_colors(ps$cov,grey_range,grey_shade())]
+            ps[,cov:=1]
             
             #### Layers !!!!!!!!!
             ids <- ps$row_id    # all ids at first
@@ -2593,23 +2646,44 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
                 }
             }        # incremental intersection of ids in order to get right ids
             ps <- ps[row_id %in% ids]
-            param_space$data[[plot_index]] <- ps
+            
+            if(input$coverage_check) {
+                num <- input$density_coeficient
+                dt <- data.table(x1=seq(boundaries[[name_x]][1],boundaries[[name_x]][2],length.out = num)[1:(num-1)],
+                                 x2=seq(boundaries[[name_x]][1],boundaries[[name_x]][2],length.out = num)[2:num])
+                dt[,x:=x1+(x2-x1)*0.5]
+                
+                uniq_x <- unique(ps[,.(x1,x2)])
+                #print(paste0("unique in x:",nrow(uniq_x)))
+                timing <- system.time({
+                    rang_x <- range(uniq_x)
+                    dt <- dt[x <= rang_x[2] & x >= rang_x[1] ]
+                    setkey(ps,x1,x2)
+                    one <- foverlaps(dt[,.(x=x,xe=x)],ps,by.x = c("x","xe"),type="within")[,.(cov=length(unique(id))),by=.(x)]
+                    dt <- merge(dt,one,by.x=c("x"),by.y=c("x"))
+                    rm(one)
+                })
+                print(timing)
+                print(paste0("uniq cov: ",paste0(unique(dt$cov),collapse = ", ")))
+                
+                param_space$data[[plot_index]] <- dt
+            } else {
+                param_space$data[[plot_index]] <- ps
+            }
         }     
         plot(range_x, range_y, type="n", xlab=name_x, ylab="", yaxt="n", xaxs="i", yaxs="i",
              xlim=boundaries[[name_x]])
         
         ps <- param_space$data[[plot_index]]
-        if(nrow(ps) != 0)
-            rect(ps$x1, range_y[1], ps$x2, range_y[2],
-                 border=ps$color, # or just NA for no border
-                 col=ps$color)
+        if(nrow(ps) != 0) {
+            range_cov <- range(ps$cov)
+            ps[,rect(x1, range_y[1], x2, range_y[2], col=rgb(0,0.5,0,alpha = (cov/range_cov[2])*grey_shade()), border=NA)]
+        }
         
         ##======= draw point due to click inside a plot =========================
         if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]]))) {
             point <- param_space_clicked$point[[plot_index]]
             abline(v=point[[index_x]], col=param_space_clicked_point$color, lwd=param_space_clicked_point$width)
-#             points(point[index_x], point[2], 
-#                    col=param_space_clicked_point$color, pch=param_space_clicked_point$type, ps=param_space_clicked_point$size, lwd=param_space_clicked_point$width)
         }
         # this must be at the end
         param_space$globals[[plot_index]] <- checkpoint
@@ -2623,7 +2697,7 @@ output$chosen_ps_states_ui <- renderUI({
         selected_formula <- 1#formulae_list[which(max(nchar(formulae_list)) == nchar(formulae_list))]     # initially selecting the longest formulae
         
         widgets <- list()
-        widgets[[1]] <- selectInput("chosen_ps_formula","choose formula of interest:",formulae_list,selected_formula,selectize=F,size=4,width="100%")
+        widgets[[1]] <- selectInput("chosen_ps_formula","choose formula of interest:",formulae_list,selected_formula,selectize=F,size=1,width="100%")
         do.call(tagList,widgets)
     }
 })
@@ -2779,19 +2853,17 @@ click_in_param_ss <- observe({
                 
                 index_x <- match(input[[paste0("param_ss_selector_x_",ii)]],loading_ps_file()$var_names)
                 index_y <- match(input[[paste0("param_ss_selector_y_",ii)]],loading_ps_file()$var_names)
-                timing <- system.time({
-                    ids <- states$id    # all ids at first
-                    for(x in 1:length(loading_ps_file()$var_names)) {
-                        if(!x %in% c(index_x,index_y)) {
-                            thr <- loading_ps_file()$thresholds[[x]]
-                            sid <- input[[paste0("scale_slider_param_ss_",i,"_",x)]] # right state_id in dimension x
-                            ids <- intersect(ids, states[get(paste0("V",x*2-1)) == thr[sid] & get(paste0("V",x*2)) == thr[sid+1],id])
-                        }
-                    }        # incremental intersection of ids in order to get right ids
-                    states <- states[id %in% ids]
-                })
-                cat("click_in_param_ss time: ")
-                print(timing)
+                
+                ids <- states$id    # all ids at first
+                for(x in 1:length(loading_ps_file()$var_names)) {
+                    if(!x %in% c(index_x,index_y)) {
+                        thr <- loading_ps_file()$thresholds[[x]]
+                        sid <- input[[paste0("scale_slider_param_ss_",i,"_",x)]] # right state_id in dimension x
+                        ids <- intersect(ids, states[get(paste0("V",x*2-1)) == thr[sid] & get(paste0("V",x*2)) == thr[sid+1],id])
+                    }
+                }        # incremental intersection of ids in order to get right ids
+                states <- states[id %in% ids]
+                
                 point <- input[[paste0("param_ss_",i,"_dblclick")]]
                 if(!is.null(point) ) isolate({
                     cat("param_ss_plot ",i,":",point$x,",",point$y,"\n")
