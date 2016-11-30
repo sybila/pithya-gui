@@ -24,6 +24,19 @@ neutral_color <- "black"
 
 examples_dir <- "example"
 
+
+rounding_precission <- 8
+
+ps_grey_colors <- function(x,n,a) {
+    #if(n == 1) grey(0,alpha = 0.1)
+    #else 
+    grey.colors(n,start = 0.4, end = 0,alpha = a)[x]
+}
+
+conj <- function(x) apply(x,1,function(i) !(F %in% i))
+
+disj <- function(x) apply(x,1,function(i) (T %in% i))
+
 chunk <- function(d,n) split(d, ceiling(seq_along(d)/n))
 
 hillm <- function(s,t,n=1,a=1,b=0) (t^n)/(s^n + t^n)
@@ -119,14 +132,6 @@ ramp <- function(value,min,max,a,b) {
 # }
 
 ######## RESULT PART ##########
-
-rounding_precission <- 8
-
-ps_grey_colors <- function(x,n,a) {
-    #if(n == 1) grey(0,alpha = 0.1)
-    #else 
-        grey.colors(n,start = 0.4, end = 0,alpha = a)[x]
-}
 
 
 # oneStep <- 0.2

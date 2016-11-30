@@ -212,8 +212,15 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
                 downloadButton("save_result_file","save results"))   # NOT WORKING FROM UNKNOWN REASON
         ),
         column(2,
-            tags$div(title="Scaling factor for shade of grey colour representing parameters.",
-                numericInput("color_alpha_coeficient","grey shade degree",min=0.001,max=1,value=0.1,step=0.005)),
+            tags$div(title="Scaling factor for density of shown rectangles in parameter space.",
+                checkboxInput("coverage_check","show parameters coverage",F)),
+            conditionalPanel(
+                condition = "input.coverage_check == true",
+                tags$div(title="Scaling factor in the range <0,1> for shade of colour representing parameters.",
+                         sliderInput("color_alpha_coeficient","grey shade degree",min=0,max=1,value=0.9,step=0.01,ticks=F)),
+                tags$div(title="Scaling factor in the range <10,100> for density of shown rectangles in parameter space.",
+                         sliderInput("density_coeficient","density",min=10,max=100,value=50,step=1,ticks=F))
+            ),
             uiOutput("ps_zoom_sliders")
         ),
         column(4,
