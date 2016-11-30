@@ -2079,7 +2079,7 @@ output$param_space_plots <- renderUI({
                        )
                 ),
                 column(4,
-                       helpText("... and corresponding transition-state space"),
+                       helpText("transition-state space"),
                        if(!is.null(input[[paste0("param_ss_selector_x_",i)]]) && input[[paste0("param_ss_selector_x_",i)]] != empty_sign &&
                               !is.null(input[[paste0("param_ss_selector_y_",i)]]) && input[[paste0("param_ss_selector_y_",i)]] != empty_sign) {
                            imageOutput(paste0("param_ss_plot_",i),"auto","auto", click=paste0("param_ss_",i,"_click"), dblclick=paste0("param_ss_",i,"_dblclick"),
