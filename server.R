@@ -1880,7 +1880,7 @@ output$param_selector <- renderUI({
                 ),
                 column(2,
                        actionButton(paste0("cancel_ps_",i), "cancel"),
-                       checkboxInput(paste0("hide_ps_",i), "hide", ifelse(!is.null(input[[paste0("hide_ps_",i)]]),input[[paste0("hide_ps_",i)]],T))
+                       checkboxInput(paste0("hide_ps_",i), "hide", ifelse(!is.null(input[[paste0("hide_ps_",i)]]),input[[paste0("hide_ps_",i)]],F))
                 )
             )
         })
