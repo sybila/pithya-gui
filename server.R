@@ -21,7 +21,7 @@ source("global.R")
 
 options(scipen=999)
 options(shiny.maxRequestSize=1000*1024^2)
-
+#gcinfo(TRUE)   # for periodically showing garbage collection stats
 
 #jsResetCode <- "shinyjs.reset = function() {history.go(0);}"
 
@@ -335,7 +335,7 @@ observeEvent(input$generate_abstraction,{
                 cat("\nError: some error occured during the approximation process!\n")
                 cat("Some error occured during abstraction generation!\n",file=progressFileName,append=T)
             }
-        }, message="Model abstraction is running...", value=0.5)
+        }, message="Model approximation is running...", value=0.5)
     }
 })
 
@@ -654,17 +654,19 @@ output$param_sliders_bio <- renderUI({
 output$selector <- renderUI({
 #    input$add_vf_plot
     if(!is.null(loading_vf_file())) {
+        variables <- loading_vf_file()$vars
         lapply(vf_update(),function(i) {
             idx <- paste0("vf_selector_x_",i)
             labelx <- paste0("horizontal")
             choicesx <- list_of_names
-            selectedx <- ifelse(is.null(input[[paste0("vf_selector_x_",i)]]),empty_sign,input[[paste0("vf_selector_x_",i)]])
+            selectedx <- ifelse(!is.null(input[[paste0("vf_selector_x_",i)]]), input[[paste0("vf_selector_x_",i)]], #empty_sign)
+                                variables[[1]])
             
             idy <- paste0("vf_selector_y_",i)
             labely <- paste0("vertical")
             choicesy <- list_of_names
-            selectedy <- ifelse(is.null(input[[paste0("vf_selector_y_",i)]]),empty_sign,input[[paste0("vf_selector_y_",i)]])
-            
+            selectedy <- ifelse(!is.null(input[[paste0("vf_selector_y_",i)]]), input[[paste0("vf_selector_y_",i)]], #empty_sign)
+                                ifelse(length(variables) > 1, variables[[2]], variables[[1]]))
             
             fluidRow(
 #                     column(2,
@@ -678,7 +680,7 @@ output$selector <- renderUI({
                 ),
                 column(2,
                        actionButton(paste0("cancel_vf_",i), "cancel"),
-                       checkboxInput(paste0("hide_vf_",i), "hide", ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],T))
+                       checkboxInput(paste0("hide_vf_",i), "hide", ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],F))
                 )
             )
         })
@@ -737,6 +739,8 @@ observe({
                 vector_field_clicked$old_point[[i]] <- NA
                 vf_brushed$data[[i]] <- NA
                 vf_brushed$click_counter[[i]] <- NA
+                
+                print(gc())
             }
         }
     }
@@ -1858,12 +1862,14 @@ output$param_selector <- renderUI({
             idx <- paste0("param_selector_x_",i)
             labelx <- paste0("horizontal axis in plot ",i)
             choicesx <- list_of_param_names
-            selectedx <- ifelse(is.null(input[[paste0("param_selector_x_",i)]]),empty_sign,input[[paste0("param_selector_x_",i)]])
+            selectedx <- ifelse(!is.null(input[[paste0("param_selector_x_",i)]]), input[[paste0("param_selector_x_",i)]], #empty_sign)
+                                list_of_param_names[1])
             
             idy <- paste0("param_selector_y_",i)
             labely <- paste0("vertical axis in plot ",i)
             choicesy <- list_of_param_names
-            selectedy <- ifelse(is.null(input[[paste0("param_selector_y_",i)]]),empty_sign,input[[paste0("param_selector_y_",i)]])
+            selectedy <- ifelse(!is.null(input[[paste0("param_selector_y_",i)]]), input[[paste0("param_selector_y_",i)]], #empty_sign)
+                                ifelse(length(list_of_param_names) > 1, list_of_param_names[2], list_of_param_names[1]))
             
             fluidRow(
                 column(5,
@@ -1935,6 +1941,8 @@ observe({
                 param_ss_clicked$old_point[[i]] <- NA
                 param_ss_brushed$data[[i]] <- NA
                 param_ss_brushed$click_counter[[i]] <- NA
+                
+                print(gc())
             }
         }
     }

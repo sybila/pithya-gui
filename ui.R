@@ -1,8 +1,10 @@
 if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
-require(parallel)
+require(parallel) # it is needed because of function for determination of available CPU cores
 #if(!require(shinythemes,quietly=T)) install.packages("shinythemes",quiet=T); library(shinythemes,quietly=T)
 #require(shiny)
 
+
+## LOOK AT SHINY.OPTIONS
 # customSlider javascript function for output threshold instead of index
 JS.custom <-
     "
