@@ -21,7 +21,7 @@ source("global.R")
 
 options(scipen=999)
 options(shiny.maxRequestSize=1000*1024^2)
-
+#gcinfo(TRUE)   # for periodically showing garbage collection stats
 
 #jsResetCode <- "shinyjs.reset = function() {history.go(0);}"
 
@@ -335,7 +335,7 @@ observeEvent(input$generate_abstraction,{
                 cat("\nError: some error occured during the approximation process!\n")
                 cat("Some error occured during abstraction generation!\n",file=progressFileName,append=T)
             }
-        }, message="Model abstraction is running...", value=0.5)
+        }, message="Model approximation is running...", value=0.5)
     }
 })
 
@@ -654,17 +654,19 @@ output$param_sliders_bio <- renderUI({
 output$selector <- renderUI({
 #    input$add_vf_plot
     if(!is.null(loading_vf_file())) {
+        variables <- loading_vf_file()$vars
         lapply(vf_update(),function(i) {
             idx <- paste0("vf_selector_x_",i)
             labelx <- paste0("horizontal")
             choicesx <- list_of_names
-            selectedx <- ifelse(is.null(input[[paste0("vf_selector_x_",i)]]),empty_sign,input[[paste0("vf_selector_x_",i)]])
+            selectedx <- ifelse(!is.null(input[[paste0("vf_selector_x_",i)]]), input[[paste0("vf_selector_x_",i)]], #empty_sign)
+                                variables[[1]])
             
             idy <- paste0("vf_selector_y_",i)
             labely <- paste0("vertical")
             choicesy <- list_of_names
-            selectedy <- ifelse(is.null(input[[paste0("vf_selector_y_",i)]]),empty_sign,input[[paste0("vf_selector_y_",i)]])
-            
+            selectedy <- ifelse(!is.null(input[[paste0("vf_selector_y_",i)]]), input[[paste0("vf_selector_y_",i)]], #empty_sign)
+                                ifelse(length(variables) > 1, variables[[2]], variables[[1]]))
             
             fluidRow(
 #                     column(2,
@@ -678,7 +680,7 @@ output$selector <- renderUI({
                 ),
                 column(2,
                        actionButton(paste0("cancel_vf_",i), "cancel"),
-                       checkboxInput(paste0("hide_vf_",i), "hide", ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],T))
+                       checkboxInput(paste0("hide_vf_",i), "hide", ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],F))
                 )
             )
         })
@@ -737,6 +739,8 @@ observe({
                 vector_field_clicked$old_point[[i]] <- NA
                 vf_brushed$data[[i]] <- NA
                 vf_brushed$click_counter[[i]] <- NA
+                
+                print(gc())
             }
         }
     }
@@ -798,7 +802,10 @@ output$plots <- renderUI({
                            actionButton(paste0("unzoom_plot_vf_",i),"Unzoom")
                        },
                        if(!is.null(loading_vf_file()) && !is.null(loading_ss_file())) {
-                           checkboxInput(paste0("abst_vf_",i),"use PWA model",F)
+                           conditionalPanel(
+                               condition = "input.advanced == true",
+                               checkboxInput(paste0("abst_vf_",i),"use PWA model",F)
+                           )
                        },
                        if(!is.null(loading_vf_file()) && length(loading_vf_file()$vars) > 2) {
                            lapply(1:length(loading_vf_file()$vars), function(t) {
@@ -1858,12 +1865,14 @@ output$param_selector <- renderUI({
             idx <- paste0("param_selector_x_",i)
             labelx <- paste0("horizontal axis in plot ",i)
             choicesx <- list_of_param_names
-            selectedx <- ifelse(is.null(input[[paste0("param_selector_x_",i)]]),empty_sign,input[[paste0("param_selector_x_",i)]])
+            selectedx <- ifelse(!is.null(input[[paste0("param_selector_x_",i)]]), input[[paste0("param_selector_x_",i)]], #empty_sign)
+                                list_of_param_names[1])
             
             idy <- paste0("param_selector_y_",i)
             labely <- paste0("vertical axis in plot ",i)
             choicesy <- list_of_param_names
-            selectedy <- ifelse(is.null(input[[paste0("param_selector_y_",i)]]),empty_sign,input[[paste0("param_selector_y_",i)]])
+            selectedy <- ifelse(!is.null(input[[paste0("param_selector_y_",i)]]), input[[paste0("param_selector_y_",i)]], #empty_sign)
+                                ifelse(length(list_of_param_names) > 1, list_of_param_names[2], list_of_param_names[1]))
             
             fluidRow(
                 column(5,
@@ -1874,7 +1883,7 @@ output$param_selector <- renderUI({
                 ),
                 column(2,
                        actionButton(paste0("cancel_ps_",i), "cancel"),
-                       checkboxInput(paste0("hide_ps_",i), "hide", ifelse(!is.null(input[[paste0("hide_ps_",i)]]),input[[paste0("hide_ps_",i)]],T))
+                       checkboxInput(paste0("hide_ps_",i), "hide", ifelse(!is.null(input[[paste0("hide_ps_",i)]]),input[[paste0("hide_ps_",i)]],F))
                 )
             )
         })
@@ -1935,6 +1944,8 @@ observe({
                 param_ss_clicked$old_point[[i]] <- NA
                 param_ss_brushed$data[[i]] <- NA
                 param_ss_brushed$click_counter[[i]] <- NA
+                
+                print(gc())
             }
         }
     }
@@ -1991,76 +2002,136 @@ output$param_space_plots <- renderUI({
                        #actionButton(paste0("apply_plot_ps_",i),"Apply to all"),
                        actionButton(paste0("clear_plot_ps_",i),"Deselect click"),
                        actionButton(paste0("unzoom_plot_ps_",i),"Unzoom"),
-                       if(input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names) {
-                           lapply(1:length(list_of_all_names), function(t) {
-                               if(!list_of_all_names[[t]] %in% c(input[[paste0("param_selector_x_",i)]],input[[paste0("param_selector_y_",i)]])) {
-                                   if(list_of_all_names[[t]] %in% loading_ps_file()$var_names) {
-                                       label <- paste0("discrete scale in ",list_of_all_names[[t]])
-                                       name <- paste0("scale_slider_ps_",i,"_",t)
-                                       #values <- c(1,length(loading_ps_file()$thresholds[[ which(loading_ps_file()$var_names == list_of_all_names[[t]]) ]])-1)
-                                       values <- range(loading_ps_file()$thresholds[[ which(loading_ps_file()$var_names == list_of_all_names[[t]]) ]])
-                                       fluidRow(
-                                           column(12,
-                                                  checkboxInput(paste0("scale_switch_ps_",i,"_",t), label, ifelse(is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), F,
-                                                                                                                  input[[paste0("scale_switch_ps_",i,"_",t)]])),
-                                                  conditionalPanel(
-                                                      condition = paste0("input.scale_switch_ps_",i,"_",t," == true"),
-                                                      sliderInput(name,label=label,min=values[1],max=values[2],step=0.001, #step=1,
-                                                          value=ifelse(is.null(input[[paste0("scale_slider_ps_",i,"_",t)]]), values[1],
-                                                                       input[[paste0("scale_slider_ps_",i,"_",t)]] )))
-                                           )
-                                       )
-                                   } else {
-                                       # TODO
-                                       label <- paste0("discrete scale in ",list_of_all_names[[t]])
-                                       name <- paste0("scale_slider_ps_",i,"_",t)
-                                       #values <- c(1,length(param_ranges_sat_for_formula()[[t]])-1)
-                                       values <- param_ranges()[[t]]
-                                       fluidRow(
-                                           column(12,
-                                                  checkboxInput(paste0("scale_switch_ps_",i,"_",t), label, ifelse(is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), F,
-                                                                                                                  input[[paste0("scale_switch_ps_",i,"_",t)]])),
-                                                  conditionalPanel(
-                                                      condition = paste0("input.scale_switch_ps_",i,"_",t," == true"),
-                                                      sliderInput(name,label=label,min=values[1],max=values[2],step=0.001, #step=1,
-                                                          value=ifelse(is.null(input[[paste0("scale_slider_ps_",i,"_",t)]]), values[1],
-                                                                       input[[paste0("scale_slider_ps_",i,"_",t)]] )))
-                                           )
-                                       )
-                                       #
-                                   }
-                               }
-                           })
-                       } else {
-                           lapply(1:length(list_of_param_names), function(t) {
-                               if(!list_of_param_names[[t]] %in% c(input[[paste0("param_selector_x_",i)]],input[[paste0("param_selector_y_",i)]])) {
-                                   label <- paste0("scale in ",list_of_param_names[[t]])
-                                   name <- paste0("scale_slider_ps_",i,"_",t)
-                                   #values <- c(1,length(param_ranges_sat_for_formula()[[t]])-1)
-                                   values <- param_ranges()[[t]]
-                                   #session$sendCustomMessage(type='scaleSliderHandler', list(name=paste0("scale_slider_ps_",i,"_",t),
-                                   #                                                          values=param_ranges_sat_for_formula()[[t]]) )
-                                   fluidRow(
-                                       column(12,
-                                              checkboxInput(paste0("scale_switch_ps_",i,"_",t), label, ifelse(is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), F,
-                                                                                                                      input[[paste0("scale_switch_ps_",i,"_",t)]])),
-                                              conditionalPanel(
-                                                  condition = paste0("input.scale_switch_ps_",i,"_",t," == true"),
-                                                  sliderInput(name,label=NULL,min=values[1],max=values[2],step=0.001, #step=1,
-                                                      value=ifelse(is.null(input[[paste0("scale_slider_ps_",i,"_",t)]]), values[1],
-                                                                   input[[paste0("scale_slider_ps_",i,"_",t)]] )))
-                                       )
-                                   )
-                                   # another variant is to use double-ended sliders with dragRange - but this needs to differently manage click inside of a PS (it could be
-                                   #    a range instead of a point in each dimension) and still use with a checkbox which instantly cancel slider's effect
-#                                    sliderInput(name,label=label,min=values[1],max=values[2],step=1,
-#                                                value=c(ifelse(is.null(input[[paste0("scale_slider_ps_",i,"_",t)]]), values[1],
-#                                                             input[[paste0("scale_slider_ps_",i,"_",t)]][1]),
-#                                                        ifelse(is.null(input[[paste0("scale_slider_ps_",i,"_",t)]]), values[2],
-#                                                               input[[paste0("scale_slider_ps_",i,"_",t)]][2])))
-                               }
-                           })
-                       },
+                       lapply(1:length(list_of_all_names), function(t) {
+                          if(!list_of_all_names[[t]] %in% c(input[[paste0("param_selector_x_",i)]],input[[paste0("param_selector_y_",i)]])) {
+                              is_mixed <- input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names
+                              is_var <- list_of_all_names[[t]] %in% loading_ps_file()$var_names
+                              label <- paste0("scale in ",list_of_all_names[[t]])
+                              name <- paste0("scale_slider_ps_",i,"_",t)
+                              if(is_var)    values <- range(loading_ps_file()$thresholds[[ which(loading_ps_file()$var_names == list_of_all_names[[t]]) ]])
+                              else          values <- param_ranges()[[t]]
+                              fluidRow(
+                                  column(12,
+                                         fluidRow(
+                                             column(1,
+                                                conditionalPanel(
+                                                    condition = "input.advanced == true",
+                                                    checkboxInput(paste0("scale_switch_ps_",i,"_",t), label=NULL,
+                                                          ifelse(!is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), input[[paste0("scale_switch_ps_",i,"_",t)]],
+                                                          ifelse(is_var, F, T))
+                                                    )
+                                                )
+                                             ),
+                                             column(11,
+                                                if(input$advanced || !is_var)
+                                                    helpText(label)
+                                             )
+                                         ),
+                                         conditionalPanel(
+                                             condition = paste0("input.scale_switch_ps_",i,"_",t," == true"),
+                                             sliderInput(name,label=NULL,min=values[1],max=values[2],step=0.001,
+                                                         value=ifelse(is.null(input[[name]]), values[1], input[[name]] ))
+                                         )
+                                  )
+                              )
+                          }
+                       }),
+#                        if(input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names) {
+#                            lapply(1:length(list_of_all_names), function(t) {
+#                                if(!list_of_all_names[[t]] %in% c(input[[paste0("param_selector_x_",i)]],input[[paste0("param_selector_y_",i)]])) {
+#                                    if(list_of_all_names[[t]] %in% loading_ps_file()$var_names) {
+#                                        label <- paste0("discrete scale in ",list_of_all_names[[t]])
+#                                        name <- paste0("scale_slider_ps_",i,"_",t)
+#                                        values <- range(loading_ps_file()$thresholds[[ which(loading_ps_file()$var_names == list_of_all_names[[t]]) ]])
+#                                        fluidRow(
+#                                            column(12,
+#                                                   fluidRow(
+#                                                       column(1,
+#                                                          conditionalPanel(
+#                                                              condition = "input.advanced == true",
+#                                                              checkboxInput(paste0("scale_switch_ps_",i,"_",t), NULL, 
+#                                                                    ifelse(is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), T, input[[paste0("scale_switch_ps_",i,"_",t)]]))
+#                                                          )
+#                                                       ),
+#                                                       column(11,
+#                                                          helpText(label)
+#                                                       )
+#                                                   ),
+#                                                   conditionalPanel(
+#                                                       condition = paste0("input.scale_switch_ps_",i,"_",t," == true"),
+#                                                       sliderInput(name,label=NULL,min=values[1],max=values[2],step=0.001,
+#                                                                   value=ifelse(is.null(input[[name]]), values[1], input[[name]] ))
+#                                                   )
+#                                            )
+#                                        )
+#                                    } else {
+#                                        label <- paste0("discrete scale in ",list_of_all_names[[t]])
+#                                        name  <- paste0("scale_slider_ps_",i,"_",t)
+#                                        values <- param_ranges()[[t]]
+#                                        fluidRow(
+#                                            column(12,
+#                                                   fluidRow(
+#                                                       column(1,
+#                                                              conditionalPanel(
+#                                                                  condition = "input.advanced == true",
+#                                                                  checkboxInput(paste0("scale_switch_ps_",i,"_",t), NULL, 
+#                                                                        ifelse(is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), T, input[[paste0("scale_switch_ps_",i,"_",t)]]))
+#                                                              )
+#                                                       ),
+#                                                       column(11,
+#                                                              helpText(label)
+#                                                       )
+#                                                   ),
+#                                                   conditionalPanel(
+#                                                       condition = paste0("input.scale_switch_ps_",i,"_",t," == true"),
+#                                                       sliderInput(name,label=NULL,min=values[1],max=values[2],step=0.001,
+#                                                                   value=ifelse(is.null(input[[name]]), values[1], input[[name]] ))
+#                                                   )
+#                                            )
+#                                        )
+#                                        #
+#                                    }
+#                                }
+#                            })
+#                        } else {
+#                            lapply(1:length(list_of_param_names), function(t) {
+#                                if(!list_of_param_names[[t]] %in% c(input[[paste0("param_selector_x_",i)]],input[[paste0("param_selector_y_",i)]])) {
+#                                    label <- paste0("scale in ",list_of_param_names[[t]])
+#                                    name <- paste0("scale_slider_ps_",i,"_",t)
+#                                    values <- param_ranges()[[t]]
+#                                    #session$sendCustomMessage(type='scaleSliderHandler', list(name=name,
+#                                    #                                                          values=param_ranges_sat_for_formula()[[t]]) )
+#                                    fluidRow(
+#                                        column(12,
+#                                               fluidRow(
+#                                                   column(1,
+#                                                          conditionalPanel(
+#                                                              condition = "input.advanced == true",
+#                                                              checkboxInput(paste0("scale_switch_ps_",i,"_",t), NULL, 
+#                                                                    ifelse(is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), T, input[[paste0("scale_switch_ps_",i,"_",t)]]))
+#                                                          )
+#                                                   ),
+#                                                   column(11,
+#                                                          helpText(label)
+#                                                   )
+#                                               ),
+#                                               conditionalPanel(
+#                                                   condition = paste0("input.scale_switch_ps_",i,"_",t," == true"),
+#                                                   sliderInput(name,label=NULL,min=values[1],max=values[2],step=0.001,
+#                                                               value=ifelse(is.null(input[[name]]), values[1], input[[name]] ))
+#                                               )
+#                                        )
+#                                    )
+#                                    # another variant is to use double-ended sliders with dragRange - but this needs to differently manage click inside of a PS (it could be
+#                                    #    a range instead of a point in each dimension) and still use with a checkbox which instantly cancel slider's effect
+# #                                    sliderInput(name,label=label,min=values[1],max=values[2],step=1,
+# #                                                value=c(ifelse(is.null(input[[name]]), values[1],
+# #                                                             input[[name]][1]),
+# #                                                        ifelse(is.null(input[[name]]), values[2],
+# #                                                               input[[name]][2])))
+#                                }
+#                            })
+#                        },
                        verbatimTextOutput(paste0("hover_text_ps_",i))
                 ),
                 column(4,
@@ -2237,6 +2308,23 @@ hover_over_ps_plots <- observe({
 #     }
 # })
 
+reset_advanced_settings <- observeEvent(input$advanced,{
+    if(!is.null(loading_ps_file()) && !input$advanced) {
+        variables <- loading_ps_file()$var_names
+        params    <- loading_ps_file()$param_names
+        list_of_all_names <- c(params, variables)
+        for(i in visible_ps_plots()) {
+            # if(!input[[paste0("param_selector_x_",i)]] %in% variables && !input[[paste0("param_selector_y_",i)]] %in% variables) {
+                for(t in 1:length(list_of_all_names)) {
+                    if(list_of_all_names[[t]] %in% variables)
+                        updateCheckboxInput(session,paste0("scale_switch_ps_",i,"_",t),value = F)
+                    else
+                        updateCheckboxInput(session,paste0("scale_switch_ps_",i,"_",t),value = T)
+                }
+        }
+    }
+})
+
 
 draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
     variables <- loading_ps_file()$var_names
@@ -2392,6 +2480,7 @@ draw_param_space_crossroad <- function(name_x, name_y, plot_index, boundaries) {
 draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
     variables <- loading_ps_file()$var_names
     params    <- loading_ps_file()$param_names
+    list_of_all_names <- c(params, variables)
     if(name_x %in% variables) {
         index_x <- match(name_x,variables)
         index_y <- match(name_y,params)
@@ -2413,7 +2502,6 @@ draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
         else                                range_y <- range(loading_ps_file()$thresholds[[name_y]])
         it_is_x <- F
     }
-    list_of_all_names <- c(params, variables)
     ##============ drawing of 2D parameter space ===============================
     if(!is.null(loading_ps_file()) && nrow(loading_ps_file()$param_space) != 0) {
         
@@ -2428,14 +2516,15 @@ draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
                            sliders_checkbox=list(),
                            sliders=list() )
         for(x in 1:length(list_of_all_names)) {
-            if(!list_of_all_names[[x]] %in% c(name_x,name_y)) {
-                if(list_of_all_names[[x]] %in% variables) {
-                    checkpoint$sliders_checkbox[[variables[[x-length(params)]] ]] <- input[[paste0("scale_switch_ps_",plot_index,"_",x)]]
-                    checkpoint$sliders[[variables[[x-length(params)]] ]] <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]]
-                } else {
-                    checkpoint$sliders_checkbox[[params[[x]] ]] <- input[[paste0("scale_switch_ps_",plot_index,"_",x)]]
-                    checkpoint$sliders[[params[[x]] ]] <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]]
-                }
+            name <- list_of_all_names[[x]]
+            if(!name %in% c(name_x,name_y)) {
+                # if(list_of_all_names[[x]] %in% variables) {
+                checkpoint$sliders_checkbox[[name]] <- input[[paste0("scale_switch_ps_",plot_index,"_",x)]]
+                checkpoint$sliders[[name]] <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]]
+                # } else {
+                #     checkpoint$sliders_checkbox[[params[[x]] ]] <- input[[paste0("scale_switch_ps_",plot_index,"_",x)]]
+                #     checkpoint$sliders[[params[[x]] ]] <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]]
+                # }
             }
         }
         # check for any change in globals for particular plot
@@ -2501,7 +2590,7 @@ draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
             }        # incremental intersection of ids in order to get right ids
             ps <- merge(merge(loading_ps_file()$param_space[(state+1) %in% st_ids & formula == chosen_ps_formulae_clean(), .(state=state+1,param=param+1)], 
                               ps[row_id %in% ids],by.x="param",by.y="id",allow.cartesian=T), states[id %in% st_ids],by.x="state",by.y="id")
-            param_space_clicked$data[[plot_index]] <- copy(ps[row_id %in% ids])
+            # param_space_clicked$data[[plot_index]] <- copy(ps[row_id %in% ids])
             
             if(input$coverage_check && nrow(ps) != 0) {
                 num <- input$density_coeficient
@@ -2523,8 +2612,6 @@ draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
                 
                 uniq_x <- unique(ps[,.(x1,x2)])
                 uniq_y <- unique(ps[,.(y1,y2)])
-                # print(paste0("unique in y:",nrow(uniq_y)))
-                # print(paste0("unique in x:",nrow(uniq_x)))
                 if(nrow(dt) != 0) {
                     # timing <- system.time({
                     #     rang_x <- range(uniq_x)
@@ -2591,6 +2678,8 @@ draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
 
 draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
     params    <- loading_ps_file()$param_names
+    variables <- loading_ps_file()$var_names
+    list_of_all_names <- c(params, variables)
     index_x <- match(name_x,params)
     index_y <- match(name_y,params)
     full_range_x <- param_ranges()[[name_x]]
@@ -2613,10 +2702,11 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
                            counter=input$process_run,
                            sliders_checkbox=list(),
                            sliders=list() )
-        for(x in 1:length(params)) {
-            if(!params[[x]] %in% c(name_x,name_y)) {
-                checkpoint$sliders_checkbox[[params[[x]] ]] <- input[[paste0("scale_switch_ps_",plot_index,"_",x)]]
-                checkpoint$sliders[[params[[x]] ]] <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]]
+        for(x in 1:length(list_of_all_names)) {
+            name <- list_of_all_names[[x]]
+            if(!name %in% c(name_x,name_y)) {
+                checkpoint$sliders_checkbox[[name]] <- input[[paste0("scale_switch_ps_",plot_index,"_",x)]]
+                checkpoint$sliders[[name]] <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]]
             }
         }
         # check for any change in globals for particular plot
@@ -2635,11 +2725,21 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
             
             #### Layers !!!!!!!!!
             ids <- ps$row_id    # all ids at first
-            for(x in 1:length(params)) {
-                if(!x %in% c(index_x,index_y) ) {
-                    if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
-                        sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
-                        ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, row_id])
+            states <- copy(satisfiable_states())
+            if(length(param_ss_clicked$point[[plot_index]]) == 0)    st_ids <- states$id     # all ids for states at first
+            else                                                     st_ids <- param_ss_clicked$point[[plot_index]]
+            for(x in 1:length(list_of_all_names)) {
+                name <- list_of_all_names[[x]]
+                if(!name %in% c(name_x,name_y) ) {
+                    if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
+                        if(name %in% variables) {
+                            x <- x-length(params)
+                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
+                            st_ids <- intersect(st_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, id])
+                        } else {
+                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                            ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, row_id])
+                        }
                     }
                     # if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]]))) {
                     #     if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
@@ -2650,7 +2750,7 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
                     #     }
                     # }
                 } else {
-                    if(x == index_x) {
+                    if(name == name_x) {
                         ids <- intersect(ids, ps[x1 < range_x[2] & x2 >= range_x[2] |
                                                  x1 <= range_x[1] & x2 > range_x[1] |
                                                  x1 >= range_x[1] & x2 <= range_x[2], row_id])
@@ -2661,7 +2761,7 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
                     }
                 }
             }        # incremental intersection of ids in order to get right ids
-            ps <- ps[row_id %in% ids]
+            ps <- ps[row_id %in% ids & id %in% loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1 ] ]
             # param_space_clicked$data[[plot_index]] <- copy(ps)
             
             if(input$coverage_check && nrow(ps) != 0) {
@@ -2739,6 +2839,8 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
 }
 draw_1D_param_space <- function(name_x, plot_index, boundaries) {
     params    <- loading_ps_file()$param_names
+    variables <- loading_ps_file()$var_names
+    list_of_all_names <- c(params, variables)
     index_x <- match(name_x,params)
     full_range_y <- c(0,1) # temporary
     full_range_x <- param_ranges()[[name_x]]
@@ -2758,10 +2860,11 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
                            density=input$density_coeficient,
                            sliders_checkbox=list(),
                            sliders=list() )
-        for(x in 1:length(params)) {
-            if(!params[[x]] %in% c(name_x)) {
-                checkpoint$sliders_checkbox[[params[[x]] ]] <- input[[paste0("scale_switch_ps_",plot_index,"_",x)]]
-                checkpoint$sliders[[params[[x]] ]] <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]]
+        for(x in 1:length(list_of_all_names)) {
+            name <- list_of_all_names[[x]]
+            if(!name %in% name_x ) {
+                checkpoint$sliders_checkbox[[name]] <- input[[paste0("scale_switch_ps_",plot_index,"_",x)]]
+                checkpoint$sliders[[name]] <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]]
             }
         }
         # check for any change in globals for particular plot
@@ -2779,12 +2882,29 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
             
             #### Layers !!!!!!!!!
             ids <- ps$row_id    # all ids at first
-            for(x in 1:length(params)) {
-                if(!x %in% c(index_x) ) {
-                    if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
-                        sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
-                        ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, row_id])
+            states <- copy(satisfiable_states())
+            if(length(param_ss_clicked$point[[plot_index]]) == 0)    st_ids <- states$id     # all ids for states at first
+            else                                                     st_ids <- param_ss_clicked$point[[plot_index]]
+            for(x in 1:length(list_of_all_names)) {
+                name <- list_of_all_names[[x]]
+                if(!name %in% name_x ) {
+                    if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
+                        if(name %in% variables) {
+                            x <- x-length(params)
+                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
+                            st_ids <- intersect(st_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, id])
+                        } else {
+                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                            ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, row_id])
+                        }
                     }
+                    # else {
+                    #     sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                    #     ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid[1] & get(paste0("V",x*2)) > sid[1] |
+                    #                              get(paste0("V",x*2-1)) >= sid[1] & get(paste0("V",x*2)) <= sid[2] |
+                    #                              get(paste0("V",x*2-1)) < sid[2] & get(paste0("V",x*2)) >= sid[2], row_id])
+                    # }
+                    
                     # if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]]))) {
                     #     if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
                     #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(input[[paste0("scale_slider_ps_",plot_index,"_",x)]],
@@ -2799,7 +2919,7 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
                                              x1 >= range_x[1] & x2 <= range_x[2], row_id])
                 }
             }        # incremental intersection of ids in order to get right ids
-            ps <- ps[row_id %in% ids]
+            ps <- ps[row_id %in% ids & id %in% loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1 ] ]
             # param_space_clicked$data[[plot_index]] <- copy(ps)
             
             if(input$coverage_check && nrow(ps) != 0) {
