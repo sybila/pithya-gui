@@ -31,8 +31,10 @@ shinyServer(function(input,output,session) {
 session_random <- sample(1000^2,1)
     
 # .Platform$OS.type=="windows"  or Sys.info()["sysname"]=="Windows"
-files_path <- ifelse(.Platform$OS.type=="windows", paste0("C:\\Temp//"), ifelse(Sys.info()["nodename"]=="psyche05",paste0(".//"),paste0("~//skola//newbiodivine//") ))
+files_path <- ifelse(.Platform$OS.type=="windows", paste0("..//Temp//"), ifelse(Sys.info()["nodename"]=="psyche05",paste0(".//"),paste0("~//skola//newbiodivine//") ))
 java_programs_path <- ifelse(Sys.info()["nodename"]=="psyche05","//mirror//new_new_biodivine//","~//skola//newbiodivine//")
+new_programs_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//bin//"), 
+                            ifelse(Sys.info()["nodename"]=="psyche05","//mirror//new_new_biodivine//","~//skola//newbiodivine//"))
 
 progressFileName <- paste0(files_path,"progress.",session_random,".txt")
 file.create(progressFileName)
@@ -113,14 +115,17 @@ observeEvent(input$process_run,{
         writeLines(loaded_ss_file$data,modelTempName)
         propTempName   <- paste0(files_path,"prop.",session_random,".ctl")
         writeLines(loaded_prop_file$data,propTempName)
-        system2("java", c("-jar",paste0(java_programs_path,"combine.jar"), modelTempName, propTempName, ">", configFileName, "2>", progressFileName), wait=T)
+        system2(paste0(new_programs_path,"combine"),c(modelTempName, propTempName), stdout=configFileName, stderr=progressFileName, wait=T)
+        # system2("java", c("-jar",paste0(java_programs_path,"combine.jar"), modelTempName, propTempName, ">", configFileName, "2>", progressFileName), wait=T)
         file.remove(modelTempName,propTempName)
         if(file.exists(configFileName) && length(readLines(configFileName)) > 0) {
             cat("config file is created\n")
             cat("Config file is created\n",file=progressFileName,append=T)
-            checker_path <- ifelse(Sys.info()["nodename"]=="psyche05","/mirror/new_new_biodivine/",
-                                   "/home/demon/skola/newbiodivine/json-ode-model/target/release/")     # it must be whole path or be a part of PATH
-            system2(paste0(checker_path,"ode_model"), c(configFileName,">",resultFileName,"2>>",progressFileName), wait=F)
+            checker_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//bin//"),
+                                   ifelse(Sys.info()["nodename"]=="psyche05","/mirror/new_new_biodivine/",
+                                   "/home/demon/skola/newbiodivine/json-ode-model/target/release/"))     # it must be whole path or be a part of PATH
+            system2(paste0(checker_path,"ode_model"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
+            # system2(paste0(checker_path,"ode_model"), c(configFileName,">",resultFileName,"2>>",progressFileName), wait=F)
         } else cat("\nError: some error occured, because no config file was created!\n")
     }
 })
@@ -314,18 +319,23 @@ observeEvent(input$generate_abstraction,{
     if(input$generate_abstraction != 0) {
         # loaded_ss_file$data <- readLines(paste0(examples_dir,"//model_2D_1P_400R.abst.bio"))
         cat("tractor is about to run\n")
-        # cat("Abstraction is started\n",file=progressFileName)
+        cat("Abstraction is started\n",file=progressFileName)
         
         withProgress({
             model_temp_name  <- paste0(files_path,"model.",session_random,".bio")
             writeLines(loaded_vf_file$data,model_temp_name)
             abstracted_model_temp_name <- paste0(files_path,"model.",session_random,".abst.bio")
-            system2("java", c("-jar",paste0(java_programs_path,"tractor.jar"), model_temp_name, 
-                              ifelse(input$fast_approximation,"true","false"),
-                              ifelse(input$thresholds_cut,"true","false"),
-                              ">", abstracted_model_temp_name,
-                              "2>",progressFileName), wait=T)
-    #        file.remove(c(model_temp_name))
+            system2(paste0(new_programs_path,"tractor"),c(model_temp_name,
+                                                          ifelse(input$fast_approximation,"true","false"),
+                                                          ifelse(input$thresholds_cut,"true","false")),
+                                                          stdout = abstracted_model_temp_name,
+                                                          stderr = progressFileName, wait=T)
+            # system2("java", c("-jar",paste0(java_programs_path,"tractor.jar"), model_temp_name, 
+            #                   ifelse(input$fast_approximation,"true","false"),
+            #                   ifelse(input$thresholds_cut,"true","false"),
+            #                   ">", abstracted_model_temp_name,
+            #                   "2>",progressFileName), wait=T)
+            file.remove(c(model_temp_name))
             if(file.exists(abstracted_model_temp_name)) {
                 loaded_ss_file$filename <- abstracted_model_temp_name
                 loaded_ss_file$data <- readLines(abstracted_model_temp_name)
@@ -1803,8 +1813,10 @@ loading_ps_file <- reactive({
             
             table <- rbindlist(lapply(file$results,function(x) as.data.table(x)))
             setkeyv(table,"formula")
-            table[,state:=sapply(data,function(x)unlist(x$state))]
-            table[,param:=sapply(data,function(x)unlist(x$param))]
+            # table[,state:=sapply(data,function(x)unlist(x$state))]
+            # table[,param:=sapply(data,function(x)unlist(x$param))]
+            table[,state:=sapply(data,function(x)unlist(x[1]))]
+            table[,param:=sapply(data,function(x)unlist(x[2]))]
             table[,cov:=nrow(.SD), by=list(formula,param)]
             table[,data:=NULL]
             
@@ -1815,9 +1827,12 @@ loading_ps_file <- reactive({
             if(file$type == "rectangular") {    
                 # file$parameter_values [[1]] [[1]] [[1]] [1:2]
                 #                        set  rect   dim  range
-                params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
-                not_empty_ids <- 1:length(file$parameter_values)
-                times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
+                # params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
+                # not_empty_ids <- 1:length(file$parameter_values)
+                # times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
+                params <- as.data.table(t(sapply(chunk(unlist(file$parameterValues),2*length(file$parameters)),unlist)))
+                not_empty_ids <- 1:length(file$parameterValues)
+                times <- sapply(lapply(not_empty_ids,function(x) file$parameterValues[[x]]),length)
                 params[, id:=unlist(sapply(1:length(not_empty_ids),function(x) rep.int(not_empty_ids[x],times[x])))]
                 params[, row_id:=1:nrow(params)]
                 ratios <- NULL
