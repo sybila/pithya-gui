@@ -1,8 +1,10 @@
 if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
-require(parallel)
+require(parallel) # it is needed because of function for determination of available CPU cores
 #if(!require(shinythemes,quietly=T)) install.packages("shinythemes",quiet=T); library(shinythemes,quietly=T)
 #require(shiny)
 
+
+## LOOK AT SHINY.OPTIONS
 # customSlider javascript function for output threshold instead of index
 JS.custom <-
     "
@@ -42,6 +44,7 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
             wellPanel(
                 fluidPage(
                     column(4,
+                        checkboxInput("advanced","advanced settings",F),
                         tags$div(title="Select input model (with '.bio' extension) for further analysis.",
                             fileInput("vf_file","choose '.bio' file",accept=".bio"))
                         # ,tags$div(title="Select input state space (with '.ss.json' extension) for further analysis.",
@@ -60,14 +63,17 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                            )
                     ),
                     column(4,
-                        wellPanel(
-                            tags$div(title="During The-PWA-approximation of special functions used inside the model new thresholds are generated and some of them could exceed explicit ones. By this checkbox you can tick off this do not be allowed.",
-                                checkboxInput("thresholds_cut","cut thresholds",F)),
-                            tags$div(title="Two versions of The-PWA-approximation are available. Slower one - more precise and computationally more demanding - and fast one - much faster but also less precise.",
-                                checkboxInput("fast_approximation","fast approximation",F)),
+                        # wellPanel(
+                            conditionalPanel(
+                                condition = "input.advanced == true",
+                                tags$div(title="During The-PWA-approximation of special functions used inside the model new thresholds are generated and some of them could exceed explicit ones. By this checkbox you can tick off this do not be allowed.",
+                                    checkboxInput("thresholds_cut","cut thresholds",F)),
+                                tags$div(title="Two versions of The-PWA-approximation are available. Slower one - more precise and computationally more demanding - and fast one - much faster but also less precise.",
+                                    checkboxInput("fast_approximation","fast approximation",F))
+                            ),
                             tags$div(title="",
                                  actionButton("generate_abstraction","generate approximation"))
-                        )
+                        # )
                     )
                 )
             )
@@ -93,7 +99,10 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
         ),
         column(2,
                wellPanel(
-                   numericInput("threads_number","no. of threads",detectCores(),1,detectCores(),1),
+                   conditionalPanel(
+                       condition = "input.advanced == true",
+                       numericInput("threads_number","no. of threads",detectCores(),1,detectCores(),1)
+                   ),
                    actionButton("process_run","Run parameter synthesis")
                )
         )
