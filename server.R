@@ -1,6 +1,7 @@
 # in linux install: r-base-dev
 
 if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
+if(!require(shinyBS,quietly = T)) {install.packages("shinyBS", dependencies=T,quiet = T); library(shinyBS,quietly = T)}
 #require(shiny)
 if(!require(pracma,quietly = T)) {install.packages("pracma", dependencies=T,quiet = T); require(pracma,quietly = T)}
 #require(pracma)
@@ -121,6 +122,8 @@ observeEvent(input$process_run,{
         if(file.exists(configFileName) && length(readLines(configFileName)) > 0) {
             cat("config file is created\n")
             cat("Config file is created\n",file=progressFileName,append=T)
+            updateButton(session,"process_run",style="default",disabled=T)
+            updateButton(session,"process_stop",style="danger",disabled=F)
             checker_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//bin//"),
                                    ifelse(Sys.info()["nodename"]=="psyche05","/mirror/new_new_biodivine/",
                                    "/home/demon/skola/newbiodivine/json-ode-model/target/release/"))     # it must be whole path or be a part of PATH
@@ -138,6 +141,8 @@ observeEvent(input$process_stop,{
             command <- ifelse(.Platform$OS.type=="windows", paste0("taskkill /f /pid ",pid), paste0("kill -9 ",pid))
             system(command,wait=T)
             cat("Process was killed!\n",file=progressFileName)
+            updateButton(session,"process_stop",style="default",disabled=T)
+            updateButton(session,"process_run",style="success",disabled=F)
         }
     }
 })
@@ -146,7 +151,11 @@ output$progress_output <- renderPrint({
     if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0) {
         # progress$set(value = as.numeric(progressFile()[length(progressFile())]))
         if(T %in% grepl("Model does not contain threshold",progressFile())) cat("chyba threshold\n")
-        if(T %in% grepl("^!!DONE!!$",progressFile())) {} # TODO: here should be call for message window
+        if(T %in% grepl("^!!DONE!!$",progressFile())) {
+            # TODO: here should be call for message window
+            updateButton(session,"process_stop",style="default",disabled=T)
+            updateButton(session,"add_result_plot", disabled=F)
+        }
         
         # if(length(progressFile()) > progressMaxLength)
         #     cat(paste0(progressFile()[(length(progressFile())-progressMaxLength+1):length(progressFile())],collapse="\n"))
@@ -154,9 +163,6 @@ output$progress_output <- renderPrint({
         cat(paste0(progressFile(),collapse="\n"))
         #on.exit(file.remove(progressFileName))
     }
-#     if(length(progressFile() > 0))
-#         for(i in 1:length(progressFile()))
-#             cat(progressFile()[i],"\n")
 })
 
 #=============== PROPERTY INPUT TAB ====================================
@@ -172,6 +178,7 @@ output$progress_output <- renderPrint({
 
 observeEvent(input$prop_input_area,{
     loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
+    if(!is.null(loaded_ss_file$data)) updateButton(session,"process_run",style="success",disabled=F)
 })
 # observeEvent(input$accept_prop_changes,{
 #     if(!is.null(input$prop_input_area) && input$prop_input_area != "")
@@ -308,10 +315,12 @@ else {
 
 observeEvent(input$model_input_area,{
     loaded_vf_file$data <- strsplit(input$model_input_area,"\n",fixed=T)[[1]]
+    updateButton(session,"generate_abstraction", style="success", disabled=F)
+    updateButton(session,"add_vf_plot", disabled=F)
 })
 
 observeEvent(c(input$vf_file,input$reset_model),{
-    cat("Start with button 'accept changes in model'.\n",file=progressFileName)
+    cat("Start with button 'generate approximation'.\n",file=progressFileName)
     if(!is.null(input$vf_file) && !is.null(input$vf_file$datapath)) {
         if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename != input$vf_file$datapath) {
             #session$reload()
@@ -365,6 +374,8 @@ observeEvent(input$generate_abstraction,{
                 loaded_ss_file$data <- readLines(abstracted_model_temp_name)
                 cat("abstracted file is loaded\n")
                 cat("Approxition is finished\n",file=progressFileName,append=T)
+                updateButton(session,"generate_abstraction",style="default",disabled=T)
+                updateButton(session,"process_run",style="success",disabled=F)
             } else {
                 cat("\nError: some error occured during the approximation process!\n")
                 cat("Some error occured during abstraction generation!\n",file=progressFileName,append=T)
@@ -713,14 +724,24 @@ output$selector <- renderUI({
                        selectInput(idy, labely, choicesy, selectedy)
                 ),
                 column(2,
-                       actionButton(paste0("cancel_vf_",i), "cancel"),
-                       checkboxInput(paste0("hide_vf_",i), "hide", ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],F))
+                       bsButton(paste0("cancel_vf_",i), "cancel"),
+                       checkboxInput(paste0("hide_vf_",i),"hide", ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],F))
+                       # bsButton(paste0("hide_vf_",i), type="toggle", "hide", value=ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],F))
                 )
             )
         })
     }
 })
 
+# observe({
+#     if(!is.null(loading_vf_file())) {
+#         for(i in vf_update()) {
+#             if(!is.null((input[[paste0("hide_vf_",i)]])))
+#                 if(input[[paste0("hide_vf_",i)]])   updateButton(session,paste0("hide_vf_",i), label="show")
+#                 else                                updateButton(session,paste0("hide_vf_",i), label="hide")
+#         }
+#     }
+# })
 # observer caring for hiding plot if some of selectors is invalidated
 observe({
     if(!is.null(loading_vf_file())) {
@@ -729,8 +750,10 @@ observe({
                    !is.null(input[[paste0("vf_selector_y_",i)]]) && input[[paste0("vf_selector_y_",i)]] != empty_sign)
                    #(length(loading_vf_file()$vars) == 1 || !is.null(input[[paste0("vf_selector_y_",i)]]) && input[[paste0("vf_selector_y_",i)]] != empty_sign))
                 next #updateCheckboxInput(session,paste0("hide_vf_",i),value=F)
+                # updateButton(session,paste0("hide_vf_",i), disabled=F)
             else
                 updateCheckboxInput(session,paste0("hide_vf_",i),value=T)
+                # updateButton(session,paste0("hide_vf_",i), disabled=T)
         }
     }
 })
@@ -742,6 +765,7 @@ observe({
                !is.null(input[[paste0("vf_selector_y_",i)]]) && input[[paste0("vf_selector_y_",i)]] != empty_sign)
                #(length(loading_vf_file()$vars) == 1 || !is.null(input[[paste0("vf_selector_y_",i)]]) && input[[paste0("vf_selector_y_",i)]] != empty_sign))
             updateCheckboxInput(session,paste0("hide_vf_",i),value=F)
+            # updateButton(session,paste0("hide_vf_",i), label="hide", value=F)
     }
 })
 # observer caring for canceling a plot
@@ -809,9 +833,11 @@ visible_vf_plots <- reactive({
         local_result <- c()
         for(i in vf_update()) {
             if(!is.null(input[[paste0("vf_selector_x_",i)]]) && input[[paste0("vf_selector_x_",i)]] != empty_sign && !input[[paste0("hide_vf_",i)]] &&
-                   !is.null(input[[paste0("vf_selector_y_",i)]]) && input[[paste0("vf_selector_y_",i)]] != empty_sign)
+                   !is.null(input[[paste0("vf_selector_y_",i)]]) && input[[paste0("vf_selector_y_",i)]] != empty_sign) {
                    #(length(loading_vf_file()$vars) == 1 || !is.null(input[[paste0("vf_selector_y_",i)]]) && input[[paste0("vf_selector_y_",i)]] != empty_sign))
                 local_result <- c(local_result,i)
+                # updateButton(session,paste0("hide_vf_",i), label="hide", disabled=F)
+            }
         }
         return(local_result)
     } else return(NULL)
@@ -868,7 +894,9 @@ output$plots <- renderUI({
                 ),
                 column(4,
                        if(!is.null(loading_ss_file()))
-                           helpText("transition-state space of the model"),
+                           helpText("transition-state space of the model")
+                       else
+                           h3("Approximation have to be generated before showing transition-state space"),
                        if(!is.null(loading_ss_file()))
                            imageOutput(paste0("plot_ss_",i),"auto","auto",click=paste0("ss_",i,"_click"),dblclick=paste0("ss_",i,"_dblclick"),
                                        hover=hoverOpts(id=paste0("ss_",i,"_hover"),delayType="debounce",delay=hover_delay_limit),
@@ -1507,7 +1535,7 @@ draw_state_space_new_2 <- function(name_x, name_y, plot_index, boundaries) {
                 out2 <- NULL
                 tmp_out <- NULL   
                 dt <- NULL
-            }, message="transition-state space is drawn"))
+            }, message="waiting for transition-state space"))
             cat(paste0("computing state-space for ",plot_index,"\n"))
             print(timing)
         }
@@ -1799,7 +1827,7 @@ reset_globals_param <- function() {
     }
 }
 
-observeEvent(c(resultFile(),input$process_run),{
+observeEvent(c(resultFile()),{
     if(!is.null(resultFile()) && length(resultFile()) > 0) {
         loaded_ps_file$filename <- resultFileName
         loaded_ps_file$data <- fromJSON(file=loaded_ps_file$filename)
@@ -3023,7 +3051,8 @@ output$chosen_ps_states_ui <- renderUI({
         widgets <- list()
         widgets[[1]] <- selectInput("chosen_ps_formula","choose formula of interest:",formulae_list,selected_formula,selectize=F,size=1,width="100%")
         do.call(tagList,widgets)
-    }
+    } else
+        h3("Parameter synthesis has to be run before showing some results")
 })
 
 

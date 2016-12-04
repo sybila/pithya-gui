@@ -1,4 +1,5 @@
 if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
+if(!require(shinyBS,quietly = T)) {install.packages("shinyBS", dependencies=T,quiet = T); library(shinyBS,quietly = T)}
 require(parallel) # it is needed because of function for determination of available CPU cores
 #if(!require(shinythemes,quietly=T)) install.packages("shinythemes",quiet=T); library(shinythemes,quietly=T)
 #require(shiny)
@@ -72,7 +73,7 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                                     checkboxInput("fast_approximation","fast approximation",F))
                             ),
                             tags$div(title="",
-                                 actionButton("generate_abstraction","generate approximation"))
+                                 bsButton("generate_abstraction","generate approximation",disabled=T))
                         # )
                     )
                 )
@@ -103,8 +104,8 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                        condition = "input.advanced == true",
                        numericInput("threads_number","no. of threads",detectCores(),1,detectCores(),1)
                    ),
-                   actionButton("process_run","Run parameter synthesis"),
-                   actionButton("process_stop","Stop parameter synthesis")
+                   bsButton("process_run","run parameter synthesis",disabled=T),
+                   bsButton("process_stop","stop parameter synthesis",disabled=T)
                )
         )
     ),
@@ -202,7 +203,7 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
                    uiOutput("selector"),
                    tags$div(title="Button will add new layer of plots for vector field or transition-state space or both, depending on which type of input was loaded. 
                                     Then you will be able to play with it.",
-                        actionButton("add_vf_plot","add plot",icon=icon("picture",lib="glyphicon")))
+                        bsButton("add_vf_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=T))
             )
         ),
         tags$hr(),
@@ -240,7 +241,7 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
                uiOutput("param_selector"),
                tags$div(title="Button will add new layer of plots for parameter space and corresponding transition-state space as soon as some file is loaded. 
                                     Then you will be able to play with it.",
-                    actionButton("add_param_plot","add plot",icon=icon("picture",lib="glyphicon")))
+                    bsButton("add_param_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=T))
         )
     ),
     tags$hr(),
