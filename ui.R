@@ -52,8 +52,8 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                     ),
                     column(4,
                            verticalLayout(
-                               tags$div(title="This button accepts all changes made in model editor so they could be passed on to further analysis.",
-                                        actionButton("accept_model_changes","accept changes in model",icon=icon("ok",lib = "glyphicon"))),
+                               # tags$div(title="This button accepts all changes made in model editor so they could be passed on to further analysis.",
+                               #          actionButton("accept_model_changes","check syntax of model",icon=icon("ok",lib = "glyphicon"))),
                                tags$div(title="This button resets all changes made up to last load or save of current file.",
                                         actionButton("reset_model","reset changes in model",icon=icon("remove",lib = "glyphicon"))),
                                tags$div(title="This button saves current state of model description.",
@@ -87,12 +87,12 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                                     fileInput("prop_file","choose '.ctl' file",accept=".ctl"))
                     ),
                     column(6,
-                           tags$div(title="This button accepts all changes made in editor so they could be passed on to further analysis.",
-                                    actionButton("accept_prop_changes","accept changes in properties",icon=icon("ok",lib = "glyphicon"))),
+                           # tags$div(title="This button accepts all changes made in editor so they could be passed on to further analysis.",
+                           #          actionButton("accept_prop_changes","check syntax of properties",icon=icon("ok",lib = "glyphicon"))),
                            tags$div(title="This button resets all changes made up to last load or save of current file.",
                                     actionButton("reset_prop","reset changes in properties",icon=icon("remove",lib = "glyphicon"))),
                            tags$div(title="This button saves current state of properties description.",
-                                    downloadButton("save_prop_file","save properties"))   # NOT WORKING FROM UNKNOWN REASON
+                                    downloadButton("save_prop_file","save properties"))
                     )
                 )
             )
@@ -103,7 +103,8 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                        condition = "input.advanced == true",
                        numericInput("threads_number","no. of threads",detectCores(),1,detectCores(),1)
                    ),
-                   actionButton("process_run","Run parameter synthesis")
+                   actionButton("process_run","Run parameter synthesis"),
+                   actionButton("process_stop","Stop parameter synthesis")
                )
         )
     ),
@@ -137,7 +138,7 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
 #                              tags$div(title="This button resets all changes made up to last load or save of current file.",
 #                                       actionButton("reset_prop","reset changes",icon=icon("remove",lib = "glyphicon"))),
 #                              tags$div(title="This button saves current state of properties description.",
-#                                       downloadButton("save_prop_file","save"))   # NOT WORKING FROM UNKNOWN REASON
+#                                       downloadButton("save_prop_file","save"))
 #                              
 #                       )
 #                   ),
@@ -218,7 +219,7 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
             tags$div(title="Select input parameter space (with '.ps.json' extension) for further analysis.",
                 fileInput("ps_file","choose result '.json' file"),accept=".json"),
             tags$div(title="This button saves model checking results.",
-                downloadButton("save_result_file","save results"))   # NOT WORKING FROM UNKNOWN REASON
+                downloadButton("save_result_file","save results"))
         ),
         column(2,
             tags$div(title="Scaling factor for density of shown rectangles in parameter space.",

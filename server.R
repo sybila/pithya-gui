@@ -110,7 +110,7 @@ param_chosen        <- reactiveValues(data=NULL,max=1)
 
 observeEvent(input$process_run,{
     if(!is.null(loaded_ss_file$data) && input$process_run != 0) {
-        # cat("Parameter synthesis is started\n",file=progressFileName)
+        cat("Parameter synthesis is started\n",file=progressFileName)
         modelTempName  <- paste0(files_path,"model.",session_random,".abst.bio")
         writeLines(loaded_ss_file$data,modelTempName)
         propTempName   <- paste0(files_path,"prop.",session_random,".ctl")
@@ -125,40 +125,58 @@ observeEvent(input$process_run,{
                                    ifelse(Sys.info()["nodename"]=="psyche05","/mirror/new_new_biodivine/",
                                    "/home/demon/skola/newbiodivine/json-ode-model/target/release/"))     # it must be whole path or be a part of PATH
             system2(paste0(checker_path,"ode_model"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
+            cat("Process has started\n",file=progressFileName)
             # system2(paste0(checker_path,"ode_model"), c(configFileName,">",resultFileName,"2>>",progressFileName), wait=F)
         } else cat("\nError: some error occured, because no config file was created!\n")
+    }
+})
+
+observeEvent(input$process_stop,{
+    if(!is.null(loaded_ss_file$data) && input$process_stop != 0) {
+        if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0 && !T %in% grepl("^!!DONE!!$",progressFile())) {
+            pid <- grep("^[0-9]+$",progressFile(),value=T)
+            command <- ifelse(.Platform$OS.type=="windows", paste0("taskkill /f /pid ",pid), paste0("kill -9 ",pid))
+            system(command,wait=T)
+            cat("Process was killed!\n",file=progressFileName)
+        }
     }
 })
 
 output$progress_output <- renderPrint({
     if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0) {
         # progress$set(value = as.numeric(progressFile()[length(progressFile())]))
-        if(grepl("Model does not contain threshold",progressFile())) cat("chyba threshold\n")
-        if(length(progressFile()) > progressMaxLength)
-            cat(paste0(progressFile()[(length(progressFile())-progressMaxLength+1):length(progressFile())],collapse="\n"))
-        else
-            cat(paste0(progressFile(),collapse="\n"))
+        if(T %in% grepl("Model does not contain threshold",progressFile())) cat("chyba threshold\n")
+        if(T %in% grepl("^!!DONE!!$",progressFile())) {} # TODO: here should be call for message window
+        
+        # if(length(progressFile()) > progressMaxLength)
+        #     cat(paste0(progressFile()[(length(progressFile())-progressMaxLength+1):length(progressFile())],collapse="\n"))
+        # else
+        cat(paste0(progressFile(),collapse="\n"))
         #on.exit(file.remove(progressFileName))
     }
 #     if(length(progressFile() > 0))
 #         for(i in 1:length(progressFile()))
 #             cat(progressFile()[i],"\n")
-},width=100)
+})
 
 #=============== PROPERTY INPUT TAB ====================================
 #=======================================================================
 
-# reaction on event of loading .bio file into tool putting a loaded model into text field
-observeEvent(c(loaded_prop_file$data,input$reset_prop),{
-    if(!is.null(loaded_prop_file$data)) {
-        updateTextInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
-    }
-})
+# reaction on event of loading .ctl file into tool putting a loaded model into text field
+# observeEvent(c(loaded_prop_file$data,input$reset_prop),{
+#     if(!is.null(loaded_prop_file$data)) {
+#         updateTextInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
+#     }
+# })
 
-observeEvent(input$accept_prop_changes,{
-    if(!is.null(input$prop_input_area) && input$prop_input_area != "")
-        loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
+
+observeEvent(input$prop_input_area,{
+    loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
 })
+# observeEvent(input$accept_prop_changes,{
+#     if(!is.null(input$prop_input_area) && input$prop_input_area != "")
+#         loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
+# })
 
 observeEvent(c(input$prop_file,input$reset_prop),{
     if(!is.null(input$prop_file) && !is.null(input$prop_file$datapath)) {
@@ -173,6 +191,7 @@ observeEvent(c(input$prop_file,input$reset_prop),{
         loaded_prop_file$filename <- paste0(examples_dir,"//bistability.ctl")
         loaded_prop_file$data <- readLines(loaded_prop_file$filename)
     }
+    updateTextInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
 })
 
 output$save_prop_file <- downloadHandler(
@@ -198,11 +217,11 @@ reset_globals <- function() {
 }
 
 # reaction on event of loading .bio file into tool putting a loaded model into text field
-observeEvent(c(loaded_vf_file$data,input$reset_model),{
-    if(!is.null(loaded_vf_file$data)) {
-        updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$data,collapse="\n"))
-    }
-})
+# observeEvent(c(loaded_vf_file$data,input$reset_model),{
+#     if(!is.null(loaded_vf_file$data)) {
+#         updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$data,collapse="\n"))
+#     }
+# })
 
 observeEvent(input$accept_model_changes,{
     if(!is.null(input$model_input_area) && input$model_input_area != "") {
@@ -281,10 +300,14 @@ else {
         # grepl(paste0("^EQ:",name,"=",rnum,"(,",rnum,")+$"), gsub(" ","",lines))
         
         if(its_ok) {
-            cat("Syntax of model is good ;) You may proceed with generating abstraction.",file=progressFileName)
+            cat("Syntax of model is good ;) You may proceed with generating approximation.",file=progressFileName)
             loaded_vf_file$data <- the_lines
         }
     }
+})
+
+observeEvent(input$model_input_area,{
+    loaded_vf_file$data <- strsplit(input$model_input_area,"\n",fixed=T)[[1]]
 })
 
 observeEvent(c(input$vf_file,input$reset_model),{
@@ -301,6 +324,7 @@ observeEvent(c(input$vf_file,input$reset_model),{
         loaded_vf_file$filename <- paste0(examples_dir,"//model_2D_1P_400R.bio")
         loaded_vf_file$data <- readLines(loaded_vf_file$filename)
     }
+    updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$data,collapse="\n"))
 })
 
 output$save_model_file <- downloadHandler(
@@ -319,7 +343,7 @@ observeEvent(input$generate_abstraction,{
     if(input$generate_abstraction != 0) {
         # loaded_ss_file$data <- readLines(paste0(examples_dir,"//model_2D_1P_400R.abst.bio"))
         cat("tractor is about to run\n")
-        cat("Abstraction is started\n",file=progressFileName)
+        cat("Approximation is started\n",file=progressFileName)
         
         withProgress({
             model_temp_name  <- paste0(files_path,"model.",session_random,".bio")
@@ -340,7 +364,7 @@ observeEvent(input$generate_abstraction,{
                 loaded_ss_file$filename <- abstracted_model_temp_name
                 loaded_ss_file$data <- readLines(abstracted_model_temp_name)
                 cat("abstracted file is loaded\n")
-                cat("Abstraction is finished\n",file=progressFileName,append=T)
+                cat("Approxition is finished\n",file=progressFileName,append=T)
             } else {
                 cat("\nError: some error occured during the approximation process!\n")
                 cat("Some error occured during abstraction generation!\n",file=progressFileName,append=T)
@@ -729,6 +753,8 @@ observe({
                 # some kind of garbage collector would be very convenient in this phase
                 # either gc() or rm()
 #                rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("vf_selector_y_",i)]]) #TODO: doplnit dalsie
+                
+                # removeUI function
                 transition_state_space$data[[i]] <- NA
                 transition_state_space$globals[[i]] <- NA
                 state_space_clicked$data[[i]] <- NA
