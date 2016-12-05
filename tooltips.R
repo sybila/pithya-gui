@@ -112,11 +112,11 @@ Explorer_SS_ClearPlot_tooltip <- "Clear this plot."
 Explorer_SS_Unzoom_label <- "Unzoom"
 Explorer_SS_Unzoom_tooltip <- "Unzoom this state space plot."
 
-Explorer_SS__label <- ""
-Explorer_SS__tooltip <- ""
+#Explorer_SS__label <- ""
+#Explorer_SS__tooltip <- ""
 
-Explorer__label <- ""
-Explorer__tooltip <- ""
+#Explorer__label <- ""
+#Explorer__tooltip <- ""
 
 #RESULT
 Result_label <- "Result" # "Result Explorer" 
@@ -176,8 +176,8 @@ Result_SS_horizontal_tooltip <- "Set variable to show on horizontal axis."
 Result_SS_vertical_label <- "vertical axis"
 Result_SS_vertical_tooltip <- "Set variable to show on vertical axis."
 
-Result__label <- ""
-Result__tooltip <- ""
+#Result__label <- ""
+#Result__tooltip <- ""
 
 
 
