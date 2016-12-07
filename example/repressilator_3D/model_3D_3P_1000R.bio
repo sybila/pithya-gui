@@ -1,0 +1,20 @@
+###########################################################################
+# This is model of repressilator of 3 genes with mutual negative feedback #
+# It has oscillatory behaviour for specific parameters                    #
+###########################################################################
+
+# CURRENTLY UNSUPPORTED - NO PROPERTY YET
+
+VARS: x,y,z
+CONSTS: k1,1; k2,1; k3,1
+PARAMS: deg_x,0,1; deg_y,0,1; deg_z,0,1
+
+EQ: x = k1*hillm(y,5,5,1,0) - deg_x*x
+EQ: y = k2*hillm(z,5,5,1,0) - deg_y*y
+EQ: z = k3*hillm(x,5,5,1,0) - deg_z*z
+
+VAR_POINTS: x: 2500, 10; y: 2500, 10; z: 2500, 10
+
+THRES: x: 0, 15
+THRES: y: 0, 15
+THRES: z: 0, 15
