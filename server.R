@@ -195,7 +195,7 @@ observeEvent(c(input$prop_file,input$reset_prop),{
         loaded_prop_file$data <- readLines(loaded_prop_file$filename)
     } else {
         # initial example file (temporary)
-        loaded_prop_file$filename <- paste0(examples_dir,"//bistability.ctl")
+        loaded_prop_file$filename <- paste0(examples_dir,"//repressilator_2D//bistability.ctl")
         loaded_prop_file$data <- readLines(loaded_prop_file$filename)
     }
     updateTextInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
@@ -330,7 +330,7 @@ observeEvent(c(input$vf_file,input$reset_model),{
         loaded_vf_file$data <- readLines(loaded_vf_file$filename)
     } else {
         # initial example file (temporary)
-        loaded_vf_file$filename <- paste0(examples_dir,"//model_2D_1P_100R.bio")
+        loaded_vf_file$filename <- paste0(examples_dir,"//repressilator_2D//model_2D_1P_100R.bio")
         loaded_vf_file$data <- readLines(loaded_vf_file$filename)
     }
     updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$data,collapse="\n"))
@@ -384,17 +384,17 @@ observeEvent(input$generate_abstraction,{
     }
 })
 
-observeEvent(input$state_space_file,{
-    if(!is.null(input$state_space_file) && !is.null(input$state_space_file$datapath)) {
-        loaded_ss_file$data <- readLines(input$state_space_file$datapath)
-    } else {
-        # initial example file (temporary)
-        if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename == paste0(examples_dir,"//model_2D_1P_100R.bio"))
-            loaded_ss_file$data <- paste0(examples_dir,"//model_2D_1P_400R.ss.json")
-        else
-            loaded_ss_file$data <- NULL
-    }
-})
+# observeEvent(input$state_space_file,{
+#     if(!is.null(input$state_space_file) && !is.null(input$state_space_file$datapath)) {
+#         loaded_ss_file$data <- readLines(input$state_space_file$datapath)
+#     } else {
+#         # initial example file (temporary)
+#         if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename == paste0(examples_dir,"//model_2D_1P_100R.bio"))
+#             loaded_ss_file$data <- paste0(examples_dir,"//model_2D_1P_400R.ss.json")
+#         else
+#             loaded_ss_file$data <- NULL
+#     }
+# })
     
 
 #===================== MODEL EXPLORER ==================================    
