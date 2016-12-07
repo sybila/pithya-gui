@@ -2,15 +2,10 @@
 
 if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
 if(!require(shinyBS,quietly = T)) {install.packages("shinyBS", dependencies=T,quiet = T); library(shinyBS,quietly = T)}
-#require(shiny)
 if(!require(pracma,quietly = T)) {install.packages("pracma", dependencies=T,quiet = T); require(pracma,quietly = T)}
-#require(pracma)
 if(!require(stringr,quietly = T)) {install.packages("stringr", dependencies=T,quiet = T); library(stringr,quietly = T)}
-#require(stringr)
 if(!require(data.table,quietly = T)) {install.packages("data.table", dependencies=T,quiet = T); library(data.table,quietly = T)}
-#require(data.table)
 if(!require(rjson,quietly = T)) {install.packages("rjson", dependencies=T,quiet = T); library(rjson,quietly = T)}
-#require(rjson)
 #if(!require(Rcpp,quietly = T)) {install.packages("Rcpp",quiet = T); library(Rcpp,quietly = T)}
 #if(!require(httpuv,quietly = T)) {install.packages("httpuv",quiet = T); library(httpuv,quietly = T)}
 #if(!require(shinyjs,quietly = T)) {install.packages("shinyjs",quiet = T); library(shinyjs,quietly = T)}
@@ -32,10 +27,10 @@ shinyServer(function(input,output,session) {
 session_random <- sample(1000^2,1)
     
 # .Platform$OS.type=="windows"  or Sys.info()["sysname"]=="Windows"
-files_path <- ifelse(.Platform$OS.type=="windows", paste0("..//Temp//"), ifelse(Sys.info()["nodename"]=="psyche05",paste0(".//"),paste0("~//skola//newbiodivine//") ))
-java_programs_path <- ifelse(Sys.info()["nodename"]=="psyche05","//mirror//new_new_biodivine//","~//skola//newbiodivine//")
+files_path <- ifelse(.Platform$OS.type=="windows", paste0("..//Temp//"), ifelse(Sys.info()["nodename"]=="psyche05",paste0("..//Temp//"),paste0("~//skola//newbiodivine//") ))
+# java_programs_path <- ifelse(Sys.info()["nodename"]=="psyche05","//mirror//new_new_biodivine//","~//skola//newbiodivine//")
 new_programs_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"), 
-                            ifelse(Sys.info()["nodename"]=="psyche05","//mirror//new_new_biodivine//","~//skola//newbiodivine//"))
+                            ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//","~//skola//newbiodivine//"))
 
 progressFileName <- paste0(files_path,"progress.",session_random,".txt")
 file.create(progressFileName)
@@ -125,7 +120,7 @@ observeEvent(input$process_run,{
             updateButton(session,"process_run",style="default",disabled=T)
             updateButton(session,"process_stop",style="danger",disabled=F)
             checker_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"),
-                                   ifelse(Sys.info()["nodename"]=="psyche05","/mirror/new_new_biodivine/",
+                                   ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//",
                                    "/home/demon/skola/newbiodivine/json-ode-model/target/release/"))     # it must be whole path or be a part of PATH
             system2(paste0(checker_path,"biodivine-ctl"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
             cat("Process has started\n",file=progressFileName)
