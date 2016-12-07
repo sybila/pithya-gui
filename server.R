@@ -2704,23 +2704,18 @@ draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
                     }
                 }
                 ps <- merge(merge(loading_ps_file()$param_space[(state+1) %in% st_ids & formula == chosen_ps_formulae_clean(), .(state=state+1,param=param+1)], 
-                                  ps[id %in% ids],by.x="param",by.y="id",allow.cartesian=T), states[id %in% st_ids],by.x="state",by.y="id")
+                                  ps,by.x="param",by.y="id",allow.cartesian=T), states[id %in% st_ids],by.x="state",by.y="id")
                 # ps <- ps[id %in% unique(loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1]) ]
                 dt <- dt[id %in% ids ]
                 
-                time <- system.time(for(ex in ps$param) dt[,cov:=cov+ifelse(eval(parse(text=ps[param==ex,expr]))(eval(parse(text=input_params))),1,0)])
+                if(it_is_x) time <- system.time(for(ex in ps$param) dt[x1 %in% ps[param==ex,x1] & x2 %in% ps[param==ex,x2], 
+                                                                       cov:=cov+ifelse(eval(parse(text=ps[param==ex,expr]))(eval(parse(text=input_params))),1,0)])
+                else        time <- system.time(for(ex in ps$param) dt[y1 %in% ps[param==ex,y1] & y2 %in% ps[param==ex,y2], 
+                                                                       cov:=cov+ifelse(eval(parse(text=ps[param==ex,expr]))(eval(parse(text=input_params))),1,0)])
                 print(time)
                 
-                if(length(param_ss_clicked$point[[plot_index]]) != 0) {
-                    if(it_is_x) dt <- unique(merge(dt,(ps),by=c("x1","x2"))[cov.x>0,.(x1,x2,cov=max(.SD$cov.x)),by=.(state,y1,y2)])
-                    else        dt <- unique(merge(dt,(ps),by=c("y1","y2"))[cov.x>0,.(y1,y2,cov=max(.SD$cov.x)),by=.(state,x1,x2)])
-                }
-                # if(length(param_ss_clicked$point[[plot_index]]) != 0) {
-                #     if(it_is_x) dt <- merge(dt,(states[id %in% st_ids]),by=c("x1","x2"))[cov > 0]
-                #     else        dt <- merge(dt,(states[id %in% st_ids]),by=c("y1","y2"))[cov > 0]
-                # }
+                dt <- dt[cov>0,.(cov=max(.SD$cov)),by=.(x1,x2,y1,y2)]
                 if(input$coverage_check) {
-                    # dt <- dt[cov > 0,.(cov=max(.SD$cov)),by=.(x1,x2,y1,y2)]
                     param_space$data[[plot_index]] <- dt[cov > 0]
                 } else {
                     dt[cov > 0, cov:=1]
@@ -3310,7 +3305,7 @@ output$chosen_ps_states_ui <- renderUI({
         widgets[[1]] <- selectInput("chosen_ps_formula","choose formula of interest:",formulae_list,selected_formula,selectize=F,size=1,width="100%")
         do.call(tagList,widgets)
     } else
-        h3("Parameter synthesis has to be run before showing some results")
+        h3("Parameter synthesis has to be run or result file loaded before showing some results")
 })
 
 

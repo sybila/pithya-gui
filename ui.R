@@ -31,9 +31,10 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 source("global.R")
 
 shinyUI(
-#     fluidPage(
-#     titlePanel("PITHYA - Parameter Investigation Tool with HYbrid Approach"),
-#     tags$hr(),
+    fluidPage(
+    # titlePanel("PITHYA - Parameter Investigation Tool with HYbrid Approach"),
+    titlePanel("PITHYA - Parameter Investigation Tool for HYbrid Analysis"),
+    tags$hr(),
     tabsetPanel(id = "dimensions",
                 
 tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
@@ -248,7 +249,7 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
     uiOutput("param_space_plots")
 )
     )
-# )
+)
 )
               
               
