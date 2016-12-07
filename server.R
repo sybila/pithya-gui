@@ -34,7 +34,7 @@ session_random <- sample(1000^2,1)
 # .Platform$OS.type=="windows"  or Sys.info()["sysname"]=="Windows"
 files_path <- ifelse(.Platform$OS.type=="windows", paste0("..//Temp//"), ifelse(Sys.info()["nodename"]=="psyche05",paste0(".//"),paste0("~//skola//newbiodivine//") ))
 java_programs_path <- ifelse(Sys.info()["nodename"]=="psyche05","//mirror//new_new_biodivine//","~//skola//newbiodivine//")
-new_programs_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//bin//"), 
+new_programs_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"), 
                             ifelse(Sys.info()["nodename"]=="psyche05","//mirror//new_new_biodivine//","~//skola//newbiodivine//"))
 
 progressFileName <- paste0(files_path,"progress.",session_random,".txt")
@@ -124,10 +124,10 @@ observeEvent(input$process_run,{
             cat("Config file is created\n",file=progressFileName,append=T)
             updateButton(session,"process_run",style="default",disabled=T)
             updateButton(session,"process_stop",style="danger",disabled=F)
-            checker_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//bin//"),
+            checker_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"),
                                    ifelse(Sys.info()["nodename"]=="psyche05","/mirror/new_new_biodivine/",
                                    "/home/demon/skola/newbiodivine/json-ode-model/target/release/"))     # it must be whole path or be a part of PATH
-            system2(paste0(checker_path,"ode_model"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
+            system2(paste0(checker_path,"biodivine-ctl"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
             cat("Process has started\n",file=progressFileName)
             # system2(paste0(checker_path,"ode_model"), c(configFileName,">",resultFileName,"2>>",progressFileName), wait=F)
         } else cat("\nError: some error occured, because no config file was created!\n")
@@ -137,7 +137,7 @@ observeEvent(input$process_run,{
 observeEvent(input$process_stop,{
     if(!is.null(loaded_ss_file$data) && input$process_stop != 0) {
         if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0 && !T %in% grepl("^!!DONE!!$",progressFile())) {
-            pid <- grep("^[0-9]+$",progressFile(),value=T)
+            pid <- gsub("PID: ","",grep("^PID: [0-9]+$",progressFile(),value=T))
             command <- ifelse(.Platform$OS.type=="windows", paste0("taskkill /f /pid ",pid), paste0("kill -9 ",pid))
             system(command,wait=T)
             cat("Process was killed!\n",file=progressFileName)
@@ -330,7 +330,7 @@ observeEvent(c(input$vf_file,input$reset_model),{
         loaded_vf_file$data <- readLines(loaded_vf_file$filename)
     } else {
         # initial example file (temporary)
-        loaded_vf_file$filename <- paste0(examples_dir,"//model_2D_1P_400R.bio")
+        loaded_vf_file$filename <- paste0(examples_dir,"//model_2D_1P_100R.bio")
         loaded_vf_file$data <- readLines(loaded_vf_file$filename)
     }
     updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$data,collapse="\n"))
@@ -389,7 +389,7 @@ observeEvent(input$state_space_file,{
         loaded_ss_file$data <- readLines(input$state_space_file$datapath)
     } else {
         # initial example file (temporary)
-        if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename == paste0(examples_dir,"//model_2D_1P_400R.bio"))
+        if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename == paste0(examples_dir,"//model_2D_1P_100R.bio"))
             loaded_ss_file$data <- paste0(examples_dir,"//model_2D_1P_400R.ss.json")
         else
             loaded_ss_file$data <- NULL
@@ -1891,23 +1891,59 @@ loading_ps_file <- reactive({
                 # params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
                 # not_empty_ids <- 1:length(file$parameter_values)
                 # times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
-                params <- as.data.table(t(sapply(chunk(unlist(file$parameterValues),2*length(file$parameters)),unlist)))
-                not_empty_ids <- 1:length(file$parameterValues)
-                times <- sapply(lapply(not_empty_ids,function(x) file$parameterValues[[x]]),length)
+                params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
+                not_empty_ids <- 1:length(file$parameter_values)
+                times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
                 params[, id:=unlist(sapply(1:length(not_empty_ids),function(x) rep.int(not_empty_ids[x],times[x])))]
                 params[, row_id:=1:nrow(params)]
-                ratios <- NULL
             }
             if(file$type == "smt") {
                 # TODO:
                 # params <- as.data.table(t(sapply(lapply(1:length(file$params$rectangles),function(x) file$params$rectangles[[x]]), function(p) unlist(p))))
                 # params[, id:=1:nrow(params)]
-                # ratios <- NULL      # temporary
-                # ratios[, id:=1:nrow(ratios)]
+                
+                # params <- data.table(expr=sapply(1:length(file$parameter_values),function(x) file$parameter_values[[x]]$Rexpression))
+                params <- data.table(expr=paste0("function(ip)",gsub("||","|",gsub("&&","&", sapply(1:length(file$parameter_values),
+                                                                                        function(x) file$parameter_values[[x]]$Rexpression),fixed=T),fixed=T)))
+                # params <- data.table(expr=parse(text=paste0("function(ip)",gsub("([a-z][a-z0-9_]+)","ip$\\1",sapply(1:length(file$parameter_values),
+                #                                                                                          function(x) file$parameter_values[[x]]$Rexpression),perl=T))))
+                params[, id:=1:nrow(params)]
+                params[, row_id:=1:nrow(params)]
+                setkey(params,id)
+                # eval(parse(text=paste0("function(ip) ",gsub("([a-z][a-z0-9_]+)","ip$\\1",params$expr[1:5],perl=T))))(ip=list(deg_x=0.1,k1=1))
+                
+                # num <- 50
+                # nesh <- meshgrid(seq(0,1,length.out = num),
+                #                  seq(0,2,length.out = num))
+                # dt <- data.table(x1=unlist(as.list(nesh$X[1:(num-1),1:(num-1)])),x2=unlist(as.list(nesh$X[2:num,2:num])),
+                #                  y1=unlist(as.list(nesh$Y[1:(num-1),1:(num-1)])),y2=unlist(as.list(nesh$Y[2:num,2:num])))
+                # dt[,x:=x1+(x2-x1)*0.5]
+                # dt[,y:=y1+(y2-y1)*0.5]
+                # dt[,cov:=0]
+                # 
+                # system.time(for(ex in params$id) dt[,cov:=cov+ifelse(eval(parse(text=params[ex,expr]))(list(deg_x=x,k1=y)),1,0)])
+                
+                # tt <- as.data.table(merge.default(params,dt,all=T))
+                # setkey(tt,id)
+                # system.time(tt[,truth:=(eval(parse(text=expr))(list(deg_x=x,k1=y))),by=.(expr,x,y)])
+                # tt[,.(cov=nrow(.SD[truth==T]),x1,x2,y1,y2),by=.(x,y)]
+                
+                # f <- function(e,l) eval(parse(text=e[1]))(list(deg_x=dtt$x,k1=dtt$y))
+                # tt[, truth:=f(.SD), by=.(expr,x,y) ]
             }
+            
+            # time <- system.time({
+            #     for(i in seq(0,1,length.out = 50))
+            #         for(j in seq(0,2,length.out = 50))
+            #             neco <- params[,sapply(parse(text=expr),function(x) eval(x)(ip<-list(deg_x=i,k1=j)))]
+            # })
+            # print(time)
             
             thrs <- file$thresholds
             names(thrs) <- file$variables
+            
+            param_bounds <- file$parameter_bounds
+            names(param_bounds) <- file$parameters
             
             return(list(param_space=table,  # DT( formula:string, data:list_of_state_and_param_indices, state:numeric_index_to_states, param:numeric_index_to_params, 
                                             #     cov:numeric_with_states_count_for_this_param )
@@ -1917,8 +1953,8 @@ loading_ps_file <- reactive({
                         params=params,                      # DT( V1,V2,... ) - each row is satisfied rectangle (of param set with same ID) in PS (each param has two columns: P1 has V1,V2 ...)
                         var_names=file$variables,           # vector of unique variable names in order of appearence in bio file
                         thresholds=thrs,                    # list of thresholds for each variable
-                        ratios=ratios                       # NULL or DT( V1,V2,... ) - each columns pair (e.g. V1,V2) is ratio for particular facet of param rectangle (with the same index),
-                                                            #   columns are organized as follows: [p_1,p_2],..,[p_1,p_n],[p_2,p_3],..,[p_(n-1),p_n], where n is number of params
+                        type=file$type,
+                        param_bounds=param_bounds
             ))
             
         } else return(NULL)
@@ -2599,117 +2635,217 @@ draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
         # check for any change in globals for particular plot
         if(is.na(param_space$globals[[plot_index]]) || !identical(param_space$globals[[plot_index]],checkpoint) ) {
             
-            if(length(param_ss_clicked$point[[plot_index]]) == 0) {
-                ps <- copy(satisfiable_param_space_for_formula())
-            } else {
-                ps <- loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & 
-                                                        (state+1) %in% param_ss_clicked$point[[plot_index]],.(param=param+1,cov)]
-                ps <- merge(loading_ps_file()$params, ps, by.x="id", by.y="param")
-            }
-            if(it_is_x) setnames(ps,c(paste0("V",index_y*2-1),paste0("V",index_y*2)),c("y1","y2"))
-            else        setnames(ps,c(paste0("V",index_x*2-1),paste0("V",index_x*2)),c("x1","x2"))
-            ps[, cov:=1]
-            
-            #### Layers !!!!!!!!!
-            ids <- ps$row_id            # all ids for params at first
-            states <- copy(satisfiable_states())
-            if(it_is_x) setnames(states,c(paste0("V",index_x*2-1),paste0("V",index_x*2)),c("x1","x2"))
-            else        setnames(states,c(paste0("V",index_y*2-1),paste0("V",index_y*2)),c("y1","y2"))
-            if(length(param_ss_clicked$point[[plot_index]]) == 0)    st_ids <- states$id     # all ids for states at first
-            else                                                     st_ids <- param_ss_clicked$point[[plot_index]]
-            for(x in 1:length(list_of_all_names)) {
-                name <- list_of_all_names[[x]]
-                if(!name %in% c(name_x,name_y) ) {
-                    if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
-                        if(name %in% variables) {
-                            x <- x-length(params)
-                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
-                            st_ids <- intersect(st_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, id])
-                        } else {
-                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
-                            ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, row_id])
-                        }
-                    }
-                    # if(name %in% params && length(param_space_clicked$point) >= plot_index && 
-                    #    !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]]))) {
-                    #     if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
-                    #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(input[[paste0("scale_slider_ps_",plot_index,"_",x)]],
-                    #                                                                      input[[paste0("scale_slider_ps_",plot_index,"_",x)]])
-                    #     } else {
-                    #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(param_ranges()[[params[[x]] ]])
-                    #     }
-                    # }
+            if(loading_ps_file()$type == "smt") {
+                # symbolic type of parameters
+                if(length(param_ss_clicked$point[[plot_index]]) == 0) {
+                    ps <- copy(satisfiable_param_space_for_formula())
                 } else {
-                    if(name == name_x) {
-                        if(it_is_x) st_ids <- intersect(st_ids, states[x1 < range_x[2] & x2 >= range_x[2] |
-                                                                       x1 <= range_x[1] & x2 > range_x[1] |
-                                                                       x1 >= range_x[1] & x2 <= range_x[2], id])
-                        else        ids <- intersect(ids, ps[x1 < range_x[2] & x2 >= range_x[2] |
-                                                             x1 <= range_x[1] & x2 > range_x[1] |
-                                                             x1 >= range_x[1] & x2 <= range_x[2], row_id])
-                    } else {
-                        if(it_is_x) ids <- intersect(ids, ps[y1 < range_y[2] & y2 >= range_y[2] |
-                                                             y1 <= range_y[1] & y2 > range_y[1] |
-                                                             y1 >= range_y[1] & y2 <= range_y[2], row_id])
-                        else        st_ids <- intersect(st_ids, states[y1 < range_y[2] & y2 >= range_y[2] |
-                                                                       y1 <= range_y[1] & y2 > range_y[1] |
-                                                                       y1 >= range_y[1] & y2 <= range_y[2], id])
-                    }
+                    ps <- loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & 
+                                                            (state+1) %in% param_ss_clicked$point[[plot_index]],.(param=param+1,cov)]
+                    ps <- merge(loading_ps_file()$params, ps, by.x="id", by.y="param")
                 }
-            }        # incremental intersection of ids in order to get right ids
-            ps <- merge(merge(loading_ps_file()$param_space[(state+1) %in% st_ids & formula == chosen_ps_formulae_clean(), .(state=state+1,param=param+1)], 
-                              ps[row_id %in% ids],by.x="param",by.y="id",allow.cartesian=T), states[id %in% st_ids],by.x="state",by.y="id")
-            # param_space_clicked$data[[plot_index]] <- copy(ps[row_id %in% ids])
-            
-            if(input$coverage_check && nrow(ps) != 0) {
+                ps <- unique(ps)
+                setkey(ps,id)
                 num <- input$density_coeficient
-                if(it_is_x) {
-                    thr <- loading_ps_file()$thresholds[[name_x]]
-                    thr <- thr[which(thr > range_x[1] & thr < range_x[2])]
-                    nesh <- meshgrid(sort(c(seq(range_x[1],range_x[2],length.out = num-length(thr)),thr)),
-                                     seq(range_y[1],range_y[2],length.out = num))
-                } else {
+                dim_indices <- letters[-which(letters %in% c("x","y"))]
+                if(!it_is_x) {
+                    input_params <- paste0("list(",name_x,"=x")
+                    
                     thr <- loading_ps_file()$thresholds[[name_y]]
-                    thr <- thr[which(thr > range_y[1] & thr < range_y[2])]
-                    nesh <- meshgrid(seq(range_x[1],range_x[2],length.out = num),
-                                     sort(c(seq(range_y[1],range_y[2],length.out = num-length(thr)),thr)))
+                    thr <- sort(unique(c(range_y, thr[which(thr > range_y[1] & thr < range_y[2])])))
+                    nesh <- meshgrid(seq(range_x[1],range_x[2],length.out = num), thr)
+                    
+                    dt <- data.table(x1=unlist(as.list(nesh$X[1:(length(thr)-1),1:(num-1)])),x2=unlist(as.list(nesh$X[2:length(thr),2:num])),
+                                     y1=unlist(as.list(nesh$Y[1:(length(thr)-1),1:(num-1)])),y2=unlist(as.list(nesh$Y[2:length(thr),2:num])))
+                } else {
+                    input_params <- paste0("list(",name_y,"=y")
+                    
+                    thr <- loading_ps_file()$thresholds[[name_x]]
+                    thr <- sort(unique(c(range_x, thr[which(thr > range_x[1] & thr < range_x[2])])))
+                    nesh <- meshgrid(thr, seq(range_y[1],range_y[2],length.out = num))
+                    
+                    dt <- data.table(x1=unlist(as.list(nesh$X[1:(num-1),1:(length(thr)-1)])),x2=unlist(as.list(nesh$X[2:num,2:length(thr)])),
+                                     y1=unlist(as.list(nesh$Y[1:(num-1),1:(length(thr)-1)])),y2=unlist(as.list(nesh$Y[2:num,2:length(thr)])))
                 }
-                dt <- data.table(x1=unlist(as.list(nesh$X[1:(num-1),1:(num-1)])),x2=unlist(as.list(nesh$X[2:num,2:num])),
-                                 y1=unlist(as.list(nesh$Y[1:(num-1),1:(num-1)])),y2=unlist(as.list(nesh$Y[2:num,2:num])))
                 dt[,x:=x1+(x2-x1)*0.5]
                 dt[,y:=y1+(y2-y1)*0.5]
                 
-                uniq_x <- unique(ps[,.(x1,x2)])
-                uniq_y <- unique(ps[,.(y1,y2)])
-                if(nrow(dt) != 0) {
-                    # timing <- system.time({
-                    #     rang_x <- range(uniq_x)
-                    #     rang_y <- range(uniq_y)
-                    #     dt <- dt[x <= rang_x[2] & x >= rang_x[1] & y <= rang_y[2] & y >= rang_y[1] ]
-                    #     if(nrow(uniq_x) < nrow(uniq_y)) {    # merge over the axis which has less unique intervals: (x1,x2) or (y1,y2)
-                    #         setkey(ps,x1,x2)
-                    #         one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps, by.x=c("x","xe"),type="within")[y1<=y & y2>=y,.(cov=length(unique(param))),by=.(x,y)]
-                    #     } else {
-                    #         setkey(ps,y1,y2)
-                    #         one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps, by.x=c("y","ye"),type="within")[x1<=x & x2>=x,.(cov=length(unique(param))),by=.(x,y)]
-                    #     }
-                    #     dt <- merge(dt, one, by.x=c("x","y"), by.y=c("x","y"))
-                    #     rm(one)
-                    # })
-                    # print(timing)
-                    timing <- system.time({
-                        rang_x <- range(uniq_x)
-                        rang_y <- range(uniq_y)
-                        dt <- dt[x <= rang_x[2] & x >= rang_x[1] & y <= rang_y[2] & y >= rang_y[1] ]
-                        dt <- dt[ps,.(x1=x.x1,x2=x.x2,y1=x.y1,y2=x.y2,id=i.param),on=.(x>=x1,x<=x2,y>=y1,y<=y2),allow.cartesian=T,nomatch=0][,.(cov=length(unique(id))),by=.(x1,x2,y1,y2)]
-                    })
-                    print(timing)
-                    print(paste0("uniq cov: ",paste0(unique(dt$cov),collapse = ", ")))
-                } else print(paste0("dt is empty"))
+                for(p in 1:length(params)) {
+                    name <- params[p]
+                    if(!name %in% c(name_x,name_y)) {
+                        data <- seq(param_ranges()[[name]][1],param_ranges()[[name]][2],length.out = num)
+                        dt <- as.data.table(merge.default(dt, data.table(V1=data[1:(num-1)], V2=data[2:num]) ))
+                        dt[, V3 := V1+(V2-V1)*0.5 ]
+                        di <- dim_indices[p]
+                        setnames( dt, c("V1","V2","V3"), c(paste0(di,1),paste0(di,2),di) )
+                        input_params <- paste(input_params,paste0(name,"=",di),sep = ",")
+                    }
+                }
+                dt[,cov:=0]
+                dt[,id:=1:nrow(dt)]
+                input_params <- paste0(input_params,")")
                 
-                param_space$data[[plot_index]] <- dt
+                #### Layers !!!!!!!!!
+                ids <- dt$id    # all ids at first
+                states <- copy(satisfiable_states())
+                if(it_is_x) setnames(states,c(paste0("V",index_x*2-1),paste0("V",index_x*2)),c("x1","x2"))
+                else        setnames(states,c(paste0("V",index_y*2-1),paste0("V",index_y*2)),c("y1","y2"))
+                if(length(param_ss_clicked$point[[plot_index]]) == 0)    st_ids <- states$id     # all ids for states at first
+                else                                                     st_ids <- param_ss_clicked$point[[plot_index]]
+                for(x in 1:length(list_of_all_names)) {
+                    name <- list_of_all_names[[x]]
+                    if(!name %in% c(name_x,name_y) ) {
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
+                            if(name %in% variables) {
+                                x <- x-length(params)
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
+                                st_ids <- intersect(st_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, id])
+                            } else {
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                                di <- dim_indices[x]
+                                ids <- intersect(ids, dt[get(paste0(di,1)) <= sid & get(paste0(di,2)) >= sid, id])
+                            }
+                        }
+                    }
+                }
+                ps <- merge(merge(loading_ps_file()$param_space[(state+1) %in% st_ids & formula == chosen_ps_formulae_clean(), .(state=state+1,param=param+1)], 
+                                  ps[id %in% ids],by.x="param",by.y="id",allow.cartesian=T), states[id %in% st_ids],by.x="state",by.y="id")
+                # ps <- ps[id %in% unique(loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1]) ]
+                dt <- dt[id %in% ids ]
+                
+                time <- system.time(for(ex in ps$param) dt[,cov:=cov+ifelse(eval(parse(text=ps[param==ex,expr]))(eval(parse(text=input_params))),1,0)])
+                print(time)
+                
+                if(length(param_ss_clicked$point[[plot_index]]) != 0) {
+                    if(it_is_x) dt <- unique(merge(dt,(ps),by=c("x1","x2"))[cov.x>0,.(x1,x2,cov=max(.SD$cov.x)),by=.(state,y1,y2)])
+                    else        dt <- unique(merge(dt,(ps),by=c("y1","y2"))[cov.x>0,.(y1,y2,cov=max(.SD$cov.x)),by=.(state,x1,x2)])
+                }
+                # if(length(param_ss_clicked$point[[plot_index]]) != 0) {
+                #     if(it_is_x) dt <- merge(dt,(states[id %in% st_ids]),by=c("x1","x2"))[cov > 0]
+                #     else        dt <- merge(dt,(states[id %in% st_ids]),by=c("y1","y2"))[cov > 0]
+                # }
+                if(input$coverage_check) {
+                    # dt <- dt[cov > 0,.(cov=max(.SD$cov)),by=.(x1,x2,y1,y2)]
+                    param_space$data[[plot_index]] <- dt[cov > 0]
+                } else {
+                    dt[cov > 0, cov:=1]
+                    param_space$data[[plot_index]] <- dt[cov > 0]
+                }
+                
             } else {
-                param_space$data[[plot_index]] <- ps
+                # rectangular type of parameters
+                if(length(param_ss_clicked$point[[plot_index]]) == 0) {
+                    ps <- copy(satisfiable_param_space_for_formula())
+                } else {
+                    ps <- loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & 
+                                                            (state+1) %in% param_ss_clicked$point[[plot_index]],.(param=param+1,cov)]
+                    ps <- merge(loading_ps_file()$params, ps, by.x="id", by.y="param")
+                }
+                if(it_is_x) setnames(ps,c(paste0("V",index_y*2-1),paste0("V",index_y*2)),c("y1","y2"))
+                else        setnames(ps,c(paste0("V",index_x*2-1),paste0("V",index_x*2)),c("x1","x2"))
+                ps[, cov:=1]
+                
+                #### Layers !!!!!!!!!
+                ids <- ps$row_id            # all ids for params at first
+                states <- copy(satisfiable_states())
+                if(it_is_x) setnames(states,c(paste0("V",index_x*2-1),paste0("V",index_x*2)),c("x1","x2"))
+                else        setnames(states,c(paste0("V",index_y*2-1),paste0("V",index_y*2)),c("y1","y2"))
+                if(length(param_ss_clicked$point[[plot_index]]) == 0)    st_ids <- states$id     # all ids for states at first
+                else                                                     st_ids <- param_ss_clicked$point[[plot_index]]
+                for(x in 1:length(list_of_all_names)) {
+                    name <- list_of_all_names[[x]]
+                    if(!name %in% c(name_x,name_y) ) {
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
+                            if(name %in% variables) {
+                                x <- x-length(params)
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
+                                st_ids <- intersect(st_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, id])
+                            } else {
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                                ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, row_id])
+                            }
+                        }
+                        # if(name %in% params && length(param_space_clicked$point) >= plot_index && 
+                        #    !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]]))) {
+                        #     if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
+                        #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(input[[paste0("scale_slider_ps_",plot_index,"_",x)]],
+                        #                                                                      input[[paste0("scale_slider_ps_",plot_index,"_",x)]])
+                        #     } else {
+                        #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(param_ranges()[[params[[x]] ]])
+                        #     }
+                        # }
+                    } else {
+                        if(name == name_x) {
+                            if(it_is_x) st_ids <- intersect(st_ids, states[x1 < range_x[2] & x2 >= range_x[2] |
+                                                                           x1 <= range_x[1] & x2 > range_x[1] |
+                                                                           x1 >= range_x[1] & x2 <= range_x[2], id])
+                            else        ids <- intersect(ids, ps[x1 < range_x[2] & x2 >= range_x[2] |
+                                                                 x1 <= range_x[1] & x2 > range_x[1] |
+                                                                 x1 >= range_x[1] & x2 <= range_x[2], row_id])
+                        } else {
+                            if(it_is_x) ids <- intersect(ids, ps[y1 < range_y[2] & y2 >= range_y[2] |
+                                                                 y1 <= range_y[1] & y2 > range_y[1] |
+                                                                 y1 >= range_y[1] & y2 <= range_y[2], row_id])
+                            else        st_ids <- intersect(st_ids, states[y1 < range_y[2] & y2 >= range_y[2] |
+                                                                           y1 <= range_y[1] & y2 > range_y[1] |
+                                                                           y1 >= range_y[1] & y2 <= range_y[2], id])
+                        }
+                    }
+                }        # incremental intersection of ids in order to get right ids
+                ps <- merge(merge(loading_ps_file()$param_space[(state+1) %in% st_ids & formula == chosen_ps_formulae_clean(), .(state=state+1,param=param+1)], 
+                                  ps[row_id %in% ids],by.x="param",by.y="id",allow.cartesian=T), states[id %in% st_ids],by.x="state",by.y="id")
+                # param_space_clicked$data[[plot_index]] <- copy(ps[row_id %in% ids])
+                
+                if(input$coverage_check && nrow(ps) != 0) {
+                    num <- input$density_coeficient
+                    if(it_is_x) {
+                        thr <- loading_ps_file()$thresholds[[name_x]]
+                        thr <- thr[which(thr > range_x[1] & thr < range_x[2])]
+                        nesh <- meshgrid(sort(c(seq(range_x[1],range_x[2],length.out = num-length(thr)),thr)),
+                                         seq(range_y[1],range_y[2],length.out = num))
+                    } else {
+                        thr <- loading_ps_file()$thresholds[[name_y]]
+                        thr <- thr[which(thr > range_y[1] & thr < range_y[2])]
+                        nesh <- meshgrid(seq(range_x[1],range_x[2],length.out = num),
+                                         sort(c(seq(range_y[1],range_y[2],length.out = num-length(thr)),thr)))
+                    }
+                    dt <- data.table(x1=unlist(as.list(nesh$X[1:(num-1),1:(num-1)])),x2=unlist(as.list(nesh$X[2:num,2:num])),
+                                     y1=unlist(as.list(nesh$Y[1:(num-1),1:(num-1)])),y2=unlist(as.list(nesh$Y[2:num,2:num])))
+                    dt[,x:=x1+(x2-x1)*0.5]
+                    dt[,y:=y1+(y2-y1)*0.5]
+                    
+                    uniq_x <- unique(ps[,.(x1,x2)])
+                    uniq_y <- unique(ps[,.(y1,y2)])
+                    if(nrow(dt) != 0) {
+                        # timing <- system.time({
+                        #     rang_x <- range(uniq_x)
+                        #     rang_y <- range(uniq_y)
+                        #     dt <- dt[x <= rang_x[2] & x >= rang_x[1] & y <= rang_y[2] & y >= rang_y[1] ]
+                        #     if(nrow(uniq_x) < nrow(uniq_y)) {    # merge over the axis which has less unique intervals: (x1,x2) or (y1,y2)
+                        #         setkey(ps,x1,x2)
+                        #         one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps, by.x=c("x","xe"),type="within")[y1<=y & y2>=y,.(cov=length(unique(param))),by=.(x,y)]
+                        #     } else {
+                        #         setkey(ps,y1,y2)
+                        #         one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps, by.x=c("y","ye"),type="within")[x1<=x & x2>=x,.(cov=length(unique(param))),by=.(x,y)]
+                        #     }
+                        #     dt <- merge(dt, one, by.x=c("x","y"), by.y=c("x","y"))
+                        #     rm(one)
+                        # })
+                        # print(timing)
+                        timing <- system.time({
+                            rang_x <- range(uniq_x)
+                            rang_y <- range(uniq_y)
+                            dt <- dt[x <= rang_x[2] & x >= rang_x[1] & y <= rang_y[2] & y >= rang_y[1] ]
+                            dt <- dt[ps,.(x1=x.x1,x2=x.x2,y1=x.y1,y2=x.y2,id=i.param),on=.(x>=x1,x<=x2,y>=y1,y<=y2),allow.cartesian=T,nomatch=0][,.(cov=length(unique(id))),by=.(x1,x2,y1,y2)]
+                        })
+                        print(timing)
+                        print(paste0("uniq cov: ",paste0(unique(dt$cov),collapse = ", ")))
+                    } else print(paste0("dt is empty"))
+                    
+                    param_space$data[[plot_index]] <- dt
+                } else {
+                    param_space$data[[plot_index]] <- ps
+                }
             }
         }
         plot(full_range_x, full_range_y, type="n", xlab=name_x, ylab=name_y, xaxs="i", yaxs="i",
@@ -2719,17 +2855,8 @@ draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
         
         ps <- param_space$data[[plot_index]]
         if(nrow(ps) > 0) {
-            # TODO: implement smt ratios by polygon() function
-            if(!is.null(loading_ps_file()$ratios)) {
-                rs <- loading_ps_file()$ratios[id %in% ids]
-                rs_id <- 0
-                for(i in 1:min(index_x,index_y)) for(j in (i+1):max(index_x,index_y)) rs_id <- 1 + rs_id
-                setnames(rs,c(paste0("V",rs_id*2-1),paste0("V",rs_id*2)),c("r1","r2"))
-                # rs[,.(r1,r2)]
-            } else {
-                range_cov <- range(ps$cov)
-                ps[,rect(x1, y1, x2, y2, col=rgb(0,0.5,0,alpha = (cov/range_cov[2])*ifelse(input$coverage_check, grey_shade(), 1)), border=NA)]
-            }
+            range_cov <- range(ps$cov)
+            ps[,rect(x1, y1, x2, y2, col=rgb(0,0.5,0,alpha = (cov/range_cov[2])*ifelse(input$coverage_check, grey_shade(), 1)), border=NA)]
         }
         ##======= draw point due to click inside a plot =========================
         if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]])) ) {
@@ -2781,98 +2908,172 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
         # check for any change in globals for particular plot
         if(is.na(param_space$globals[[plot_index]]) || !identical(param_space$globals[[plot_index]],checkpoint) ) {
             
-            if(length(param_ss_clicked$point[[plot_index]]) == 0) {
-                ps <- copy(satisfiable_param_space_for_formula())
-            } else {
-                ps <- loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & 
-                                                          (state+1) %in% param_ss_clicked$point[[plot_index]],.(param=param+1,cov)]
-                ps <- merge(loading_ps_file()$params, ps, by.x="id", by.y="param")
-            }
-            suppressWarnings(setnames(ps,c(paste0("V",index_x*2-1),paste0("V",index_x*2)),c("x1","x2")))
-            suppressWarnings(setnames(ps,c(paste0("V",index_y*2-1),paste0("V",index_y*2)),c("y1","y2")))
-            ps[, cov:=1 ]
-            
-            #### Layers !!!!!!!!!
-            ids <- ps$row_id    # all ids at first
-            states <- copy(satisfiable_states())
-            if(length(param_ss_clicked$point[[plot_index]]) == 0)    st_ids <- states$id     # all ids for states at first
-            else                                                     st_ids <- param_ss_clicked$point[[plot_index]]
-            for(x in 1:length(list_of_all_names)) {
-                name <- list_of_all_names[[x]]
-                if(!name %in% c(name_x,name_y) ) {
-                    if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
-                        if(name %in% variables) {
-                            x <- x-length(params)
-                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
-                            st_ids <- intersect(st_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, id])
-                        } else {
-                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
-                            ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, row_id])
-                        }
-                    }
-                    # if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]]))) {
-                    #     if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
-                    #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(input[[paste0("scale_slider_ps_",plot_index,"_",x)]],
-                    #                                                                      input[[paste0("scale_slider_ps_",plot_index,"_",x)]])
-                    #     } else {
-                    #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(param_ranges()[[params[[x]] ]])
-                    #     }
-                    # }
+            if(loading_ps_file()$type == "smt") {
+                # symbolic type of parameters
+                if(length(param_ss_clicked$point[[plot_index]]) == 0) {
+                    ps <- copy(satisfiable_param_space_for_formula())
                 } else {
-                    if(name == name_x) {
-                        ids <- intersect(ids, ps[x1 < range_x[2] & x2 >= range_x[2] |
-                                                 x1 <= range_x[1] & x2 > range_x[1] |
-                                                 x1 >= range_x[1] & x2 <= range_x[2], row_id])
-                    } else {
-                        ids <- intersect(ids, ps[y1 < range_y[2] & y2 >= range_y[2] |
-                                                 y1 <= range_y[1] & y2 > range_y[1] |
-                                                 y1 >= range_y[1] & y2 <= range_y[2], row_id])
-                    }
+                    ps <- loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & 
+                                                            (state+1) %in% param_ss_clicked$point[[plot_index]],.(param=param+1,cov)]
+                    ps <- merge(loading_ps_file()$params, ps, by.x="id", by.y="param")
                 }
-            }        # incremental intersection of ids in order to get right ids
-            ps <- ps[row_id %in% ids & id %in% loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1 ] ]
-            # param_space_clicked$data[[plot_index]] <- copy(ps)
-            
-            if(input$coverage_check && nrow(ps) != 0) {
+                ps <- unique(ps)
+                setkey(ps,id)
                 num <- input$density_coeficient
+                dim_indices <- letters[-which(letters %in% c("x","y"))]
+                input_params <- paste0("list(",name_x,"=x,",name_y,"=y")
+                
                 nesh <- meshgrid(seq(range_x[1],range_x[2],length.out = num),
                                  seq(range_y[1],range_y[2],length.out = num))
                 dt <- data.table(x1=unlist(as.list(nesh$X[1:(num-1),1:(num-1)])),x2=unlist(as.list(nesh$X[2:num,2:num])),
                                  y1=unlist(as.list(nesh$Y[1:(num-1),1:(num-1)])),y2=unlist(as.list(nesh$Y[2:num,2:num])))
                 dt[,x:=x1+(x2-x1)*0.5]
                 dt[,y:=y1+(y2-y1)*0.5]
-    
-                if(nrow(dt) != 0) {
-                    uniq_x <- unique(ps[,.(x1,x2)])
-                    uniq_y <- unique(ps[,.(y1,y2)])
-                    # timing <- system.time({
-                    #     rang_x <- range(uniq_x)
-                    #     rang_y <- range(uniq_y)
-                    #     dt <- dt[x <= rang_x[2] & x >= rang_x[1] & y <= rang_y[2] & y >= rang_y[1] ]
-                    #     if(nrow(uniq_x) < nrow(uniq_y)) {    # merge over the axis which has less unique intervals: (x1,x2) or (y1,y2)
-                    #         setkey(ps,x1,x2)
-                    #         one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps,by.x = c("x","xe"),type="within")[y1<=y & y2>=y,.(cov=length(unique(id))),by=.(x,y)]
-                    #     } else {
-                    #         setkey(ps,y1,y2)
-                    #         one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps,by.x = c("y","ye"),type="within")[x1<=x & x2>=x,.(cov=length(unique(id))),by=.(x,y)]
-                    #     }
-                    #     dt <- merge(dt,one,by.x=c("x","y"),by.y=c("x","y"))
-                    #     rm(one)
-                    # })
-                    # print(timing)
-                    timing <- system.time({
-                        rang_x <- range(uniq_x)
-                        rang_y <- range(uniq_y)
-                        dt <- dt[x <= rang_x[2] & x >= rang_x[1] & y <= rang_y[2] & y >= rang_y[1] ]
-                        dt <- dt[ps,.(x1=x.x1,x2=x.x2,y1=x.y1,y2=x.y2,id=i.id),on=.(x>=x1,x<=x2,y>=y1,y<=y2),allow.cartesian=T,nomatch=0][,.(cov=length(unique(id))),by=.(x1,x2,y1,y2)]
-                    })
-                    print(timing)
-                    print(paste0("uniq cov: ",paste0(unique(dt$cov),collapse = ", ")))
-                } else print(paste0("dt is empty"))
-    
-                param_space$data[[plot_index]] <- dt
+                for(p in 1:length(params)) {
+                    name <- params[[p]]
+                    if(!name %in% c(name_x,name_y)) {
+                        data <- seq(param_ranges()[[name]][1],param_ranges()[[name]][2],length.out = num)
+                        dt <- as.data.table(merge.default(dt, data.table(V1=data[1:(num-1)], V2=data[2:num]) ))
+                        dt[, V3 := V1+(V2-V1)*0.5 ]
+                        di <- dim_indices[p]
+                        setnames( dt, c("V1","V2","V3"), c(paste0(di,1),paste0(di,2),di) )
+                        input_params <- paste(input_params,paste0(name,"=",di),sep = ",")
+                    }
+                }
+                dt[,cov:=0]
+                dt[,id:=1:nrow(dt)]
+                input_params <- paste0(input_params,")")
+                
+                #### Layers !!!!!!!!!
+                ids <- dt$id    # all ids at first
+                states <- copy(satisfiable_states())
+                if(length(param_ss_clicked$point[[plot_index]]) == 0)    st_ids <- states$id     # all ids for states at first
+                else                                                     st_ids <- param_ss_clicked$point[[plot_index]]
+                for(x in 1:length(list_of_all_names)) {
+                    name <- list_of_all_names[[x]]
+                    if(!name %in% c(name_x,name_y) ) {
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
+                            if(name %in% variables) {
+                                x <- x-length(params)
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
+                                st_ids <- intersect(st_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, id])
+                            } else {
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                                di <- dim_indices[x]
+                                ids <- intersect(ids, dt[get(paste0(di,1)) <= sid & get(paste0(di,2)) >= sid, id])
+                            }
+                        }
+                    }
+                }
+                ps <- ps[id %in% unique(loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1]) ]
+                dt <- dt[id %in% ids ]
+                
+                time <- system.time(for(ex in ps$id) dt[,cov:=cov+ifelse(eval(parse(text=ps[id==ex,expr]))(eval(parse(text=input_params))),1,0)])
+                print(time)
+                
+                if(input$coverage_check) {
+                    dt <- dt[cov > 0,.(cov=max(.SD$cov)),by=.(x1,x2,y1,y2)]
+                    param_space$data[[plot_index]] <- dt[cov > 0]
+                } else {
+                    dt[cov > 0, cov:=1]
+                    param_space$data[[plot_index]] <- dt[cov > 0]
+                }
+                
             } else {
-                param_space$data[[plot_index]] <- ps
+                # rectangular type of parameters
+                if(length(param_ss_clicked$point[[plot_index]]) == 0) {
+                    ps <- copy(satisfiable_param_space_for_formula())
+                } else {
+                    ps <- loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & 
+                                                              (state+1) %in% param_ss_clicked$point[[plot_index]],.(param=param+1,cov)]
+                    ps <- merge(loading_ps_file()$params, ps, by.x="id", by.y="param")
+                }
+                suppressWarnings(setnames(ps,c(paste0("V",index_x*2-1),paste0("V",index_x*2)),c("x1","x2")))
+                suppressWarnings(setnames(ps,c(paste0("V",index_y*2-1),paste0("V",index_y*2)),c("y1","y2")))
+                ps[, cov:=1 ]
+                
+                #### Layers !!!!!!!!!
+                ids <- ps$row_id    # all ids at first
+                states <- copy(satisfiable_states())
+                if(length(param_ss_clicked$point[[plot_index]]) == 0)    st_ids <- states$id     # all ids for states at first
+                else                                                     st_ids <- param_ss_clicked$point[[plot_index]]
+                for(x in 1:length(list_of_all_names)) {
+                    name <- list_of_all_names[[x]]
+                    if(!name %in% c(name_x,name_y) ) {
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
+                            if(name %in% variables) {
+                                x <- x-length(params)
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
+                                st_ids <- intersect(st_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, id])
+                            } else {
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                                ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, row_id])
+                            }
+                        }
+                        # if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]]))) {
+                        #     if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
+                        #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(input[[paste0("scale_slider_ps_",plot_index,"_",x)]],
+                        #                                                                      input[[paste0("scale_slider_ps_",plot_index,"_",x)]])
+                        #     } else {
+                        #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(param_ranges()[[params[[x]] ]])
+                        #     }
+                        # }
+                    } else {
+                        if(name == name_x) {
+                            ids <- intersect(ids, ps[x1 < range_x[2] & x2 >= range_x[2] |
+                                                     x1 <= range_x[1] & x2 > range_x[1] |
+                                                     x1 >= range_x[1] & x2 <= range_x[2], row_id])
+                        } else {
+                            ids <- intersect(ids, ps[y1 < range_y[2] & y2 >= range_y[2] |
+                                                     y1 <= range_y[1] & y2 > range_y[1] |
+                                                     y1 >= range_y[1] & y2 <= range_y[2], row_id])
+                        }
+                    }
+                }        # incremental intersection of ids in order to get right ids
+                ps <- ps[row_id %in% ids & id %in% loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1 ] ]
+                # param_space_clicked$data[[plot_index]] <- copy(ps)
+                
+                if(input$coverage_check && nrow(ps) != 0) {
+                    num <- input$density_coeficient
+                    nesh <- meshgrid(seq(range_x[1],range_x[2],length.out = num),
+                                     seq(range_y[1],range_y[2],length.out = num))
+                    dt <- data.table(x1=unlist(as.list(nesh$X[1:(num-1),1:(num-1)])),x2=unlist(as.list(nesh$X[2:num,2:num])),
+                                     y1=unlist(as.list(nesh$Y[1:(num-1),1:(num-1)])),y2=unlist(as.list(nesh$Y[2:num,2:num])))
+                    dt[,x:=x1+(x2-x1)*0.5]
+                    dt[,y:=y1+(y2-y1)*0.5]
+        
+                    if(nrow(dt) != 0) {
+                        uniq_x <- unique(ps[,.(x1,x2)])
+                        uniq_y <- unique(ps[,.(y1,y2)])
+                        # timing <- system.time({
+                        #     rang_x <- range(uniq_x)
+                        #     rang_y <- range(uniq_y)
+                        #     dt <- dt[x <= rang_x[2] & x >= rang_x[1] & y <= rang_y[2] & y >= rang_y[1] ]
+                        #     if(nrow(uniq_x) < nrow(uniq_y)) {    # merge over the axis which has less unique intervals: (x1,x2) or (y1,y2)
+                        #         setkey(ps,x1,x2)
+                        #         one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps,by.x = c("x","xe"),type="within")[y1<=y & y2>=y,.(cov=length(unique(id))),by=.(x,y)]
+                        #     } else {
+                        #         setkey(ps,y1,y2)
+                        #         one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps,by.x = c("y","ye"),type="within")[x1<=x & x2>=x,.(cov=length(unique(id))),by=.(x,y)]
+                        #     }
+                        #     dt <- merge(dt,one,by.x=c("x","y"),by.y=c("x","y"))
+                        #     rm(one)
+                        # })
+                        # print(timing)
+                        timing <- system.time({
+                            rang_x <- range(uniq_x)
+                            rang_y <- range(uniq_y)
+                            dt <- dt[x <= rang_x[2] & x >= rang_x[1] & y <= rang_y[2] & y >= rang_y[1] ]
+                            dt <- dt[ps,.(x1=x.x1,x2=x.x2,y1=x.y1,y2=x.y2,id=i.id),on=.(x>=x1,x<=x2,y>=y1,y<=y2),allow.cartesian=T,nomatch=0][,.(cov=length(unique(id))),by=.(x1,x2,y1,y2)]
+                        })
+                        print(timing)
+                        print(paste0("uniq cov: ",paste0(unique(dt$cov),collapse = ", ")))
+                    } else print(paste0("dt is empty"))
+        
+                    param_space$data[[plot_index]] <- dt
+                } else {
+                    param_space$data[[plot_index]] <- ps
+                }
             }
         }
         
@@ -2882,17 +3083,8 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
         ps <- param_space$data[[plot_index]]
 
         if(nrow(ps) != 0) {
-            # TODO: implement smt ratios by polygon() function
-            if(!is.null(loading_ps_file()$ratios)) {
-                rs <- loading_ps_file()$ratios[id %in% ids]
-                rs_id <- 0
-                for(i in 1:min(index_x,index_y)) for(j in (i+1):max(index_x,index_y)) rs_id <- 1 + rs_id
-                setnames(rs,c(paste0("V",rs_id*2-1),paste0("V",rs_id*2)),c("r1","r2"))
-                # rs[,.(r1,r2)]
-            } else {
-                range_cov <- range(ps$cov)
-                ps[,rect(x1, y1, x2, y2, col=rgb(0,0.5,0,alpha = (cov/range_cov[2])*ifelse(input$coverage_check, grey_shade(), 1)), border=NA)]
-            }
+            range_cov <- range(ps$cov)
+            ps[,rect(x1, y1, x2, y2, col=rgb(0,0.5,0,alpha = (cov/range_cov[2])*ifelse(input$coverage_check, grey_shade(), 1)), border=NA)]
         }
 
         ##======= draw point due to click inside a plot =========================
@@ -2939,87 +3131,158 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
         # check for any change in globals for particular plot
         if(is.na(param_space$globals[[plot_index]]) || !identical(param_space$globals[[plot_index]],checkpoint) ) {
             
-            if(length(param_ss_clicked$point[[plot_index]]) == 0) {
-                ps <- copy(satisfiable_param_space_for_formula())
-            } else {
-                ps <- loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & 
-                                                        (state+1) %in% param_ss_clicked$point[[plot_index]],.(param=param+1,cov)]
-                ps <- merge(loading_ps_file()$params, ps, by.x="id", by.y="param")
-            }
-            setnames(ps,c(paste0("V",index_x*2-1),paste0("V",index_x*2)),c("x1","x2"))
-            ps[,cov:=1]
-            
-            #### Layers !!!!!!!!!
-            ids <- ps$row_id    # all ids at first
-            states <- copy(satisfiable_states())
-            if(length(param_ss_clicked$point[[plot_index]]) == 0)    st_ids <- states$id     # all ids for states at first
-            else                                                     st_ids <- param_ss_clicked$point[[plot_index]]
-            for(x in 1:length(list_of_all_names)) {
-                name <- list_of_all_names[[x]]
-                if(!name %in% name_x ) {
-                    if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
-                        if(name %in% variables) {
-                            x <- x-length(params)
-                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
-                            st_ids <- intersect(st_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, id])
-                        } else {
-                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
-                            ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, row_id])
-                        }
-                    }
-                    # else {
-                    #     sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
-                    #     ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid[1] & get(paste0("V",x*2)) > sid[1] |
-                    #                              get(paste0("V",x*2-1)) >= sid[1] & get(paste0("V",x*2)) <= sid[2] |
-                    #                              get(paste0("V",x*2-1)) < sid[2] & get(paste0("V",x*2)) >= sid[2], row_id])
-                    # }
-                    
-                    # if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]]))) {
-                    #     if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
-                    #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(input[[paste0("scale_slider_ps_",plot_index,"_",x)]],
-                    #                                                                      input[[paste0("scale_slider_ps_",plot_index,"_",x)]])
-                    #     } else {
-                    #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(param_ranges()[[params[[x]] ]])
-                    #     }
-                    # }
+            if(loading_ps_file()$type == "smt") {
+                # symbolic type of parameters
+                if(length(param_ss_clicked$point[[plot_index]]) == 0) {
+                    ps <- copy(satisfiable_param_space_for_formula())
                 } else {
-                    ids <- intersect(ids, ps[x1 < range_x[2] & x2 >= range_x[2] |
-                                             x1 <= range_x[1] & x2 > range_x[1] |
-                                             x1 >= range_x[1] & x2 <= range_x[2], row_id])
+                    ps <- loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & 
+                                                            (state+1) %in% param_ss_clicked$point[[plot_index]],.(param=param+1,cov)]
+                    ps <- merge(loading_ps_file()$params, ps, by.x="id", by.y="param")
                 }
-            }        # incremental intersection of ids in order to get right ids
-            ps <- ps[row_id %in% ids & id %in% loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1 ] ]
-            # param_space_clicked$data[[plot_index]] <- copy(ps)
-            
-            if(input$coverage_check && nrow(ps) != 0) {
+                ps <- unique(ps)
+                setkey(ps,id)
                 num <- input$density_coeficient
+                dim_indices <- letters[-which(letters %in% c("x"))]
+                input_params <- paste0("list(",name_x,"=x")
+                
                 dt <- data.table(x1=seq(range_x[1],range_x[2],length.out = num)[1:(num-1)],
                                  x2=seq(range_x[1],range_x[2],length.out = num)[2:num])
                 dt[,x:=x1+(x2-x1)*0.5]
+                for(p in 1:length(params)) {
+                    name <- params[p]
+                    if(!name %in% c(name_x)) {
+                        data <- seq(param_ranges()[[name]][1],param_ranges()[[name]][2],length.out = num)
+                        dt <- as.data.table(merge.default(dt, data.table(V1=data[1:(num-1)], V2=data[2:num]) ))
+                        dt[, V3 := V1+(V2-V1)*0.5 ]
+                        di <- dim_indices[p]
+                        setnames( dt, c("V1","V2","V3"), c(paste0(di,1),paste0(di,2),di) )
+                        input_params <- paste(input_params,paste0(name,"=",di),sep = ",")
+                    }
+                }
+                dt[,cov:=0]
+                dt[,id:=1:nrow(dt)]
+                input_params <- paste0(input_params,")")
                 
-                if(nrow(dt) != 0) {
-                    uniq_x <- unique(ps[,.(x1,x2)])
-                    # timing <- system.time({
-                    #     rang_x <- range(uniq_x)
-                    #     dt <- dt[x <= rang_x[2] & x >= rang_x[1] ]
-                    #     setkey(ps,x1,x2)
-                    #     one <- foverlaps(dt[,.(x=x,xe=x)],ps,by.x = c("x","xe"),type="within")[,.(cov=length(unique(id))),by=.(x)]
-                    #     dt <- merge(dt,one,by.x=c("x"),by.y=c("x"))
-                    #     rm(one)
-                    # })
-                    # print(timing)
-                    timing <- system.time({
-                        rang_x <- range(uniq_x)
-                        dt <- dt[x <= rang_x[2] & x >= rang_x[1] ]
-                        dt <- dt[ps,.(x1=x.x1,x2=x.x2,id=i.id),on=.(x>=x1,x<=x2),allow.cartesian=T,nomatch=0][,.(cov=length(unique(id))),by=.(x1,x2)]
-                    })
-                    print(timing)
-                    print(paste0("uniq cov: ",paste0(unique(dt$cov),collapse = ", ")))
-                } else print(paste0("dt is empty"))
+                #### Layers !!!!!!!!!
+                ids <- dt$id    # all ids at first
+                states <- copy(satisfiable_states())
+                if(length(param_ss_clicked$point[[plot_index]]) == 0)    st_ids <- states$id     # all ids for states at first
+                else                                                     st_ids <- param_ss_clicked$point[[plot_index]]
+                for(x in 1:length(list_of_all_names)) {
+                    name <- list_of_all_names[[x]]
+                    if(!name %in% c(name_x) ) {
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
+                            if(name %in% variables) {
+                                x <- x-length(params)
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
+                                st_ids <- intersect(st_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, id])
+                            } else {
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                                di <- dim_indices[x]
+                                ids <- intersect(ids, dt[get(paste0(di,1)) <= sid & get(paste0(di,2)) >= sid, id])
+                            }
+                        }
+                    }
+                }
+                ps <- ps[id %in% unique(loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1]) ]
+                dt <- dt[id %in% ids ]
                 
-                param_space$data[[plot_index]] <- dt
+                time <- system.time(for(ex in ps$id) dt[,cov:=cov+ifelse(eval(parse(text=ps[id==ex,expr]))(eval(parse(text=input_params))),1,0)])
+                print(time)
+                
+                if(input$coverage_check) {
+                    dt <- dt[cov > 0,.(cov=max(.SD$cov)),by=.(x1,x2)]
+                    param_space$data[[plot_index]] <- dt[cov > 0]
+                } else {
+                    dt[cov > 0, cov:=1]
+                    param_space$data[[plot_index]] <- dt[cov > 0]
+                }
+                
             } else {
-                param_space$data[[plot_index]] <- ps
+                # rectangular type of parameters
+                if(length(param_ss_clicked$point[[plot_index]]) == 0) {
+                    ps <- copy(satisfiable_param_space_for_formula())
+                } else {
+                    ps <- loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & 
+                                                            (state+1) %in% param_ss_clicked$point[[plot_index]],.(param=param+1,cov)]
+                    ps <- merge(loading_ps_file()$params, ps, by.x="id", by.y="param")
+                }
+                setnames(ps,c(paste0("V",index_x*2-1),paste0("V",index_x*2)),c("x1","x2"))
+                ps[,cov:=1]
+                
+                #### Layers !!!!!!!!!
+                ids <- ps$row_id    # all ids at first
+                states <- copy(satisfiable_states())
+                if(length(param_ss_clicked$point[[plot_index]]) == 0)    st_ids <- states$id     # all ids for states at first
+                else                                                     st_ids <- param_ss_clicked$point[[plot_index]]
+                for(x in 1:length(list_of_all_names)) {
+                    name <- list_of_all_names[[x]]
+                    if(!name %in% name_x ) {
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
+                            if(name %in% variables) {
+                                x <- x-length(params)
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
+                                st_ids <- intersect(st_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, id])
+                            } else {
+                                sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                                ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, row_id])
+                            }
+                        }
+                        # else {
+                        #     sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                        #     ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid[1] & get(paste0("V",x*2)) > sid[1] |
+                        #                              get(paste0("V",x*2-1)) >= sid[1] & get(paste0("V",x*2)) <= sid[2] |
+                        #                              get(paste0("V",x*2-1)) < sid[2] & get(paste0("V",x*2)) >= sid[2], row_id])
+                        # }
+                        
+                        # if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]]))) {
+                        #     if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
+                        #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(input[[paste0("scale_slider_ps_",plot_index,"_",x)]],
+                        #                                                                      input[[paste0("scale_slider_ps_",plot_index,"_",x)]])
+                        #     } else {
+                        #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(param_ranges()[[params[[x]] ]])
+                        #     }
+                        # }
+                    } else {
+                        ids <- intersect(ids, ps[x1 < range_x[2] & x2 >= range_x[2] |
+                                                 x1 <= range_x[1] & x2 > range_x[1] |
+                                                 x1 >= range_x[1] & x2 <= range_x[2], row_id])
+                    }
+                }        # incremental intersection of ids in order to get right ids
+                ps <- ps[row_id %in% ids & id %in% loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1 ] ]
+                # param_space_clicked$data[[plot_index]] <- copy(ps)
+                
+                if(input$coverage_check && nrow(ps) != 0) {
+                    num <- input$density_coeficient
+                    dt <- data.table(x1=seq(range_x[1],range_x[2],length.out = num)[1:(num-1)],
+                                     x2=seq(range_x[1],range_x[2],length.out = num)[2:num])
+                    dt[,x:=x1+(x2-x1)*0.5]
+                    
+                    if(nrow(dt) != 0) {
+                        uniq_x <- unique(ps[,.(x1,x2)])
+                        # timing <- system.time({
+                        #     rang_x <- range(uniq_x)
+                        #     dt <- dt[x <= rang_x[2] & x >= rang_x[1] ]
+                        #     setkey(ps,x1,x2)
+                        #     one <- foverlaps(dt[,.(x=x,xe=x)],ps,by.x = c("x","xe"),type="within")[,.(cov=length(unique(id))),by=.(x)]
+                        #     dt <- merge(dt,one,by.x=c("x"),by.y=c("x"))
+                        #     rm(one)
+                        # })
+                        # print(timing)
+                        timing <- system.time({
+                            rang_x <- range(uniq_x)
+                            dt <- dt[x <= rang_x[2] & x >= rang_x[1] ]
+                            dt <- dt[ps,.(x1=x.x1,x2=x.x2,id=i.id),on=.(x>=x1,x<=x2),allow.cartesian=T,nomatch=0][,.(cov=length(unique(id))),by=.(x1,x2)]
+                        })
+                        print(timing)
+                        print(paste0("uniq cov: ",paste0(unique(dt$cov),collapse = ", ")))
+                    } else print(paste0("dt is empty"))
+                    
+                    param_space$data[[plot_index]] <- dt
+                } else {
+                    param_space$data[[plot_index]] <- ps
+                }
             }
         }     
         plot(full_range_x, full_range_y, type="n", xlab=name_x, ylab="", yaxt="n", xaxs="i", yaxs="i",
@@ -3351,22 +3614,27 @@ satisfiable_param_space_for_formula <- reactive({
     } else return(NULL)
 })
 
-param_ranges_sat_for_formula <- reactive({
-    if(!is.null(loading_ps_file()) && nrow(loading_ps_file()$param_space) != 0) {
-        n <- length(loading_ps_file()$param_names)
-        sat <- satisfiable_param_space_for_formula()
-        list <- lapply(1:n,function(i) sort(unique(unlist(sat[,.(get(paste0("V",i*2-1)),get(paste0("V",i*2)))]))))
-        names(list) <- loading_ps_file()$param_names
-        return(list)
-    } else return(NULL)
-})
+# param_ranges_sat_for_formula <- reactive({
+#     if(!is.null(loading_ps_file()) && nrow(loading_ps_file()$param_space) != 0) {
+#         n <- length(loading_ps_file()$param_names)
+#         sat <- satisfiable_param_space_for_formula()
+#         list <- lapply(1:n,function(i) sort(unique(unlist(sat[,.(get(paste0("V",i*2-1)),get(paste0("V",i*2)))]))))
+#         names(list) <- loading_ps_file()$param_names
+#         return(list)
+#     } else return(NULL)
+# })
 
 param_ranges <- reactive({
     if(!is.null(loading_ps_file()) && nrow(loading_ps_file()$params) != 0) {
-        n <- length(loading_ps_file()$param_names)
-        list <- lapply(1:n,function(i) range(loading_ps_file()$params[,.(get(paste0("V",i*2-1)),get(paste0("V",i*2)))]))
-        names(list) <- loading_ps_file()$param_names
-        return(list)
+        # if(loading_ps_file()$type == "smt") {
+        #     return(list(deg_x=c(0,1),k1=c(0,2)))    # TODO: temporary
+        # } else {
+        #     n <- length(loading_ps_file()$param_names)
+        #     list <- lapply(1:n,function(i) range(loading_ps_file()$params[,.(get(paste0("V",i*2-1)),get(paste0("V",i*2)))]))
+        #     names(list) <- loading_ps_file()$param_names
+        #     return(list)
+        # }
+        return(loading_ps_file()$param_bounds)
     } else return(NULL)
 })
 

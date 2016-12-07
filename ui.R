@@ -229,8 +229,8 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
                 condition = "input.coverage_check == true",
                 tags$div(title="Scaling factor in the range <0,1> for shade of colour representing parameters.",
                          sliderInput("color_alpha_coeficient","grey shade degree",min=0,max=1,value=0.9,step=0.01,ticks=F)),
-                tags$div(title="Scaling factor in the range <10,100> for density of shown rectangles in parameter space.",
-                         sliderInput("density_coeficient","density",min=10,max=100,value=50,step=1,ticks=F))
+                tags$div(title="Scaling factor in the range <10,150> for density of shown rectangles in parameter space.",
+                         sliderInput("density_coeficient","density",min=10,max=150,value=50,step=1,ticks=F))
             ),
             uiOutput("ps_zoom_sliders")
         ),
@@ -241,7 +241,7 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
                uiOutput("param_selector"),
                tags$div(title="Button will add new layer of plots for parameter space and corresponding transition-state space as soon as some file is loaded. 
                                     Then you will be able to play with it.",
-                    bsButton("add_param_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=T))
+                    bsButton("add_param_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=F))
         )
     ),
     tags$hr(),
