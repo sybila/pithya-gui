@@ -1,8 +1,3 @@
-################################################################################
-# This is an example of intersting properties for model of 2D repressilator    #
-# Warning: numeric thresholds used in properties must be defined also in model #
-################################################################################
-
 high = y > 8
 low  = y < 4
 
