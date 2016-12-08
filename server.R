@@ -1996,8 +1996,8 @@ observe({
     if(!is.null(loading_ps_file())) {
         for(i in param_update()) {
             if(!is.null(input[[paste0("param_selector_x_",i)]]) && input[[paste0("param_selector_x_",i)]] != empty_sign &&
-                   !is.null(input[[paste0("param_selector_y_",i)]]) && input[[paste0("param_selector_y_",i)]] != empty_sign &&
-                   (!input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || !input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names))
+                   !is.null(input[[paste0("param_selector_y_",i)]]) && input[[paste0("param_selector_y_",i)]] != empty_sign )
+               # && (!input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || !input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names))
 #                   (length(loading_ps_file()$param_names) == 1 || !is.null(input[[paste0("param_selector_y_",i)]]) && input[[paste0("param_selector_y_",i)]] != empty_sign))
                 next #updateCheckboxInput(session,paste0("hide_ps_",i),value=F)
             else
@@ -2010,8 +2010,8 @@ observe({
     if(!is.null(loading_ps_file())) {
         i <- param_update()[length(param_update())]
         if(!is.null(input[[paste0("param_selector_x_",i)]]) && input[[paste0("param_selector_x_",i)]] != empty_sign &&
-               !is.null(input[[paste0("param_selector_y_",i)]]) && input[[paste0("param_selector_y_",i)]] != empty_sign &&
-               (!input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || !input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names))
+               !is.null(input[[paste0("param_selector_y_",i)]]) && input[[paste0("param_selector_y_",i)]] != empty_sign )
+           # && (!input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || !input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names))
 #           (length(loading_ps_file()$param_names) == 1 || !is.null(input[[paste0("param_selector_y_",i)]]) && input[[paste0("param_selector_y_",i)]] != empty_sign))
             updateCheckboxInput(session,paste0("hide_ps_",i),value=F)
     }
@@ -2097,6 +2097,9 @@ output$param_space_plots <- renderUI({
         list_of_all_names <- c(loading_ps_file()$param_names, loading_ps_file()$var_names)
         list_of_param_names <- loading_ps_file()$param_names
         one_line <- lapply(visible_ps_plots(), function(i) {
+            if(input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names && input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names)
+                h3("This feature is designed for exploring of paramaters so, please, choose at least one of them")
+            else
             fluidRow(
                 column(2,
                        #actionButton(paste0("apply_plot_ps_",i),"Apply to all"),
