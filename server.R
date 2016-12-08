@@ -2098,7 +2098,7 @@ output$param_space_plots <- renderUI({
         list_of_param_names <- loading_ps_file()$param_names
         one_line <- lapply(visible_ps_plots(), function(i) {
             if(input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names && input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names)
-                h3("This feature is designed for exploring of paramaters so, please, choose at least one of them")
+                h3("Please select at least one parameter.")
             else
             fluidRow(
                 column(2,
