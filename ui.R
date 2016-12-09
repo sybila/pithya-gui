@@ -167,13 +167,13 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
     fluidPage(
         theme = "simplex.css",
         fluidRow(
-            column(2,
-                   tags$div(title="",
-                            bsButton("model_prev","previous",disabled=T)
-                   ),
-                   tags$div(title="",
-                            bsButton("model_next","next",disabled=T)
-                   )
+            column(2
+                   # ,tags$div(title="",
+                   #          bsButton("model_prev","previous",disabled=T)
+                   # ),
+                   # tags$div(title="",
+                   #          bsButton("model_next","next",disabled=T)
+                   # )
             ),
             column(4,
                    fluidRow(
@@ -221,12 +221,12 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
     fluidPage(
         column(2,
                
-               tags$div(title="",
-                        bsButton("result_prev","previous",disabled=T)
-               ),
-               tags$div(title="",
-                        bsButton("result_next","next",disabled=T)
-               ),
+               # tags$div(title="",
+               #          bsButton("result_prev","previous",disabled=T)
+               # ),
+               # tags$div(title="",
+               #          bsButton("result_next","next",disabled=T)
+               # ),
             tags$div(title="Select input parameter space (with '.ps.json' extension) for further analysis.",
                 fileInput("ps_file","choose result '.json' file"),accept=".json"),
             tags$div(title="This button saves model checking results.",
