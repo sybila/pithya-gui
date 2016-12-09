@@ -59,7 +59,7 @@ Hillp <- function(s,t,n=1,a=0,b=1) (s^n)/(s^n + t^n)
 #     )
 # }
 Approx <- function(m,l) {
-    apply(as.matrix(m),c(1,2),function(s) {
+    as.vector(apply(as.matrix(m),c(1,2),function(s) {
         if(s <= l[[1]][1]) return(l[[1]][2])
         if(s >= l[[length(l)]][1]) return(l[[length(l)]][2])
         for(i in 2:length(l)) {
@@ -67,7 +67,7 @@ Approx <- function(m,l) {
             b<-l[[i]]
             if(s >= a[1] && s <= b[1]) return(a[2]+(s-a[1])/(b[1]-a[1])*(b[2]-a[2]))
         }
-    })
+    }))
 }
 # Approx <- function(m,l) {
 #     dt <- data.table(t(sapply(l,function(x)as.numeric(c(x[1],x[2])))))

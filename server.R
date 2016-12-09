@@ -1460,34 +1460,65 @@ draw_state_space_new_2 <- function(name_x, name_y, plot_index, boundaries) {
         # check for any change in globals for particular plot
         if(is.na(transition_state_space$globals[[plot_index]]) || !identical(transition_state_space$globals[[plot_index]],checkpoint)) {
             timing <- system.time(withProgress({
+                
+                dim_indices <- letters[-which(letters %in% c("x","y"))]
+                input_params <- paste0(set_abst_input_params(),paste0(name_x,"=dt$x,"),paste0(name_y,"=dt$y"))
+                
                 mesh <- meshgrid(thres_x,thres_y)
-                
-                input_params <- set_abst_input_params()
+                dt <- data.table(c(mesh$X)) # x-coordinates of vertices
+                setnames(dt,"V1","x")       
+                dt[,y:=c(mesh$Y)]           # y-coordinates of vertices
                 for(i in 1:length(variables)) {
-                    if(variables[[i]] == name_x || variables[[i]] == name_y) {
-                        if(variables[[i]] == name_x)  input_params <- paste0(input_params,variables[[i]],"=","mesh$X",",")
-                        else                                        input_params <- paste0(input_params,variables[[i]],"=","mesh$Y",",")
-                    } else input_params <- paste0(input_params,variables[[i]],"=",input[[paste0("scale_slider_vf_",plot_index,"_",i)]],",")
+                    name <- variables[[i]]
+                    if(!name %in% c(name_x,name_y)) {
+                        data <- c(loading_ss_file()$thr[[name]][input[[paste0("scale_slider_ss_",plot_index,"_",i)]]  ],
+                                  loading_ss_file()$thr[[name]][input[[paste0("scale_slider_ss_",plot_index,"_",i)]]+1])
+                        dt <- as.data.table(merge.default(dt, data.table(V1=data) ))
+                        di <- dim_indices[i]
+                        setnames( dt, "V1", di)
+                        input_params <- paste(input_params,paste0(name,"=dt$",di),sep = ",")
+                    }
                 }
-                substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
-                
-                fx = eval(funcs_abst[[name_x]])(eval(parse(text=input_params)))
-                fy = eval(funcs_abst[[name_y]])(eval(parse(text=input_params)))
-                
+                input_params <- paste0(input_params,")")
                 incProgress(1/5)
                 
                 inds_x <- 1:length(thres_x)
                 inds_y <- 1:length(thres_y)
                 inds <- meshgrid(inds_x,inds_y)
-                
-                dt <- data.table(c(mesh$X)) # x-coordinates of vertices
-                setnames(dt,"V1","x")       
-                dt[,y:=c(mesh$Y)]           # y-coordinates of vertices
-                dt[,fx:=c(fx)]              # derivatives in x-dimension
-                dt[,fy:=c(fy)]              # derivatives in y-dimension
                 dt[,ix:=c(inds$X)]          # indices of thresholds in x-dimension
                 dt[,iy:=c(inds$Y)]          # indices of thresholds in y-dimension
                 dt[,id:=1:nrow(dt)]         # id of the record inside DT
+                
+                dt[,fx:=eval(funcs_abst[[name_x]])(eval(parse(text=input_params))) ]
+                dt[,fy:=eval(funcs_abst[[name_y]])(eval(parse(text=input_params))) ]
+                
+                ################
+                # mesh <- meshgrid(thres_x,thres_y)
+                # 
+                # input_params <- set_abst_input_params()
+                # for(i in 1:length(variables)) {
+                #     if(variables[[i]] == name_x || variables[[i]] == name_y) {
+                #         if(variables[[i]] == name_x)  input_params <- paste0(input_params,variables[[i]],"=","mesh$X",",")
+                #         else                                        input_params <- paste0(input_params,variables[[i]],"=","mesh$Y",",")
+                #     } else input_params <- paste0(input_params,variables[[i]],"=",loading_ss_file()$thr[[i]][input[[paste0("scale_slider_ss_",plot_index,"_",i)]] ],",")
+                # }
+                # substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
+                # 
+                # fx = eval(funcs_abst[[name_x]])(eval(parse(text=input_params)))
+                # fy = eval(funcs_abst[[name_y]])(eval(parse(text=input_params)))
+                # 
+                # incProgress(1/5)
+                # 
+                # 
+                # dt <- data.table(c(mesh$X)) # x-coordinates of vertices
+                # setnames(dt,"V1","x")       
+                # dt[,y:=c(mesh$Y)]           # y-coordinates of vertices
+                # dt[,fx:=c(fx)]              # derivatives in x-dimension
+                # dt[,fy:=c(fy)]              # derivatives in y-dimension
+                # dt[,ix:=c(inds$X)]          # indices of thresholds in x-dimension
+                # dt[,iy:=c(inds$Y)]          # indices of thresholds in y-dimension
+                # dt[,id:=1:nrow(dt)]         # id of the record inside DT
+                ##################
                 
                 incProgress(1/5)
                 
@@ -1867,7 +1898,7 @@ loading_ps_file <- reactive({
             
             # musi byt kontrola ci result file vobec nieco obsahuje !!!!
             
-            table <- rbindlist(lapply(file$results,function(x) as.data.table(x)))
+            table <- rbindlist(lapply(file$results,function(x) if(length(x$data)!=0) as.data.table(x))) # temporary measure: empty results are omitted
             setkeyv(table,"formula")
             # table[,state:=sapply(data,function(x)unlist(x$state))]
             # table[,param:=sapply(data,function(x)unlist(x$param))]
