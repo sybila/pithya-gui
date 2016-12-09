@@ -6,7 +6,7 @@ empty_sign <- " "
 range_granul <- 100
 zoom_granul <- 0.01
 transitions_line_type <- "solid" #"dashed" #"dotted"
-num_of_flow_points <- 400
+num_of_flow_points <- 500
 size_of_flow_points <- 3
 progressMaxLength <- 10
 hover_delay_limit <- 10
@@ -14,6 +14,7 @@ brush_delay_limit <- 700
 param_space_clicked_point <- list(type=4, color="blue", size=3, width=2)
 no_param_const <- 1
 rounding_in_hover <- 6
+rounding_in_flow <- 2
 
 positive_color <- "green" 
 #positive_color <- "darkgreen"
@@ -59,7 +60,7 @@ Hillp <- function(s,t,n=1,a=0,b=1) (s^n)/(s^n + t^n)
 #     )
 # }
 Approx <- function(m,l) {
-    apply(as.matrix(m),c(1,2),function(s) {
+    as.vector(apply(as.matrix(m),c(1,2),function(s) {
         if(s <= l[[1]][1]) return(l[[1]][2])
         if(s >= l[[length(l)]][1]) return(l[[length(l)]][2])
         for(i in 2:length(l)) {
@@ -67,7 +68,7 @@ Approx <- function(m,l) {
             b<-l[[i]]
             if(s >= a[1] && s <= b[1]) return(a[2]+(s-a[1])/(b[1]-a[1])*(b[2]-a[2]))
         }
-    })
+    }))
 }
 # Approx <- function(m,l) {
 #     dt <- data.table(t(sapply(l,function(x)as.numeric(c(x[1],x[2])))))

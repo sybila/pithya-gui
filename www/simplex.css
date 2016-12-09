@@ -6566,6 +6566,13 @@ label {
 	overflow-y: scroll;
 	overflow-x: scroll;
 }
+#progress_output {
+	max-height: 100px;
+	width: 100%;
+	overflow-y: scroll;
+/*	margin-right: 10px;
+	margin-left: 10px; */
+}
 
 /* this part is for loading spinning-like circle  */
 #plot-container {

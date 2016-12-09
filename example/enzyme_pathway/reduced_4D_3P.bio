@@ -1,0 +1,20 @@
+#####################################################################################
+# biodegradation of substrate SUB into product PROD via INT1 and INT2 intermediates # 
+#####################################################################################
+
+VARS: SUB, INT1, INT2, PROD 
+CONSTS: k_cat_SUB_INT1,1.05; k_K_INT1,0.751; k_cat_INT2,14.37; Km_SUB,1.79; Km_INT2,0.09
+#E1,0.01; E2,0.01; E3,0.01 
+PARAMS: E1,0,0.02 ; E2,0,0.02; E3,0,0.02
+
+EQ: SUB = -k_cat_SUB_INT1*E1*hillp(SUB,Km_SUB,1,0,1) 
+EQ: INT1 = k_cat_SUB_INT1*E1*hillp(SUB,Km_SUB,1,0,1) - k_K_INT1*E2*hillp(INT1,1,1,0,1) 
+EQ: INT2 = k_K_INT1*E2*hillp(INT1,1,1,0,1) - k_cat_INT2*E3*hillp(INT2,Km_INT2,1,0,1) 
+EQ: PROD = k_cat_INT2*E3*hillp(INT2,Km_INT2,1,0,1) 
+
+VAR_POINTS: SUB:500,5; INT1:500,5; INT2:500,5 
+
+THRES: SUB:  0, 0.01, 0.5, 1, 1.5, 1.9, 2 
+THRES: INT1:  0, 0.5, 1, 1.5, 2 
+THRES: INT2:  0, 0.5, 2 
+THRES: PROD:  0, 0.01, 0.25, 0.5, 0.75, 1, 1.5, 1.9, 2 

@@ -1,8 +1,11 @@
 if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
-require(parallel)
+if(!require(shinyBS,quietly = T)) {install.packages("shinyBS", dependencies=T,quiet = T); library(shinyBS,quietly = T)}
+require(parallel) # it is needed because of function for determination of available CPU cores
 #if(!require(shinythemes,quietly=T)) install.packages("shinythemes",quiet=T); library(shinythemes,quietly=T)
 #require(shiny)
 
+
+## LOOK AT SHINY.OPTIONS
 # customSlider javascript function for output threshold instead of index
 JS.custom <-
     "
@@ -28,9 +31,10 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 source("global.R")
 
 shinyUI(
-#     fluidPage(
-#     titlePanel("PITHYA - Parameter Investigation Tool with HYbrid Approach"),
-#     tags$hr(),
+    fluidPage(
+    # titlePanel("PITHYA - Parameter Investigation Tool with HYbrid Approach"),
+    titlePanel("PITHYA - Parameter Investigation Tool for HYbrid Analysis"),
+    tags$hr(),
     tabsetPanel(id = "dimensions",
                 
 tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
@@ -42,6 +46,7 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
             wellPanel(
                 fluidPage(
                     column(4,
+                        checkboxInput("advanced","advanced settings",F),
                         tags$div(title="Select input model (with '.bio' extension) for further analysis.",
                             fileInput("vf_file","choose '.bio' file",accept=".bio"))
                         # ,tags$div(title="Select input state space (with '.ss.json' extension) for further analysis.",
@@ -49,8 +54,8 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                     ),
                     column(4,
                            verticalLayout(
-                               tags$div(title="This button accepts all changes made in model editor so they could be passed on to further analysis.",
-                                        actionButton("accept_model_changes","accept changes in model",icon=icon("ok",lib = "glyphicon"))),
+                               # tags$div(title="This button accepts all changes made in model editor so they could be passed on to further analysis.",
+                               #          actionButton("accept_model_changes","check syntax of model",icon=icon("ok",lib = "glyphicon"))),
                                tags$div(title="This button resets all changes made up to last load or save of current file.",
                                         actionButton("reset_model","reset changes in model",icon=icon("remove",lib = "glyphicon"))),
                                tags$div(title="This button saves current state of model description.",
@@ -60,14 +65,17 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                            )
                     ),
                     column(4,
-                        wellPanel(
-                            tags$div(title="During The-PWA-approximation of special functions used inside the model new thresholds are generated and some of them could exceed explicit ones. By this checkbox you can tick off this do not be allowed.",
-                                checkboxInput("thresholds_cut","cut thresholds",F)),
-                            tags$div(title="Two versions of The-PWA-approximation are available. Slower one - more precise and computationally more demanding - and fast one - much faster but also less precise.",
-                                checkboxInput("fast_approximation","fast approximation",F)),
+                        # wellPanel(
+                            conditionalPanel(
+                                condition = "input.advanced == true",
+                                tags$div(title="During The-PWA-approximation of special functions used inside the model new thresholds are generated and some of them could exceed explicit ones. By this checkbox you can tick off this do not be allowed.",
+                                    checkboxInput("thresholds_cut","cut thresholds",F)),
+                                tags$div(title="Two versions of The-PWA-approximation are available. Slower one - more precise and computationally more demanding - and fast one - much faster but also less precise.",
+                                    checkboxInput("fast_approximation","fast approximation",F))
+                            ),
                             tags$div(title="",
-                                 actionButton("generate_abstraction","generate approximation"))
-                        )
+                                 bsButton("generate_abstraction","generate approximation",disabled=T))
+                        # )
                     )
                 )
             )
@@ -81,20 +89,24 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                                     fileInput("prop_file","choose '.ctl' file",accept=".ctl"))
                     ),
                     column(6,
-                           tags$div(title="This button accepts all changes made in editor so they could be passed on to further analysis.",
-                                    actionButton("accept_prop_changes","accept changes in properties",icon=icon("ok",lib = "glyphicon"))),
+                           # tags$div(title="This button accepts all changes made in editor so they could be passed on to further analysis.",
+                           #          actionButton("accept_prop_changes","check syntax of properties",icon=icon("ok",lib = "glyphicon"))),
                            tags$div(title="This button resets all changes made up to last load or save of current file.",
                                     actionButton("reset_prop","reset changes in properties",icon=icon("remove",lib = "glyphicon"))),
                            tags$div(title="This button saves current state of properties description.",
-                                    downloadButton("save_prop_file","save properties"))   # NOT WORKING FROM UNKNOWN REASON
+                                    downloadButton("save_prop_file","save properties"))
                     )
                 )
             )
         ),
         column(2,
                wellPanel(
-                   numericInput("threads_number","no. of threads",detectCores(),1,detectCores(),1),
-                   actionButton("process_run","Run parameter synthesis")
+                   conditionalPanel(
+                       condition = "input.advanced == true",
+                       numericInput("threads_number","no. of threads",detectCores(),1,detectCores(),1)
+                   ),
+                   bsButton("process_run","run parameter synthesis",disabled=T),
+                   bsButton("process_stop","stop parameter synthesis",disabled=T)
                )
         )
     ),
@@ -128,7 +140,7 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
 #                              tags$div(title="This button resets all changes made up to last load or save of current file.",
 #                                       actionButton("reset_prop","reset changes",icon=icon("remove",lib = "glyphicon"))),
 #                              tags$div(title="This button saves current state of properties description.",
-#                                       downloadButton("save_prop_file","save"))   # NOT WORKING FROM UNKNOWN REASON
+#                                       downloadButton("save_prop_file","save"))
 #                              
 #                       )
 #                   ),
@@ -155,9 +167,13 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
     fluidPage(
         theme = "simplex.css",
         fluidRow(
-            column(2,
-                tags$div(title="This button (re)activates changes from last abstraction generation.",
-                    actionButton("activate_abstraction","activate!"))
+            column(2
+                   # ,tags$div(title="",
+                   #          bsButton("model_prev","previous",disabled=T)
+                   # ),
+                   # tags$div(title="",
+                   #          bsButton("model_next","next",disabled=T)
+                   # )
             ),
             column(4,
                    fluidRow(
@@ -192,7 +208,7 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
                    uiOutput("selector"),
                    tags$div(title="Button will add new layer of plots for vector field or transition-state space or both, depending on which type of input was loaded. 
                                     Then you will be able to play with it.",
-                        actionButton("add_vf_plot","add plot",icon=icon("picture",lib="glyphicon")))
+                        bsButton("add_vf_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=T))
             )
         ),
         tags$hr(),
@@ -204,12 +220,17 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
 tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
     fluidPage(
         column(2,
-            tags$div(title="This button (re)activates changes from last results of model checking procedure.",
-                actionButton("activate_result","activate!")),
+               
+               # tags$div(title="",
+               #          bsButton("result_prev","previous",disabled=T)
+               # ),
+               # tags$div(title="",
+               #          bsButton("result_next","next",disabled=T)
+               # ),
             tags$div(title="Select input parameter space (with '.ps.json' extension) for further analysis.",
                 fileInput("ps_file","choose result '.json' file"),accept=".json"),
             tags$div(title="This button saves model checking results.",
-                downloadButton("save_result_file","save results"))   # NOT WORKING FROM UNKNOWN REASON
+                downloadButton("save_result_file","save results"))
         ),
         column(2,
             tags$div(title="Scaling factor for density of shown rectangles in parameter space.",
@@ -218,8 +239,8 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
                 condition = "input.coverage_check == true",
                 tags$div(title="Scaling factor in the range <0,1> for shade of colour representing parameters.",
                          sliderInput("color_alpha_coeficient","grey shade degree",min=0,max=1,value=0.9,step=0.01,ticks=F)),
-                tags$div(title="Scaling factor in the range <10,100> for density of shown rectangles in parameter space.",
-                         sliderInput("density_coeficient","density",min=10,max=100,value=50,step=1,ticks=F))
+                tags$div(title="Scaling factor in the range <10,150> for density of shown rectangles in parameter space.",
+                         sliderInput("density_coeficient","density",min=10,max=150,value=50,step=1,ticks=F))
             ),
             uiOutput("ps_zoom_sliders")
         ),
@@ -230,14 +251,14 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
                uiOutput("param_selector"),
                tags$div(title="Button will add new layer of plots for parameter space and corresponding transition-state space as soon as some file is loaded. 
                                     Then you will be able to play with it.",
-                    actionButton("add_param_plot","add plot",icon=icon("picture",lib="glyphicon")))
+                    bsButton("add_param_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=F))
         )
     ),
     tags$hr(),
     uiOutput("param_space_plots")
 )
     )
-# )
+)
 )
               
               
