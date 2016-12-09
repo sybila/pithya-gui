@@ -6,7 +6,7 @@ empty_sign <- " "
 range_granul <- 100
 zoom_granul <- 0.01
 transitions_line_type <- "solid" #"dashed" #"dotted"
-num_of_flow_points <- 400
+num_of_flow_points <- 500
 size_of_flow_points <- 3
 progressMaxLength <- 10
 hover_delay_limit <- 10
@@ -14,6 +14,7 @@ brush_delay_limit <- 700
 param_space_clicked_point <- list(type=4, color="blue", size=3, width=2)
 no_param_const <- 1
 rounding_in_hover <- 6
+rounding_in_flow <- 2
 
 positive_color <- "green" 
 #positive_color <- "darkgreen"

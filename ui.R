@@ -168,8 +168,12 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
         theme = "simplex.css",
         fluidRow(
             column(2,
-                tags$div(title="This button (re)activates changes from last abstraction generation.",
-                    actionButton("activate_abstraction","activate!"))
+                   tags$div(title="",
+                            bsButton("model_prev","previous",disabled=T)
+                   ),
+                   tags$div(title="",
+                            bsButton("model_next","next",disabled=T)
+                   )
             ),
             column(4,
                    fluidRow(
@@ -216,8 +220,13 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
 tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
     fluidPage(
         column(2,
-            tags$div(title="This button (re)activates changes from last results of model checking procedure.",
-                actionButton("activate_result","activate!")),
+               
+               tags$div(title="",
+                        bsButton("result_prev","previous",disabled=T)
+               ),
+               tags$div(title="",
+                        bsButton("result_next","next",disabled=T)
+               ),
             tags$div(title="Select input parameter space (with '.ps.json' extension) for further analysis.",
                 fileInput("ps_file","choose result '.json' file"),accept=".json"),
             tags$div(title="This button saves model checking results.",

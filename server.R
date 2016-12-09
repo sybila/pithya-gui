@@ -46,13 +46,15 @@ file.create(configFileName)
 #session$onSessionEnded(for(i in c(progressFileName,resultFileName,configFileName)) if(file.exists(i)) file.remove(i))
 #session$onSessionEnded(stopApp)
 #session$onSessionEnded(file.remove(configFileName,progressFileName,resultFileName))
-
+session$onSessionEnded(function() {
+    for(i in c(progressFileName,resultFileName,configFileName)) if(file.exists(i)) file.remove(i)
+})
 
 # loaded_vf_file_name <<- "nothing"
-loaded_prop_file    <- reactiveValues(data=NULL,filename=NULL)
-loaded_vf_file      <- reactiveValues(data=NULL,filename=NULL)
-loaded_ss_file      <- reactiveValues(data=NULL,filename=NULL)
-loaded_ps_file      <- reactiveValues(data=NULL,filename=NULL)
+loaded_prop_file    <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
+loaded_vf_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
+loaded_ss_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
+loaded_ps_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 
 vf_brushed          <- reactiveValues(data=list(),click_counter=list())
 ss_brushed          <- reactiveValues(data=list(),click_counter=list())
@@ -367,6 +369,7 @@ observeEvent(input$generate_abstraction,{
             if(file.exists(abstracted_model_temp_name)) {
                 loaded_ss_file$filename <- abstracted_model_temp_name
                 loaded_ss_file$data <- readLines(abstracted_model_temp_name)
+                file.remove(abstracted_model_temp_name)
                 cat("abstracted file is loaded\n")
                 cat("Approxition is finished\n",file=progressFileName,append=T)
                 updateButton(session,"generate_abstraction",style="default",disabled=T)
@@ -861,7 +864,7 @@ output$plots <- renderUI({
                        if(!is.null(loading_vf_file()) && !is.null(loading_ss_file())) {
                            conditionalPanel(
                                condition = "input.advanced == true",
-                               checkboxInput(paste0("abst_vf_",i),"use PWA model",F)
+                               checkboxInput(paste0("abst_vf_",i),"use PWA model",ifelse(!is.null(input[[paste0("abst_vf_",i)]]), input[[paste0("abst_vf_",i)]], F))
                            )
                        },
                        if(!is.null(loading_vf_file()) && length(loading_vf_file()$vars) > 2) {
@@ -869,7 +872,9 @@ output$plots <- renderUI({
                                if(!loading_vf_file()$vars[[t]] %in% c(input[[paste0("vf_selector_x_",i)]],input[[paste0("vf_selector_y_",i)]])) {
                                    label <- paste0("continues scale in ",loading_vf_file()$vars[[t]])
                                    name <- paste0("scale_slider_vf_",i,"_",t)
-                                   values <- range(as.numeric(loading_vf_file()$thres[[loading_vf_file()$vars[[t]]]]))
+                                   values <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]],
+                                                    loading_ss_file()$ranges[[loading_vf_file()$vars[[t]] ]],
+                                                    loading_vf_file()$ranges[[loading_vf_file()$vars[[t]] ]])
                                    sliderInput(name,label=label,min=values[1],max=values[2],step=zoom_granul,
                                                value=ifelse(is.null(input[[name]]),values[1],input[[name]]))
                                }
@@ -948,7 +953,9 @@ zoom_vf_ranges <- observe({
                 vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) {
                     if(x == input[[paste0("vf_selector_x_",i)]]) return(c(brush$xmin, brush$xmax))
                     if(x == input[[paste0("vf_selector_y_",i)]]) return(c(brush$ymin, brush$ymax))
-                    return(loading_vf_file()$ranges[[x]])
+                    # return(loading_vf_file()$ranges[[x]])
+                    if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) return(loading_ss_file()$ranges[[x]])
+                    else return(loading_vf_file()$ranges[[x]])
                 })
 #                 vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) {
 #                     if(x==input[[paste0("vf_selector_y_",i)]] || x==input[[paste0("vf_selector_x_",i)]]) {
@@ -967,11 +974,11 @@ unzoom_vf_ranges <- observe({
         for(i in visible_vf_plots()) {
             button <- input[[paste0("unzoom_plot_vf_",i)]]
             if(!is.null(button) && (button > vf_brushed$click_counter[[i]])) isolate({
-                vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) loading_vf_file()$ranges[[x]] )
-#                 vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) {
-#                     seq(loading_vf_file()$ranges[[x]][1], loading_vf_file()$ranges[[x]][2], 
-#                         (loading_vf_file()$ranges[[x]][2]-loading_vf_file()$ranges[[x]][1])/arrows_number)
-#                 })
+                # vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) loading_vf_file()$ranges[[x]] )
+                vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) {
+                    if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) loading_ss_file()$ranges[[x]]
+                    else loading_vf_file()$ranges[[x]]
+                })
                 vf_brushed$click_counter[[i]] <- button
             })
         }
@@ -1316,12 +1323,32 @@ draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
         point <- vector_field_clicked$point[[plot_index]]
         if(is.na(vector_field_clicked$old_point[[plot_index]]) || !identical(vector_field_clicked$old_point[[plot_index]],point) ||
                !identical(vector_field_space$globals[[plot_index]],checkpoint)) {
-            flow_data <- matrix(,nrow=num_of_flow_points+1,ncol=length(variables))
-            flow_data[1,] <- point
+            
+            flow_data <- as.data.table(t(point))
+            #########
+            # repeat {
+            #     r <- nrow(flow_data)
+            #     input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
+            #     for(i in 1:length(variables)) {
+            #         input_params <- paste0(input_params,variables[i],"=",flow_data[r,get(variables[[i]])],",")
+            #     }
+            #     substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
+            #     new_move <- sapply(1:length(variables), function(i) {
+            #         if(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]])
+            #             eval(funcs_abst[[i]])(eval(parse(text=input_params)))
+            #         else
+            #             eval(funcs[[i]])(eval(parse(text=input_params)))
+            #     })
+            #     new_move <- flow_data[r]+new_move
+            #     print(paste0("point ",r,"=",new_move))
+            #     if(nrow(flow_data[round(x,rounding_in_flow)==round(new_move$x,rounding_in_flow) & round(y,rounding_in_flow)==round(new_move$y,rounding_in_flow)]) > 0) break
+            #     else flow_data <- rbind(flow_data,new_move)
+            # }
+            ########
             for(r in seq(num_of_flow_points)) {
                 input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
                 for(i in 1:length(variables)) {
-                    input_params <- paste0(input_params,variables[i],"=",flow_data[r,i],",")
+                    input_params <- paste0(input_params,variables[i],"=",flow_data[r,get(variables[[i]])],",")
                 }
                 substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
                 new_move <- sapply(1:length(variables), function(i) {
@@ -1329,13 +1356,14 @@ draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
                         eval(funcs_abst[[i]])(eval(parse(text=input_params)))
                     else
                         eval(funcs[[i]])(eval(parse(text=input_params)))
-                    })
-                flow_data[r+1,] <- flow_data[r,]+new_move
+                })
+                flow_data <- rbind(flow_data,flow_data[r]+new_move)
             }
+            #########
             vector_field_clicked$data[[plot_index]] <- flow_data
         }
         flow_data <- vector_field_clicked$data[[plot_index]]
-        xspline(flow_data[,index_x], flow_data[,index_y], shape=1, col="blue", border="blue", lwd=size_of_flow_points)
+        xspline(flow_data[,get(name_x)], flow_data[,get(name_y)], shape=1, col="blue", border="blue", lwd=size_of_flow_points)
         # it has to be at the end
         vector_field_clicked$old_point[[plot_index]] <- point
     }
@@ -1762,8 +1790,6 @@ draw_state_space <- function(name_x, name_y, plot_index, boundaries) {
         param_sets <- vector(length=loading_ss_file()$params_num*2)
         if(loading_ss_file()$params_num != 0) {
             for(i in 0:(loading_ss_file()$params_num -1)) {
-#                param_sets[2*i+1] <- as.numeric(ifelse(is.null(input[[paste0("param_slider_",i+1)]]),g_param_slider[2*i+1],input[[paste0("param_slider_",i+1)]][1]))
-#                param_sets[2*i+2] <- as.numeric(ifelse(is.null(input[[paste0("param_slider_",i+1)]]),g_param_slider[2*i+2],input[[paste0("param_slider_",i+1)]][1]))
                 param_sets[2*i+1] <- as.numeric(ifelse(is.null(input[[paste0("param_slider_vf_",i+1)]]) | is.na(input[[paste0("param_slider_vf_",i+1)]]),
                                                        no_param_const,input[[paste0("param_slider_vf_",i+1)]][1]))
                 param_sets[2*i+2] <- as.numeric(ifelse(is.null(input[[paste0("param_slider_vf_",i+1)]]) | is.na(input[[paste0("param_slider_vf_",i+1)]]),
@@ -1844,6 +1870,7 @@ draw_1D_state_space <- function(name_x, plot_index, boundaries) {
     #TODO:
 }
 
+################################################################################################################################################################
 #=============== RESULT TAB ============================================
 #=======================================================================
 
@@ -1856,7 +1883,7 @@ reset_globals_param <- function() {
 observeEvent(c(resultFile()),{
     if(!is.null(resultFile()) && length(resultFile()) > 0) {
         loaded_ps_file$filename <- resultFileName
-        loaded_ps_file$data <- fromJSON(file=loaded_ps_file$filename)
+        loaded_ps_file$filedata <- readLines(loaded_ps_file$filename)
     }
 })
 
@@ -1867,123 +1894,121 @@ observeEvent(input$ps_file,{
             reset_globals_param()
         }
         loaded_ps_file$filename <- input$ps_file$datapath
-        loaded_ps_file$data <- fromJSON(file=loaded_ps_file$filename)
-    } else {
-        # # initial example file (temporary)    
-        # if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename == paste0(examples_dir,"//model_2D_1P_400R.bio")) {
-        #     loaded_ps_file$filename <- paste0(examples_dir,"//model_2D_1P_400R.result.json")
-        #     loaded_ps_file$data <- fromJSON(file=loaded_ps_file$filename)
-        # } else {
-        #     loaded_ps_file$filename <- NULL
-        #     loaded_ps_file$data <- NULL
-        # }
+        loaded_ps_file$filedata <- readLines(loaded_ps_file$filename)
     }
 })
 
 
 output$save_result_file <- downloadHandler(
-    filename = ifelse(!is.null(input$ps_file) && !is.null(input$ps_file$datapath), paste0(input$ps_file$datapath), "results.json"),
+    filename = ifelse(!is.null(manage_result_experiments()$filepath), paste0(manage_result_experiments()$filepath), "results.json"),
     content = function(file) {
-        if(!is.null(loaded_ps_file$data))
-            writeLines(toJSON(loaded_ps_file$data), file)
+        if(!is.null(manage_result_experiments()$filedata))
+            writeLines(manage_result_experiments()$filedata, file)
         else writeLines("", file)
     }
 )
 
+manage_result_experiments <- reactive({
+    filedata <- loaded_ps_file$filedata
+    if(!is.null(filedata)) {
+        
+        # Here will be core of managing switching between experiments result
+        
+        return(list(filepath=NULL,filedata=filedata))
+    } else return(NULL)
+})
 
 loading_ps_file <- reactive({
-    file <- loaded_ps_file$data
+    file <- manage_result_experiments()$filedata
     if(!is.null(file)) {
-        if(class(file) == "list") {     # temporary
+        file <- fromJSON(file)
             
-            # musi byt kontrola ci result file vobec nieco obsahuje !!!!
+        # musi byt kontrola ci result file vobec nieco obsahuje !!!!
+        
+        table <- rbindlist(lapply(file$results,function(x) if(length(x$data)!=0) as.data.table(x))) # temporary measure: empty results are omitted
+        setkeyv(table,"formula")
+        # table[,state:=sapply(data,function(x)unlist(x$state))]
+        # table[,param:=sapply(data,function(x)unlist(x$param))]
+        table[,state:=sapply(data,function(x)unlist(x[1]))]
+        table[,param:=sapply(data,function(x)unlist(x[2]))]
+        table[,cov:=nrow(.SD), by=list(formula,param)]
+        table[,data:=NULL]
+        
+        states <- as.data.table(t(sapply(lapply(1:length(file$states),function(x) file$states[[x]]$bounds), function(s) unlist(s))))
+        states[, id:=1:nrow(states)]
+        #states[, id:=sapply(1:length(file$states),function(x) file$states[[x]]$id+1)]
+        
+        if(file$type == "rectangular") {    
+            # file$parameter_values [[1]] [[1]] [[1]] [1:2]
+            #                        set  rect   dim  range
+            # params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
+            # not_empty_ids <- 1:length(file$parameter_values)
+            # times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
+            params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
+            not_empty_ids <- 1:length(file$parameter_values)
+            times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
+            params[, id:=unlist(sapply(1:length(not_empty_ids),function(x) rep.int(not_empty_ids[x],times[x])))]
+            params[, row_id:=1:nrow(params)]
+        }
+        if(file$type == "smt") {
+            # TODO:
+            # params <- as.data.table(t(sapply(lapply(1:length(file$params$rectangles),function(x) file$params$rectangles[[x]]), function(p) unlist(p))))
+            # params[, id:=1:nrow(params)]
             
-            table <- rbindlist(lapply(file$results,function(x) if(length(x$data)!=0) as.data.table(x))) # temporary measure: empty results are omitted
-            setkeyv(table,"formula")
-            # table[,state:=sapply(data,function(x)unlist(x$state))]
-            # table[,param:=sapply(data,function(x)unlist(x$param))]
-            table[,state:=sapply(data,function(x)unlist(x[1]))]
-            table[,param:=sapply(data,function(x)unlist(x[2]))]
-            table[,cov:=nrow(.SD), by=list(formula,param)]
-            table[,data:=NULL]
+            # params <- data.table(expr=sapply(1:length(file$parameter_values),function(x) file$parameter_values[[x]]$Rexpression))
+            params <- data.table(expr=paste0("function(ip)",gsub("||","|",gsub("&&","&", sapply(1:length(file$parameter_values),
+                                                                                    function(x) file$parameter_values[[x]]$Rexpression),fixed=T),fixed=T)))
+            # params <- data.table(expr=parse(text=paste0("function(ip)",gsub("([a-z][a-z0-9_]+)","ip$\\1",sapply(1:length(file$parameter_values),
+            #                                                                                          function(x) file$parameter_values[[x]]$Rexpression),perl=T))))
+            params[, id:=1:nrow(params)]
+            params[, row_id:=1:nrow(params)]
+            setkey(params,id)
+            # eval(parse(text=paste0("function(ip) ",gsub("([a-z][a-z0-9_]+)","ip$\\1",params$expr[1:5],perl=T))))(ip=list(deg_x=0.1,k1=1))
             
-            states <- as.data.table(t(sapply(lapply(1:length(file$states),function(x) file$states[[x]]$bounds), function(s) unlist(s))))
-            states[, id:=1:nrow(states)]
-            #states[, id:=sapply(1:length(file$states),function(x) file$states[[x]]$id+1)]
+            # num <- 50
+            # nesh <- meshgrid(seq(0,1,length.out = num),
+            #                  seq(0,2,length.out = num))
+            # dt <- data.table(x1=unlist(as.list(nesh$X[1:(num-1),1:(num-1)])),x2=unlist(as.list(nesh$X[2:num,2:num])),
+            #                  y1=unlist(as.list(nesh$Y[1:(num-1),1:(num-1)])),y2=unlist(as.list(nesh$Y[2:num,2:num])))
+            # dt[,x:=x1+(x2-x1)*0.5]
+            # dt[,y:=y1+(y2-y1)*0.5]
+            # dt[,cov:=0]
+            # 
+            # system.time(for(ex in params$id) dt[,cov:=cov+ifelse(eval(parse(text=params[ex,expr]))(list(deg_x=x,k1=y)),1,0)])
             
-            if(file$type == "rectangular") {    
-                # file$parameter_values [[1]] [[1]] [[1]] [1:2]
-                #                        set  rect   dim  range
-                # params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
-                # not_empty_ids <- 1:length(file$parameter_values)
-                # times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
-                params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
-                not_empty_ids <- 1:length(file$parameter_values)
-                times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
-                params[, id:=unlist(sapply(1:length(not_empty_ids),function(x) rep.int(not_empty_ids[x],times[x])))]
-                params[, row_id:=1:nrow(params)]
-            }
-            if(file$type == "smt") {
-                # TODO:
-                # params <- as.data.table(t(sapply(lapply(1:length(file$params$rectangles),function(x) file$params$rectangles[[x]]), function(p) unlist(p))))
-                # params[, id:=1:nrow(params)]
-                
-                # params <- data.table(expr=sapply(1:length(file$parameter_values),function(x) file$parameter_values[[x]]$Rexpression))
-                params <- data.table(expr=paste0("function(ip)",gsub("||","|",gsub("&&","&", sapply(1:length(file$parameter_values),
-                                                                                        function(x) file$parameter_values[[x]]$Rexpression),fixed=T),fixed=T)))
-                # params <- data.table(expr=parse(text=paste0("function(ip)",gsub("([a-z][a-z0-9_]+)","ip$\\1",sapply(1:length(file$parameter_values),
-                #                                                                                          function(x) file$parameter_values[[x]]$Rexpression),perl=T))))
-                params[, id:=1:nrow(params)]
-                params[, row_id:=1:nrow(params)]
-                setkey(params,id)
-                # eval(parse(text=paste0("function(ip) ",gsub("([a-z][a-z0-9_]+)","ip$\\1",params$expr[1:5],perl=T))))(ip=list(deg_x=0.1,k1=1))
-                
-                # num <- 50
-                # nesh <- meshgrid(seq(0,1,length.out = num),
-                #                  seq(0,2,length.out = num))
-                # dt <- data.table(x1=unlist(as.list(nesh$X[1:(num-1),1:(num-1)])),x2=unlist(as.list(nesh$X[2:num,2:num])),
-                #                  y1=unlist(as.list(nesh$Y[1:(num-1),1:(num-1)])),y2=unlist(as.list(nesh$Y[2:num,2:num])))
-                # dt[,x:=x1+(x2-x1)*0.5]
-                # dt[,y:=y1+(y2-y1)*0.5]
-                # dt[,cov:=0]
-                # 
-                # system.time(for(ex in params$id) dt[,cov:=cov+ifelse(eval(parse(text=params[ex,expr]))(list(deg_x=x,k1=y)),1,0)])
-                
-                # tt <- as.data.table(merge.default(params,dt,all=T))
-                # setkey(tt,id)
-                # system.time(tt[,truth:=(eval(parse(text=expr))(list(deg_x=x,k1=y))),by=.(expr,x,y)])
-                # tt[,.(cov=nrow(.SD[truth==T]),x1,x2,y1,y2),by=.(x,y)]
-                
-                # f <- function(e,l) eval(parse(text=e[1]))(list(deg_x=dtt$x,k1=dtt$y))
-                # tt[, truth:=f(.SD), by=.(expr,x,y) ]
-            }
+            # tt <- as.data.table(merge.default(params,dt,all=T))
+            # setkey(tt,id)
+            # system.time(tt[,truth:=(eval(parse(text=expr))(list(deg_x=x,k1=y))),by=.(expr,x,y)])
+            # tt[,.(cov=nrow(.SD[truth==T]),x1,x2,y1,y2),by=.(x,y)]
             
-            # time <- system.time({
-            #     for(i in seq(0,1,length.out = 50))
-            #         for(j in seq(0,2,length.out = 50))
-            #             neco <- params[,sapply(parse(text=expr),function(x) eval(x)(ip<-list(deg_x=i,k1=j)))]
-            # })
-            # print(time)
-            
-            thrs <- file$thresholds
-            names(thrs) <- file$variables
-            
-            param_bounds <- file$parameter_bounds
-            names(param_bounds) <- file$parameters
-            
-            return(list(param_space=table,  # DT( formula:string, data:list_of_state_and_param_indices, state:numeric_index_to_states, param:numeric_index_to_params, 
-                                            #     cov:numeric_with_states_count_for_this_param )
-                        states=states,      # DT( V1,V2,... ) - each pair of columns (e.g., V1,V2) contains boundary threshodls of state (each row), 3D SS has 6 columns
-                        formulae=unique(table$formula),     # vector of unique formulae from table 'table' or 'param_space'
-                        param_names=file$parameters,        # vector of param names in order of appearence in bio file
-                        params=params,                      # DT( V1,V2,... ) - each row is satisfied rectangle (of param set with same ID) in PS (each param has two columns: P1 has V1,V2 ...)
-                        var_names=file$variables,           # vector of unique variable names in order of appearence in bio file
-                        thresholds=thrs,                    # list of thresholds for each variable
-                        type=file$type,
-                        param_bounds=param_bounds
-            ))
-            
-        } else return(NULL)
+            # f <- function(e,l) eval(parse(text=e[1]))(list(deg_x=dtt$x,k1=dtt$y))
+            # tt[, truth:=f(.SD), by=.(expr,x,y) ]
+        }
+        
+        # time <- system.time({
+        #     for(i in seq(0,1,length.out = 50))
+        #         for(j in seq(0,2,length.out = 50))
+        #             neco <- params[,sapply(parse(text=expr),function(x) eval(x)(ip<-list(deg_x=i,k1=j)))]
+        # })
+        # print(time)
+        
+        thrs <- file$thresholds
+        names(thrs) <- file$variables
+        
+        param_bounds <- file$parameter_bounds
+        names(param_bounds) <- file$parameters
+        
+        return(list(param_space=table,  # DT( formula:string, data:list_of_state_and_param_indices, state:numeric_index_to_states, param:numeric_index_to_params, 
+                                        #     cov:numeric_with_states_count_for_this_param )
+                    states=states,      # DT( V1,V2,... ) - each pair of columns (e.g., V1,V2) contains boundary threshodls of state (each row), 3D SS has 6 columns
+                    formulae=unique(table$formula),     # vector of unique formulae from table 'table' or 'param_space'
+                    param_names=file$parameters,        # vector of param names in order of appearence in bio file
+                    params=params,                      # DT( V1,V2,... ) - each row is satisfied rectangle (of param set with same ID) in PS (each param has two columns: P1 has V1,V2 ...)
+                    var_names=file$variables,           # vector of unique variable names in order of appearence in bio file
+                    thresholds=thrs,                    # list of thresholds for each variable
+                    type=file$type,
+                    param_bounds=param_bounds
+        ))
     } else return(NULL)
 })
 
