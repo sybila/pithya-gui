@@ -55,6 +55,7 @@ loaded_prop_file    <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_vf_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_ss_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_ps_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
+stored_ps_files     <- reactiveValues(data=list(),current=0,max=1)
 
 vf_brushed          <- reactiveValues(data=list(),click_counter=list())
 ss_brushed          <- reactiveValues(data=list(),click_counter=list())
@@ -119,7 +120,7 @@ observeEvent(input$process_run,{
         if(file.exists(configFileName) && length(readLines(configFileName)) > 0) {
             cat("config file is created\n")
             cat("Config file is created\n",file=progressFileName,append=T)
-            updateButton(session,"process_run",style="default",disabled=T)
+            updateButton(session,"process_run",style="default",disabled=F)
             updateButton(session,"process_stop",style="danger",disabled=F)
             checker_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"),
                                    ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//",
@@ -1880,7 +1881,6 @@ draw_1D_state_space <- function(name_x, plot_index, boundaries) {
                 dim_indices <- letters[-which(letters %in% c("x"))]
                 input_params <- paste0(set_abst_input_params(),paste0(name_x,"=dt$x"))
                 
-                # mesh <- meshgrid(thres_x,thres_y)
                 dt <- data.table(x=thres_x) # x-coordinates of vertices
                 for(i in 1:length(variables)) {
                     name <- variables[[i]]
@@ -2004,40 +2004,99 @@ observeEvent(c(resultFile()),{
 })
 
 observeEvent(input$ps_file,{
+    #TODO: add JS script for cleaning fileInput after loading
     if(!is.null(input$ps_file) && !is.null(input$ps_file$datapath)) {
-        if(!is.null(loaded_ps_file$filename) && loaded_ps_file$filename != input$ps_file$datapath) {
-            #session$reload()
-            reset_globals_param()
-        }
-        loaded_ps_file$filename <- input$ps_file$datapath
-        loaded_ps_file$filedata <- readLines(loaded_ps_file$filename)
+        # if(!is.null(loaded_ps_file$filename) && loaded_ps_file$filename != input$ps_file$datapath) {
+        #     #session$reload()
+        #     reset_globals_param()
+        # }
+        loaded_ps_file$filename <- input$ps_file$name
+        loaded_ps_file$filedata <- readLines(input$ps_file$datapath)
     }
 })
 
 
 output$save_result_file <- downloadHandler(
-    filename = ifelse(!is.null(manage_result_experiments()$filepath), paste0(manage_result_experiments()$filepath), "results.json"),
+    filename = ifelse(stored_ps_files$current > 0 && !is.null(stored_ps_files$data[[stored_ps_files$current]]$filepath), 
+                      paste0(stored_ps_files$data[[stored_ps_files$current]]$filepath), "results.json"),
     content = function(file) {
-        if(!is.null(manage_result_experiments()$filedata))
-            writeLines(manage_result_experiments()$filedata, file)
+        if(stored_ps_files$current > 0 && !is.null(stored_ps_files$data[[stored_ps_files$current]]$filedata))
+            writeLines(stored_ps_files$data[[stored_ps_files$current]]$filedata, file)
         else writeLines("", file)
     }
 )
 
-manage_result_experiments <- reactive({
+output$result_help_text <- renderUI({
+    if(stored_ps_files$current != 0) {
+        helpText(paste0("Experiment no. ",stored_ps_files$current,": ",stored_ps_files$data[[stored_ps_files$current]]$filepath))
+    }
+})
+
+manage_result_experiments <- observe({
     filedata <- loaded_ps_file$filedata
     if(!is.null(filedata)) {
         
         # Here will be core of managing switching between experiments result
-        
-        return(list(filepath=NULL,filedata=filedata))
-    } else return(NULL)
+        if(stored_ps_files$max == 1 || !identical(filedata,stored_ps_files$data[[stored_ps_files$max-1]]$filedata)) {
+            stored_ps_files$data[[stored_ps_files$max]] <- list(filedata=filedata,filepath=loaded_ps_file$filename)
+            # loaded_ps_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
+            if(stored_ps_files$max==1)  {
+                stored_ps_files$current <- stored_ps_files$max
+                updateButton(session,"result_del",style="default",disabled=F)
+            } else    
+                updateButton(session,"result_next",style="success",disabled=F)
+            stored_ps_files$max <- stored_ps_files$max + 1
+        }
+    }
+})
+manage_result_next <- observeEvent(input$result_next,{
+    reset_globals_param()
+    stored_ps_files$current <- stored_ps_files$current + 1
+    updateButton(session,"result_prev",style="default",disabled=F)
+    if(stored_ps_files$current+1 == stored_ps_files$max) {
+        updateButton(session,"result_next",style="default",disabled=T)
+    } else {
+        # updateButton(session,"result_next",style="default")
+    }
+})
+manage_result_prev <- observeEvent(input$result_prev,{
+    reset_globals_param()
+    stored_ps_files$current <- stored_ps_files$current - 1
+    updateButton(session,"result_next",style="default",disabled=F)
+    if(stored_ps_files$current == 1) {
+        updateButton(session,"result_prev",style="default",disabled=T)
+    } else {
+        # updateButton(session,"result_prev",style="default")
+    }
+})
+manage_result_del <- observeEvent(input$result_del,{
+    if(stored_ps_files$current > 0) {
+        reset_globals_param()
+        stored_ps_files$max <- stored_ps_files$max - 1
+        stored_ps_files$data[[stored_ps_files$current]] <- NULL
+        if(stored_ps_files$current == stored_ps_files$max) {
+            stored_ps_files$current <- stored_ps_files$current - 1
+            if(stored_ps_files$current == 0)
+                updateButton(session,"result_del",style="default",disabled=T)
+        }
+        if(stored_ps_files$current == 1) {
+            updateButton(session,"result_prev",style="default",disabled=T)
+        }
+        if(stored_ps_files$current+1 == stored_ps_files$max) {
+            updateButton(session,"result_next",style="default",disabled=T)
+        }
+    }
 })
 
+preloading_ps_file <- eventReactive(c(stored_ps_files$data,stored_ps_files$current),{
+    if(stored_ps_files$current != 0)
+        return(stored_ps_files$data[[stored_ps_files$current]]$filedata)
+    else
+        return(NULL)
+})
 loading_ps_file <- reactive({
-    file <- manage_result_experiments()$filedata
-    if(!is.null(file)) {
-        file <- fromJSON(file)
+    if(!is.null(preloading_ps_file())) {
+        file <- fromJSON(preloading_ps_file())
             
         # musi byt kontrola ci result file vobec nieco obsahuje !!!!
         
@@ -2580,7 +2639,7 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
         # create current set of globals
         checkpoint <- list(selectors=list(x=input[[paste0("param_ss_selector_x_",plot_index)]], y=input[[paste0("param_ss_selector_y_",plot_index)]]),
                            formula=chosen_ps_formulae_clean(),
-                           counter=input$process_run,
+                           # counter=input$process_run,
                            sliders=list() )
         for(t in 1:length(variables)) {
             if(!variables[[t]] %in% c(input[[paste0("param_ss_selector_x_",plot_index)]],input[[paste0("param_ss_selector_y_",plot_index)]] )) {
@@ -2722,7 +2781,7 @@ draw_1D_param_ss <- function(name_x, plot_index, boundaries) {
         # create current set of globals
         checkpoint <- list(selectors=list(x=input[[paste0("param_ss_selector_x_",plot_index)]], y=input[[paste0("param_ss_selector_y_",plot_index)]]),
                            formula=chosen_ps_formulae_clean(),
-                           counter=input$process_run,
+                           # counter=input$process_run,
                            sliders=list() )
         for(t in 1:length(variables)) {
             if(!variables[[t]] %in% c(input[[paste0("param_ss_selector_x_",plot_index)]],input[[paste0("param_ss_selector_y_",plot_index)]] )) {
@@ -2879,7 +2938,7 @@ draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
                            coverage=input$coverage_check,
                            formula=chosen_ps_formulae_clean(),
                            param_ss_clicked_point=param_ss_clicked$point[[plot_index]],
-                           counter=input$process_run,
+                           # counter=input$process_run,
                            sliders_checkbox=list(),
                            sliders=list() )
         for(x in 1:length(list_of_all_names)) {
@@ -3152,7 +3211,7 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
                            coverage=input$coverage_check,
                            param_ss_clicked_point=param_ss_clicked$point[[plot_index]],
                            formula=chosen_ps_formulae_clean(),
-                           counter=input$process_run,
+                           # counter=input$process_run,
                            sliders_checkbox=list(),
                            sliders=list() )
         for(x in 1:length(list_of_all_names)) {
@@ -3350,7 +3409,7 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
                            param_ss_clicked_point=param_ss_clicked$point[[plot_index]],
                            formula=chosen_ps_formulae_clean(),
                            coverage=input$coverage_check,
-                           counter=input$process_run,
+                           # counter=input$process_run,
                            density=input$density_coeficient,
                            sliders_checkbox=list(),
                            sliders=list() )

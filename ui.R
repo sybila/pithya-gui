@@ -220,13 +220,21 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
 tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
     fluidPage(
         column(2,
-               
-               # tags$div(title="",
-               #          bsButton("result_prev","previous",disabled=T)
-               # ),
-               # tags$div(title="",
-               #          bsButton("result_next","next",disabled=T)
-               # ),
+               uiOutput("result_help_text"),
+               fluidRow(
+                   column(4,
+                          tags$div(title="",
+                                   bsButton("result_prev","previous",disabled=T,block=T)
+                   )),
+                   column(4,
+                          tags$div(title="",
+                                   bsButton("result_next","next",disabled=T,block=T)
+                   )),
+                   column(4,
+                          tags$div(title="",
+                                   bsButton("result_del","delete",disabled=T,block=T)
+                   ))
+               ),
             tags$div(title="Select input parameter space (with '.ps.json' extension) for further analysis.",
                 fileInput("ps_file","choose result '.json' file"),accept=".json"),
             tags$div(title="This button saves model checking results.",
