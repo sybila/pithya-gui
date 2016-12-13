@@ -28,7 +28,6 @@ session_random <- sample(1000^2,1)
     
 # .Platform$OS.type=="windows"  or Sys.info()["sysname"]=="Windows"
 files_path <- ifelse(.Platform$OS.type=="windows", paste0("..//Temp//"), ifelse(Sys.info()["nodename"]=="psyche05",paste0("..//Temp//"),paste0("~//skola//newbiodivine//") ))
-# java_programs_path <- ifelse(Sys.info()["nodename"]=="psyche05","//mirror//new_new_biodivine//","~//skola//newbiodivine//")
 new_programs_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"), 
                             ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//","~//skola//newbiodivine//"))
 
@@ -43,18 +42,18 @@ resultFile <- reactiveFileReader(1000,session,resultFileName,readLines)
 configFileName <- paste0(files_path,"config.",session_random,".json")
 file.create(configFileName)
 
-#session$onSessionEnded(for(i in c(progressFileName,resultFileName,configFileName)) if(file.exists(i)) file.remove(i))
-#session$onSessionEnded(stopApp)
-#session$onSessionEnded(file.remove(configFileName,progressFileName,resultFileName))
 session$onSessionEnded(function() {
     for(i in c(progressFileName,resultFileName,configFileName)) if(file.exists(i)) file.remove(i)
 })
 
-# loaded_vf_file_name <<- "nothing"
+
 loaded_prop_file    <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_vf_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_ss_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_ps_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
+
+stored_vf_files     <- reactiveValues(data=list(),current=0,max=1)
+stored_ss_files     <- reactiveValues(data=list(),current=0,max=1)
 stored_ps_files     <- reactiveValues(data=list(),current=0,max=1)
 
 vf_brushed          <- reactiveValues(data=list(),click_counter=list())
@@ -108,10 +107,10 @@ param_chosen        <- reactiveValues(data=NULL,max=1)
 #=======================================================================
 
 observeEvent(input$process_run,{
-    if(!is.null(loaded_ss_file$data) && input$process_run != 0) {
+    if(!is.null(loaded_ss_file$filedata) && input$process_run != 0) {
         cat("Parameter synthesis is started\n",file=progressFileName)
         modelTempName  <- paste0(files_path,"model.",session_random,".abst.bio")
-        writeLines(loaded_ss_file$data,modelTempName)
+        writeLines(loaded_ss_file$filedata,modelTempName)
         propTempName   <- paste0(files_path,"prop.",session_random,".ctl")
         writeLines(loaded_prop_file$data,propTempName)
         system2(paste0(new_programs_path,"combine"),c(modelTempName, propTempName), stdout=configFileName, stderr=progressFileName, wait=T)
@@ -133,7 +132,7 @@ observeEvent(input$process_run,{
 })
 
 observeEvent(input$process_stop,{
-    if(!is.null(loaded_ss_file$data) && input$process_stop != 0) {
+    if(!is.null(loaded_ss_file$filedata) && input$process_stop != 0) {
         if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0 && !T %in% grepl("^!!DONE!!$",progressFile())) {
             pid <- gsub("PID: ","",grep("^PID: [0-9]+$",progressFile(),value=T))
             command <- ifelse(.Platform$OS.type=="windows", paste0("taskkill /f /pid ",pid), paste0("kill -9 ",pid))
@@ -159,7 +158,6 @@ output$progress_output <- renderPrint({
         #     cat(paste0(progressFile()[(length(progressFile())-progressMaxLength+1):length(progressFile())],collapse="\n"))
         # else
         cat(paste0(progressFile(),collapse="\n"))
-        #on.exit(file.remove(progressFileName))
     }
 })
 
@@ -176,7 +174,7 @@ output$progress_output <- renderPrint({
 
 observeEvent(input$prop_input_area,{
     loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
-    if(!is.null(loaded_ss_file$data)) updateButton(session,"process_run",style="success",disabled=F)
+    if(!is.null(loaded_ss_file$filedata)) updateButton(session,"process_run",style="success",disabled=F)
 })
 # observeEvent(input$accept_prop_changes,{
 #     if(!is.null(input$prop_input_area) && input$prop_input_area != "")
@@ -189,8 +187,8 @@ observeEvent(c(input$prop_file,input$reset_prop),{
 #             #session$reload()
 #             reset_globals()
 #         }
-        loaded_prop_file$filename <- input$prop_file$datapath
-        loaded_prop_file$data <- readLines(loaded_prop_file$filename)
+        loaded_prop_file$filename <- input$prop_file$name
+        loaded_prop_file$data <- readLines(input$prop_file$datapath)
     } else {
         # initial example file (temporary)
         loaded_prop_file$filename <- paste0(examples_dir,"//repressilator_2D//bistability.ctl")
@@ -206,9 +204,8 @@ output$save_prop_file <- downloadHandler(
         else return("property.ctl")
     },
     content = function(file) {
-        if(!is.null(loaded_prop_file$data))
-            writeLines(loaded_prop_file$data, file)
-        else writeLines("", file)
+        if(!is.null(loaded_prop_file$data)) writeLines(loaded_prop_file$data, file)
+        else                                writeLines("", file)
     }
 )
 
@@ -222,9 +219,9 @@ reset_globals <- function() {
 }
 
 # reaction on event of loading .bio file into tool putting a loaded model into text field
-# observeEvent(c(loaded_vf_file$data,input$reset_model),{
-#     if(!is.null(loaded_vf_file$data)) {
-#         updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$data,collapse="\n"))
+# observeEvent(c(loaded_vf_file$filedata,input$reset_model),{
+#     if(!is.null(loaded_vf_file$filedata)) {
+#         updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
 #     }
 # })
 
@@ -306,40 +303,38 @@ else {
         
         if(its_ok) {
             cat("Syntax of model is good ;) You may proceed with generating approximation.",file=progressFileName)
-            loaded_vf_file$data <- the_lines
+            loaded_vf_file$filedata <- the_lines
         }
     }
 })
 
 observeEvent(input$model_input_area,{
-    loaded_vf_file$data <- strsplit(input$model_input_area,"\n",fixed=T)[[1]]
+    loaded_vf_file$filedata <- strsplit(input$model_input_area,"\n",fixed=T)[[1]]
     updateButton(session,"generate_abstraction", style="success", disabled=F)
-    updateButton(session,"add_vf_plot", disabled=F)
 })
 
 observeEvent(c(input$vf_file,input$reset_model),{
     cat("Start with button 'generate approximation'.\n",file=progressFileName)
     if(!is.null(input$vf_file) && !is.null(input$vf_file$datapath)) {
-        if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename != input$vf_file$datapath) {
-            #session$reload()
-            reset_globals()
-        }
-        loaded_vf_file$filename <- input$vf_file$datapath
-        loaded_vf_file$data <- readLines(loaded_vf_file$filename)
+        # if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename != input$vf_file$datapath) {
+        #     #session$reload()
+        #     reset_globals()
+        # }
+        loaded_vf_file$filename <- input$vf_file$name
+        loaded_vf_file$filedata <- readLines(input$vf_file$datapath)
     } else {
         # initial example file (temporary)
         loaded_vf_file$filename <- paste0(examples_dir,"//repressilator_2D//model_2D_1P_100R.bio")
-        loaded_vf_file$data <- readLines(loaded_vf_file$filename)
+        loaded_vf_file$filedata <- readLines(loaded_vf_file$filename)
     }
-    updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$data,collapse="\n"))
+    updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
 })
 
 output$save_model_file <- downloadHandler(
-    filename = ifelse(!is.null(input$vf_file) && !is.null(input$vf_file$datapath), paste0(input$vf_file$datapath), "model.bio"),
+    filename = ifelse(!is.null(preloading_vf_file()), paste0(preloading_vf_file()$filepath), "model.bio"),
     content = function(file) {
-        if(!is.null(loaded_vf_file$data))
-            writeLines(loaded_vf_file$data, file)
-        else writeLines("", file)
+        if(!is.null(preloading_vf_file())) writeLines(preloading_vf_file()$filedata, file)
+        else                               writeLines("", file)
     }
 )
 
@@ -348,13 +343,13 @@ output$save_model_file <- downloadHandler(
 
 observeEvent(input$generate_abstraction,{
     if(input$generate_abstraction != 0) {
-        # loaded_ss_file$data <- readLines(paste0(examples_dir,"//model_2D_1P_400R.abst.bio"))
+        # loaded_ss_file$filedata <- readLines(paste0(examples_dir,"//model_2D_1P_400R.abst.bio"))
         cat("tractor is about to run\n")
         cat("Approximation is started\n",file=progressFileName)
         
         withProgress({
             model_temp_name  <- paste0(files_path,"model.",session_random,".bio")
-            writeLines(loaded_vf_file$data,model_temp_name)
+            writeLines(loaded_vf_file$filedata,model_temp_name)
             abstracted_model_temp_name <- paste0(files_path,"model.",session_random,".abst.bio")
             system2(paste0(new_programs_path,"tractor"),c(model_temp_name,
                                                           ifelse(input$fast_approximation,"true","false"),
@@ -369,7 +364,7 @@ observeEvent(input$generate_abstraction,{
             file.remove(c(model_temp_name))
             if(file.exists(abstracted_model_temp_name)) {
                 loaded_ss_file$filename <- abstracted_model_temp_name
-                loaded_ss_file$data <- readLines(abstracted_model_temp_name)
+                loaded_ss_file$filedata <- readLines(abstracted_model_temp_name)
                 file.remove(abstracted_model_temp_name)
                 cat("abstracted file is loaded\n")
                 cat("Approxition is finished\n",file=progressFileName,append=T)
@@ -385,13 +380,13 @@ observeEvent(input$generate_abstraction,{
 
 # observeEvent(input$state_space_file,{
 #     if(!is.null(input$state_space_file) && !is.null(input$state_space_file$datapath)) {
-#         loaded_ss_file$data <- readLines(input$state_space_file$datapath)
+#         loaded_ss_file$filedata <- readLines(input$state_space_file$datapath)
 #     } else {
 #         # initial example file (temporary)
 #         if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename == paste0(examples_dir,"//model_2D_1P_100R.bio"))
-#             loaded_ss_file$data <- paste0(examples_dir,"//model_2D_1P_400R.ss.json")
+#             loaded_ss_file$filedata <- paste0(examples_dir,"//model_2D_1P_400R.ss.json")
 #         else
-#             loaded_ss_file$data <- NULL
+#             loaded_ss_file$filedata <- NULL
 #     }
 # })
     
@@ -399,10 +394,98 @@ observeEvent(input$generate_abstraction,{
 #===================== MODEL EXPLORER ==================================    
 #=============== LOADING OF FILES ======================================
 #=======================================================================
+
+output$model_help_text <- renderUI({
+    if(stored_ss_files$current != 0) {
+        helpText(paste0("Experiment no. ",stored_vf_files$current,": ",stored_vf_files$data[[stored_vf_files$current]]$filepath))
+    }
+})
+
+manage_model_experiments <- observe({
+    filedata <- loaded_ss_file$filedata
+    if(!is.null(filedata)) {
+        
+        # Here will be core of managing switching between experiments models
+        if(stored_ss_files$max == 1 || !identical(filedata,stored_ss_files$data[[stored_ss_files$max-1]]$filedata)) {
+            stored_ss_files$data[[stored_ss_files$max]] <- list(filedata=filedata, filepath=loaded_ss_file$filename)
+            stored_vf_files$data[[stored_vf_files$max]] <- list(filedata=loaded_vf_file$filedata, filepath=loaded_vf_file$filename)
+            # loaded_ss_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
+            if(stored_ss_files$max==1)  {
+                stored_ss_files$current <- stored_ss_files$max
+                stored_vf_files$current <- stored_vf_files$max
+                updateButton(session,"model_del",style="default",disabled=F)
+                updateButton(session,"add_vf_plot",style="default",disabled=F)
+            } else    
+                updateButton(session,"model_next",style="success",disabled=F)
+            stored_ss_files$max <- stored_ss_files$max + 1
+            stored_vf_files$max <- stored_vf_files$max + 1
+        }
+    }
+})
+manage_model_next <- observeEvent(input$model_next,{
+    reset_globals()
+    stored_ss_files$current <- stored_ss_files$current + 1
+    stored_vf_files$current <- stored_vf_files$current + 1
+    updateButton(session,"model_prev",style="default",disabled=F)
+    if(stored_ss_files$current+1 == stored_ss_files$max) {
+        updateButton(session,"model_next",style="default",disabled=T)
+    } else {
+        # updateButton(session,"model_next",style="default")
+    }
+})
+manage_model_prev <- observeEvent(input$model_prev,{
+    reset_globals()
+    stored_ss_files$current <- stored_ss_files$current - 1
+    stored_vf_files$current <- stored_vf_files$current - 1
+    updateButton(session,"model_next",style="default",disabled=F)
+    if(stored_ss_files$current == 1) {
+        updateButton(session,"model_prev",style="default",disabled=T)
+    } else {
+        # updateButton(session,"model_prev",style="default")
+    }
+})
+manage_model_del <- observeEvent(input$model_del,{
+    if(stored_ss_files$current > 0) {
+        reset_globals()
+        stored_ss_files$max <- stored_ss_files$max - 1
+        stored_ss_files$data[[stored_ss_files$current]] <- NULL
+        stored_vf_files$max <- stored_vf_files$max - 1
+        stored_vf_files$data[[stored_vf_files$current]] <- NULL
+        if(stored_ss_files$current == stored_ss_files$max) {
+            stored_ss_files$current <- stored_ss_files$current - 1
+            stored_vf_files$current <- stored_vf_files$current - 1
+            if(stored_ss_files$current == 0) {
+                updateButton(session,"model_del",style="default",disabled=T)
+                updateButton(session,"add_vf_plot",style="default",disabled=T)
+            }
+        }
+        if(stored_ss_files$current == 1) {
+            updateButton(session,"model_prev",style="default",disabled=T)
+        }
+        if(stored_ss_files$current+1 == stored_ss_files$max) {
+            updateButton(session,"model_next",style="default",disabled=T)
+        }
+    }
+})
+
+
+preloading_vf_file <- eventReactive(c(stored_vf_files$data,stored_vf_files$current),{
+    if(stored_vf_files$current != 0)
+        return(stored_vf_files$data[[stored_vf_files$current]])
+    else
+        return(NULL)
+})
+
+preloading_ss_file <- eventReactive(c(stored_ss_files$data,stored_ss_files$current),{
+    if(stored_ss_files$current != 0)
+        return(stored_ss_files$data[[stored_ss_files$current]])
+    else
+        return(NULL)
+})
     
 loading_vf_file <- reactive({
-    biofile <- loaded_vf_file$data
-    if(!is.null(biofile)) {
+    if(!is.null(preloading_vf_file())) {
+        biofile <- preloading_vf_file()$filedata
         
         # VARIABLES
         # result is vector of VAR NAMES
@@ -487,11 +570,10 @@ loading_vf_file <- reactive({
 })
 
 
-# prepared for new .json format
 loading_ss_file <- reactive({
-    if(!is.null(loaded_ss_file$data)) {
-        if(class(loaded_ss_file$data) == "character") {
-            biofile <- loaded_ss_file$data
+    if(!is.null(preloading_ss_file())) {
+        biofile <- preloading_ss_file()$filedata
+        if(class(biofile) == "character") {
             
             # VARIABLES
             # result is vector of VAR NAMES
@@ -565,74 +647,6 @@ loading_ss_file <- reactive({
             }
             
             return(list(var_names=var_names, params_num=length(params), param_names=names(params), params=params, thr=thres, eqs=eqs, ranges=ranges))
-        } else {
-            withProgress(message = paste0('Parsing .json file','...'), value = 1, {
-                timing <- system.time(json_data <- fromJSON(file=loaded_ss_file$data))
-                cat("-------------------------\n")
-                cat("... time of loading file:\n")
-                print(timing)
-                
-                ids <- length(json_data$transitions) # number of rows (all succesors of all states)
-                var_num <- length(json_data$variables) # length(loading_vf_file()$var_names)
-                param_num <- length(json_data$params$names) # length(loading_vf_file()$params)
-                
-                thr_data <- json_data$thresholds
-                var_names <- json_data$variables
-                
-                dividers <- 1
-                for(i in 2:var_num) dividers <- c(dividers[1]*(length(thr_data[[i]])-1),dividers)
-                
-                timing <- proc.time()
-                udata <- as.data.table(as.matrix(unlist(json_data$transitions)))
-                udata$id <- 1:nrow(udata)
-                setkeyv(udata,"id")
-                cat("... time of parsing json file:\n")
-                print(proc.time() - timing)
-                
-                states <- data.table(id=1:ids)
-                timing <- system.time({
-                    indices <- udata[(id%%3)==(1), V1]
-                    for(i in 1:var_num) {
-                        states[[paste0("V",i)]] <- indices%/%dividers[i]
-                        indices <- indices%%dividers[i]
-                    }
-                })
-                cat("... time of parsing states:\n")
-                print(timing)
-                
-                succs <- data.table(id=1:ids)
-                timing <- system.time({
-                    indices <- udata[(id%%3)==(2), V1]
-                    for(i in 1:var_num) {
-                        succs[[paste0("V",i)]] <- indices%/%dividers[i]
-                        indices <- indices%%dividers[i]
-                    }
-                })
-                cat("... time of parsing succs:\n")
-                print(timing)
-                
-                if(param_num != 0) {
-                    timing <- system.time({#for(i in 1:(2*np)) params[[paste0("V",i)]] <- udata[(id%%one_part)==((i+2*nv)%%one_part),V1])
-                        params <- udata[(id%%3) == 0, as.data.table(t(matrix(unlist(json_data$params$rectangles[V1+1]),nrow=2*param_num))) ]
-                    })
-                    params[,id:=1:ids]
-                    setkeyv(params,"id")
-                    cat("... time of parsing params:\n")
-                    print(timing)
-                    #g_param_slider <<- as.numeric(params[1])[-1]
-                    p_num <- (ncol(params)-1)/2
-                } else {
-                    params <- NULL
-                    p_num <- 0
-                }
-                
-                ranges <- lapply(thr_data, range)
-                names(ranges) <- json_data$params$names
-            })
-            
-            udata <- NULL
-            return(NULL)
-            #return(list(thr = thr_data, states = states, succs = succs, params = params, params_num = p_num, var_names = var_names, ranges = ranges))
         }
     } else return(NULL)
 })
@@ -654,17 +668,6 @@ output$param_sliders_bio <- renderUI({
             )
         })
     }
-    ####### NEW PART ########
-#     else {
-#         if(!is.null(loading_ss_file()) && !is.null(loading_ss_file()$params)) {
-#             lapply(1:loading_ss_file()$params_num, function(i) {
-#                 label <- paste0("parameter ",names(loading_vf_file()$params)[i])
-#                 name <- paste0("param_slider_vf_",i)
-#                 values <- c(min(as.numeric(loading_ss_file()$params[[paste0("V",2*i)]]),na.rm=T),max(as.numeric(loading_ss_file()$params[[paste0("V",2*i+1)]]),na.rm=T))
-#                 numericInput(name,label=label,min=values[1],max=values[2],value=((values[2]-values[1])*0.1),step=((values[2]-values[1])/1000))
-#             })
-#         }
-#     }
 })
 # update_param_sliders <- observe({
 #     if(!is.null(loading_vf_file())) {
@@ -698,7 +701,6 @@ output$param_sliders_bio <- renderUI({
 
 
 output$selector <- renderUI({
-#    input$add_vf_plot
     if(!is.null(loading_vf_file())) {
         variables <- loading_vf_file()$vars
         lapply(vf_update(),function(i) {
@@ -942,8 +944,11 @@ zoom_vf_ranges <- observe({
                     if(x == input[[paste0("vf_selector_x_",i)]]) return(c(brush$xmin, brush$xmax))
                     if(x == input[[paste0("vf_selector_y_",i)]]) return(c(brush$ymin, brush$ymax))
                     # return(loading_vf_file()$ranges[[x]])
-                    if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) return(loading_ss_file()$ranges[[x]])
-                    else return(loading_vf_file()$ranges[[x]])
+                    
+                    # if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) return(loading_ss_file()$ranges[[x]])
+                    # else return(loading_vf_file()$ranges[[x]])
+                    
+                    return(loading_ss_file()$ranges[[x]])
                 })
             })
         }
@@ -957,8 +962,10 @@ unzoom_vf_ranges <- observe({
             if(!is.null(button) && (button > vf_brushed$click_counter[[i]])) isolate({
                 # vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) loading_vf_file()$ranges[[x]] )
                 vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) {
-                    if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) loading_ss_file()$ranges[[x]]
-                    else loading_vf_file()$ranges[[x]]
+                    # if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) loading_ss_file()$ranges[[x]]
+                    # else loading_vf_file()$ranges[[x]]
+                    
+                    return(loading_ss_file()$ranges[[x]])
                 })
                 vf_brushed$click_counter[[i]] <- button
             })
@@ -2008,12 +2015,10 @@ observeEvent(input$ps_file,{
 
 
 output$save_result_file <- downloadHandler(
-    filename = ifelse(stored_ps_files$current > 0 && !is.null(stored_ps_files$data[[stored_ps_files$current]]$filepath), 
-                      paste0(stored_ps_files$data[[stored_ps_files$current]]$filepath), "results.json"),
+    filename = ifelse(!is.null(preloading_ps_file()), paste0(preloading_ps_file()$filepath), "results.json"),
     content = function(file) {
-        if(stored_ps_files$current > 0 && !is.null(stored_ps_files$data[[stored_ps_files$current]]$filedata))
-            writeLines(stored_ps_files$data[[stored_ps_files$current]]$filedata, file)
-        else writeLines("", file)
+        if(!is.null(preloading_ps_file())) writeLines(preloading_ps_file()$filedata, file)
+        else                               writeLines("", file)
     }
 )
 
@@ -2034,6 +2039,7 @@ manage_result_experiments <- observe({
             if(stored_ps_files$max==1)  {
                 stored_ps_files$current <- stored_ps_files$max
                 updateButton(session,"result_del",style="default",disabled=F)
+                updateButton(session,"add_param_plot",style="default",disabled=F)
             } else    
                 updateButton(session,"result_next",style="success",disabled=F)
             stored_ps_files$max <- stored_ps_files$max + 1
@@ -2067,8 +2073,10 @@ manage_result_del <- observeEvent(input$result_del,{
         stored_ps_files$data[[stored_ps_files$current]] <- NULL
         if(stored_ps_files$current == stored_ps_files$max) {
             stored_ps_files$current <- stored_ps_files$current - 1
-            if(stored_ps_files$current == 0)
+            if(stored_ps_files$current == 0) {
                 updateButton(session,"result_del",style="default",disabled=T)
+                updateButton(session,"add_param_plot",style="default",disabled=T)
+            }
         }
         if(stored_ps_files$current == 1) {
             updateButton(session,"result_prev",style="default",disabled=T)
@@ -2081,13 +2089,13 @@ manage_result_del <- observeEvent(input$result_del,{
 
 preloading_ps_file <- eventReactive(c(stored_ps_files$data,stored_ps_files$current),{
     if(stored_ps_files$current != 0)
-        return(stored_ps_files$data[[stored_ps_files$current]]$filedata)
+        return(stored_ps_files$data[[stored_ps_files$current]])
     else
         return(NULL)
 })
 loading_ps_file <- reactive({
     if(!is.null(preloading_ps_file())) {
-        file <- fromJSON(preloading_ps_file())
+        file <- fromJSON(preloading_ps_file()$filedata)
             
         # musi byt kontrola ci result file vobec nieco obsahuje !!!!
         

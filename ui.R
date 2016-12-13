@@ -167,13 +167,22 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
     fluidPage(
         theme = "simplex.css",
         fluidRow(
-            column(2
-                   # ,tags$div(title="",
-                   #          bsButton("model_prev","previous",disabled=T)
-                   # ),
-                   # tags$div(title="",
-                   #          bsButton("model_next","next",disabled=T)
-                   # )
+            column(2,
+                   uiOutput("model_help_text"),
+                   fluidRow(
+                       column(4,
+                              tags$div(title="",
+                                       bsButton("model_prev","previous",disabled=T,block=T)
+                              )),
+                       column(4,
+                              tags$div(title="",
+                                       bsButton("model_next","next",disabled=T,block=T)
+                              )),
+                       column(4,
+                              tags$div(title="",
+                                       bsButton("model_del","delete",disabled=T,block=T)
+                              ))
+                   )
             ),
             column(4,
                    fluidRow(
@@ -259,7 +268,7 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
                uiOutput("param_selector"),
                tags$div(title="Button will add new layer of plots for parameter space and corresponding transition-state space as soon as some file is loaded. 
                                     Then you will be able to play with it.",
-                    bsButton("add_param_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=F))
+                    bsButton("add_param_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=T))
         )
     ),
     tags$hr(),
