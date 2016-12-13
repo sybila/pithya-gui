@@ -1193,17 +1193,8 @@ draw_ss_plots <- observe({
                 my_i <- i
                 plotname <- paste0("plot_ss_",my_i)
                 output[[plotname]] <- renderPlot({
-                    draw_state_space_crossroad(isolate(input[[paste0("vf_selector_x_",my_i)]]), isolate(input[[paste0("vf_selector_y_",my_i)]]), my_i, vf_brushed$data[[my_i]])
+                    draw_state_space_crossroad(isolate(input[[paste0("vf_selector_x_",my_i)]]), isolate(input[[paste0("vf_selector_y_",my_i)]]), my_i, ss_brushed$data[[my_i]])
                 },height=change_height() )
-                # if(input[[paste0("vf_selector_x_",my_i)]] != input[[paste0("vf_selector_y_",my_i)]]) {
-                #     output[[plotname]] <- renderPlot({
-                #         draw_state_space_new_2(isolate(input[[paste0("vf_selector_x_",my_i)]]), isolate(input[[paste0("vf_selector_y_",my_i)]]), my_i, ss_brushed$data[[my_i]])
-                #     },height=change_height() )
-                # } else {
-                #     output[[plotname]] <- renderPlot({
-                #         draw_1D_state_space(isolate(input[[paste0("vf_selector_x_",my_i)]]), my_i, ss_brushed$data[[my_i]])
-                #     },height=change_height() )
-                # }
             })
         }
     }
