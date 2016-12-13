@@ -28,10 +28,19 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 );
 "
 
+# message handler for giving an information about finished prameter synthesis
+JS.parameterSynthesisFinished <- "
+Shiny.addCustomMessageHandler('jsCode',
+    function(message) {
+        eval(message.value);
+});
+"
+
 source("global.R")
 
 shinyUI(
     fluidPage(
+        tags$head(tags$script(HTML(JS.parameterSynthesisFinished))),
     # titlePanel("PITHYA - Parameter Investigation Tool with HYbrid Approach"),
     titlePanel("PITHYA - Parameter Investigation Tool for HYbrid Analysis"),
     tags$hr(),

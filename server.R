@@ -147,11 +147,23 @@ observeEvent(input$process_stop,{
 output$progress_output <- renderPrint({
     if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0) {
         # progress$set(value = as.numeric(progressFile()[length(progressFile())]))
-        if(T %in% grepl("Model does not contain threshold",progressFile())) cat("chyba threshold\n")
+        # if(T %in% grepl("Model does not contain threshold",progressFile())) cat("chyba threshold\n")
+        
+        # TEMPLATE: You have to use an exact threshold in propositions! Proposition: y > 8.0,
+        if(T %in% grepl("You have to use an exact threshold in propositions! Proposition: [^,]+,",progressFile())) {
+            # # cat("chyba threshold\n")
+            # string <- gsub(", \t","",gsub("You have to use an exact threshold in propositions! Proposition:","",
+            #                grep("You have to use an exact threshold in propositions! Proposition: [^,]+,",progressFile(),value=T)))
+            # print(string)
+            js_string <- 'alert("Missing threshold!");'
+            session$sendCustomMessage(type='jsCode', list(value = js_string))
+        }
         if(T %in% grepl("^!!DONE!!$",progressFile())) {
             # TODO: here should be call for message window
             updateButton(session,"process_stop",style="default",disabled=T)
             updateButton(session,"add_result_plot", disabled=F)
+            js_string <- 'alert("Parameter synthesis done!");'
+            session$sendCustomMessage(type='jsCode', list(value = js_string))
         }
         
         # if(length(progressFile()) > progressMaxLength)
