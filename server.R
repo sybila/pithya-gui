@@ -2036,7 +2036,7 @@ output$save_result_file <- downloadHandler(
 
 output$result_help_text <- renderUI({
     if(stored_ps_files$current != 0) {
-        helpText(paste0("Experiment no. ",stored_ps_files$current,": ",stored_ps_files$data[[stored_ps_files$current]]$filepath))
+        helpText(paste0("Experiment no. ",stored_ps_files$current," (",stored_ps_files$data[[stored_ps_files$current]]$timestamp,")"))
     }
 })
 
@@ -2046,7 +2046,7 @@ manage_result_experiments <- observe({
         
         # Here will be core of managing switching between experiments result
         if(stored_ps_files$max == 1 || !identical(filedata,stored_ps_files$data[[stored_ps_files$max-1]]$filedata)) {
-            stored_ps_files$data[[stored_ps_files$max]] <- list(filedata=filedata,filepath=loaded_ps_file$filename)
+            stored_ps_files$data[[stored_ps_files$max]] <- list(filedata=filedata,filepath=loaded_ps_file$filename,timestamp=Sys.time())
             # loaded_ps_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
             if(stored_ps_files$max==1)  {
                 stored_ps_files$current <- stored_ps_files$max
