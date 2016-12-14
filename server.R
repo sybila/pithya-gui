@@ -2154,7 +2154,6 @@ loading_ps_file <- reactive({
             names(param_bounds) <- file$parameters
             
             stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- 1
-            stored_ps_files$data[[stored_ps_files$current]]$data$ps_selectors <- list()
             stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen <- list(data=NULL,max=1)
             stored_ps_files$data[[stored_ps_files$current]]$data$parsed_data <- list(
                 param_space=table,  # DT( formula:string, data:list_of_state_and_param_indices, state:numeric_index_to_states, param:numeric_index_to_params, 
@@ -2182,34 +2181,25 @@ output$param_selector <- renderUI({
             idx <- paste0("param_selector_x_",i)
             labelx <- paste0("horizontal axis in plot ",i)
             choicesx <- list_of_param_names
+            selectedx <- ifelse(!is.null(input[[paste0("param_selector_x_",i)]]), input[[paste0("param_selector_x_",i)]], #empty_sign)
+                                list_of_param_names[1])
             
             idy <- paste0("param_selector_y_",i)
             labely <- paste0("vertical axis in plot ",i)
             choicesy <- list_of_param_names
-            
-            stored_ps_files$data[[stored_ps_files$current]]$data$ps_selectors[[i]] <- list(
-                x=ifelse(!is.null(input[[paste0("param_selector_x_",i)]]), input[[paste0("param_selector_x_",i)]], #empty_sign)
-                         ifelse(length(preloading_ps_file()$data$ps_selectors) >= i && !is.null(preloading_ps_file()$data$ps_selectors[[i]]), 
-                                preloading_ps_file()$data$ps_selectors[[i]]$x, list_of_param_names[[1]])),
-                y=ifelse(!is.null(input[[paste0("param_selector_y_",i)]]), input[[paste0("param_selector_y_",i)]], #empty_sign)
-                         ifelse(length(preloading_ps_file()$data$ps_selectors) >= i && !is.null(preloading_ps_file()$data$ps_selectors[[i]]), 
-                                preloading_ps_file()$data$ps_selectors[[i]]$y,
-                                ifelse(length(list_of_param_names) > 1, list_of_param_names[[2]], list_of_param_names[[1]]))),
-                hide=ifelse(!is.null(input[[paste0("hide_ps_",i)]]), input[[paste0("hide_ps_",i)]], 
-                            ifelse(length(preloading_ps_file()$data$ps_selectors) >= i && !is.null(preloading_ps_file()$data$ps_selectors[[i]]),
-                                   preloading_ps_file()$data$ps_selectors[[i]]$hide, F))
-            )
+            selectedy <- ifelse(!is.null(input[[paste0("param_selector_y_",i)]]), input[[paste0("param_selector_y_",i)]], #empty_sign)
+                                ifelse(length(list_of_param_names) > 1, list_of_param_names[2], list_of_param_names[1]))
             
             fluidRow(
                 column(5,
-                       selectInput(idx,labelx,choicesx,preloading_ps_file()$data$ps_selectors[[i]]$x)
+                       selectInput(idx,labelx,choicesx,selectedx)
                 ),
                 column(5,
-                       selectInput(idy,labely,choicesy,preloading_ps_file()$data$ps_selectors[[i]]$y)
+                       selectInput(idy,labely,choicesy,selectedy)
                 ),
                 column(2,
                        actionButton(paste0("cancel_ps_",i), "cancel"),
-                       checkboxInput(paste0("hide_ps_",i), "hide", preloading_ps_file()$data$ps_selectors[[i]]$hide)
+                       checkboxInput(paste0("hide_ps_",i), "hide", ifelse(!is.null(input[[paste0("hide_ps_",i)]]),input[[paste0("hide_ps_",i)]],F))
                 )
             )
         })
@@ -2280,24 +2270,24 @@ observe({
 observeEvent(input$add_param_plot,{
     if(!is.null(loading_ps_file())) {
         # very important initialisation of unzoom button click counters
-        ps_brushed$click_counter[[preloading_ps_file()$data$param_chosen$max]] <- -1
-        param_ss_brushed$click_counter[[preloading_ps_file()$data$param_chosen$max]] <- -1
+        ps_brushed$click_counter[[param_chosen$max]] <- -1
+        param_ss_brushed$click_counter[[param_chosen$max]] <- -1
         
-        param_space_clicked$old_point[[preloading_ps_file()$data$param_chosen$max]] <- NA
-        param_space_clicked$click_counter[[preloading_ps_file()$data$param_chosen$max]] <- -1
-        param_space_clicked$apply_to_all_click_counter[[preloading_ps_file()$data$param_chosen$max]] <- -1
+        param_space_clicked$old_point[[param_chosen$max]] <- NA
+        param_space_clicked$click_counter[[param_chosen$max]] <- -1
+        param_space_clicked$apply_to_all_click_counter[[param_chosen$max]] <- -1
         
-        param_ss_clicked$point[[preloading_ps_file()$data$param_chosen$max]] <- vector()
-        param_ss_clicked$old_point[[preloading_ps_file()$data$param_chosen$max]] <- NA
-        param_ss_clicked$click_counter[[preloading_ps_file()$data$param_chosen$max]] <- -1
-        param_ss_clicked$apply_to_all_click_counter[[preloading_ps_file()$data$param_chosen$max]] <- -1
+        param_ss_clicked$point[[param_chosen$max]] <- vector()
+        param_ss_clicked$old_point[[param_chosen$max]] <- NA
+        param_ss_clicked$click_counter[[param_chosen$max]] <- -1
+        param_ss_clicked$apply_to_all_click_counter[[param_chosen$max]] <- -1
         
-        param_space$globals[[preloading_ps_file()$data$param_chosen$max]] <- NA
-        param_state_space$globals[[preloading_ps_file()$data$param_chosen$max]] <- NA
+        param_space$globals[[param_chosen$max]] <- NA
+        param_state_space$globals[[param_chosen$max]] <- NA
         #satisfiable_ps$data[[param_chosen$max]] <- NA
         
-        stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$data <- c(param_update(),preloading_ps_file()$data$param_chosen$max)
-        stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$max  <- preloading_ps_file()$data$param_chosen$max + 1
+        stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$data <- c(param_update(),param_chosen$max)
+        param_chosen$max  <- param_chosen$max + 1
     }
 })
 param_update <- reactive({
