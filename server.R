@@ -409,7 +409,7 @@ observeEvent(input$generate_abstraction,{
 
 output$model_help_text <- renderUI({
     if(stored_ss_files$current != 0) {
-        helpText(paste0("Experiment no. ",stored_vf_files$current,": ",stored_vf_files$data[[stored_vf_files$current]]$filepath))
+        helpText(paste0("Experiment no. ",stored_vf_files$current," (",stored_vf_files$data[[stored_vf_files$current]]$timestamp,")"))
     }
 })
 
@@ -419,8 +419,8 @@ manage_model_experiments <- observe({
         
         # Here will be core of managing switching between experiments models
         if(stored_ss_files$max == 1 || !identical(filedata,stored_ss_files$data[[stored_ss_files$max-1]]$filedata)) {
-            stored_ss_files$data[[stored_ss_files$max]] <- list(filedata=filedata, filepath=loaded_ss_file$filename)
-            stored_vf_files$data[[stored_vf_files$max]] <- list(filedata=loaded_vf_file$filedata, filepath=loaded_vf_file$filename)
+            stored_ss_files$data[[stored_ss_files$max]] <- list(filedata=filedata, filepath=loaded_ss_file$filename, timestamp=Sys.time())
+            stored_vf_files$data[[stored_vf_files$max]] <- list(filedata=loaded_vf_file$filedata, filepath=loaded_vf_file$filename, timestamp=Sys.time())
             # loaded_ss_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
             if(stored_ss_files$max==1)  {
                 stored_ss_files$current <- stored_ss_files$max
@@ -2106,7 +2106,7 @@ preloading_ps_file <- eventReactive(c(stored_ps_files$data,stored_ps_files$curre
         return(NULL)
 })
 loading_ps_file <- reactive({
-    if(!is.null(preloading_ps_file())) {
+    if(!is.null(preloading_ps_file()) && nchar(preloading_ps_file()$filedata) != 0) {
         file <- fromJSON(preloading_ps_file()$filedata)
             
         # musi byt kontrola ci result file vobec nieco obsahuje !!!!
@@ -2231,7 +2231,7 @@ observe({
                 param_chosen$data <- param_chosen$data[param_chosen$data != i]
                 # some kind of garbage collector would be very convenient in this phase
                 # either gc() or rm()
-                #rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("vf_selector_y_",i)]]) #TODO: doplnit dalsie
+                #rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("param_selector_y_",i)]]) #TODO: doplnit dalsie
                 param_space$data[[i]] <- NA
                 param_space$globals[[i]] <- NA
                 param_space_clicked$data[[i]] <- NA
@@ -2451,8 +2451,8 @@ output$param_space_plots <- renderUI({
                            helpText("parameter space of the model"),
                        div(id = "plot-container",
                            tags$img(
-                               #src="circle.png",
-                               src = "spinner.gif",
+                               src="circle.png",
+                               # src = "spinner.gif",
                                id = "loading-spinner"),
                            imageOutput(paste0("param_space_plot_",i),"auto","auto", click=paste0("ps_",i,"_click"), dblclick=paste0("ps_",i,"_dblclick"),
                                        hover=hoverOpts(id=paste0("ps_",i,"_hover"),delayType="debounce",delay=hover_delay_limit),
@@ -2774,8 +2774,10 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
             # # this has to be at the end
             # param_space_clicked$old_point[[plot_index]] <- point
             
-            rect(states[[paste0("V",index_x*2-1)]], states[[paste0("V",index_y*2-1)]], states[[paste0("V",index_x*2)]], states[[paste0("V",index_y*2)]],
-                 border="blue", col=NA, lwd=2)
+            if(nrow(states) > 0) {
+                rect(states[[paste0("V",index_x*2-1)]], states[[paste0("V",index_y*2-1)]], states[[paste0("V",index_x*2)]], states[[paste0("V",index_y*2)]],
+                     border="blue", col=NA, lwd=2)
+            }
         }
         # this has to be at the end
         param_state_space$globals[[plot_index]] <- checkpoint
@@ -2839,7 +2841,7 @@ draw_1D_param_ss <- function(name_x, plot_index, boundaries) {
                 dt <- data.table(a=point[[1]])
                 input_params <- paste0("list(",names(point)[1],"=dt$a")
                 for(x in 1:length(params)) {
-                    name <- params[x]
+                    name <- params[[x]]
                     di <- dim_indices[x]
                     if(name != names(point)[1]) {
                         if(!name %in% names(point)) {
@@ -2867,8 +2869,8 @@ draw_1D_param_ss <- function(name_x, plot_index, boundaries) {
             } else {
                 # for rectangular parameters
                 ids <- ps$row_id    # all ids at first
-                for(x in 1:length(loading_ps_file()$param_names)) {
-                    name <- loading_ps_file()$param_names[x]
+                for(x in 1:length(params)) {
+                    name <- params[[x]]
                     if(!name %in% c(input[[paste0("param_selector_x_",plot_index)]],input[[paste0("param_selector_y_",plot_index)]]) ) {
                         if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
                             sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
@@ -2883,8 +2885,8 @@ draw_1D_param_ss <- function(name_x, plot_index, boundaries) {
             
             blue_ids <- loading_ps_file()$param_space[(param+1) %in% ids & formula==chosen_ps_formulae_clean(),state+1]
             if(input[[paste0("param_selector_x_",plot_index)]] %in% variables || input[[paste0("param_selector_y_",plot_index)]] %in% variables) {
-                for(x in 1:length(loading_ps_file()$var_names)) {
-                    name <- loading_ps_file()$var_names[x]
+                for(x in 1:length(variables)) {
+                    name <- variables[[x]]
                     if(!name %in% c(input[[paste0("param_selector_x_",plot_index)]],input[[paste0("param_selector_y_",plot_index)]]) ) {
                         if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x+length(loading_ps_file()$param_names))]]) && 
                            input[[paste0("scale_switch_ps_",plot_index,"_",x+length(loading_ps_file()$param_names))]]) {
@@ -2898,9 +2900,14 @@ draw_1D_param_ss <- function(name_x, plot_index, boundaries) {
             }
             states <- states[id %in% blue_ids]
             
-            rect(states[[paste0("V",index_x*2-1)]], 0, states[[paste0("V",index_x*2)]], 1,
-                 border="blue", col=NA, lwd=2)
+            if(nrow(states) > 0) {
+                rect(states[[paste0("V",index_x*2-1)]], 0, states[[paste0("V",index_x*2)]], 1,
+                     border="blue", col=NA, lwd=2)
+            }
         }
+        # this has to be at the end
+        param_state_space$globals[[plot_index]] <- checkpoint
+        param_ss_clicked$old_point[[plot_index]] <- param_ss_clicked$point[[plot_index]]
     }
 }
 
