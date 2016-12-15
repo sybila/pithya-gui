@@ -224,10 +224,42 @@ output$save_prop_file <- downloadHandler(
 #=============== MODEL INPUT TAB =======================================
 #=======================================================================
 
-reset_globals <- function() {
-    for(i in vf_chosen$data) {
-        vf_chosen$data <- vf_chosen$data[vf_chosen$data != i]
+reset_globals <- function(i=NA) {
+    if(is.na(i)) {
+        for(i in vf_chosen$data) reset_particular_global(i)
+    } else {
+        reset_particular_global(i)
     }
+}
+reset_particular_global <- function(i) {
+    vf_chosen$data <- vf_chosen$data[vf_chosen$data != i]
+    # some kind of garbage collector would be very convenient in this phase
+    # either gc() or rm()
+    #                rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("vf_selector_y_",i)]]) #TODO: doplnit dalsie
+    
+    # removeUI function
+    transition_state_space$data[[i]] <- NA
+    transition_state_space$globals[[i]] <- NA
+    state_space_clicked$data[[i]] <- NA
+    state_space_clicked$click_counter[[i]] <- NA
+    state_space_clicked$apply_to_all_click_counter[[i]] <- NA
+    state_space_clicked$old_point[[i]] <- NA
+    state_space_clicked$point[[i]] <- NA
+    ss_brushed$data[[i]] <- NA
+    ss_brushed$click_counter[[i]] <- NA
+    
+    vector_field_space$data[[i]] <- NA
+    vector_field_space$globals[[i]] <- NA
+    vector_field_clicked$data[[i]] <- NA
+    vector_field_clicked$apply_to_all_click_counter[[i]] <- NA
+    vector_field_clicked$apply_to_tss_click_counter[[i]] <- NA
+    vector_field_clicked$click_counter[[i]] <- NA
+    vector_field_clicked$point[[i]] <- NA
+    vector_field_clicked$old_point[[i]] <- NA
+    vf_brushed$data[[i]] <- NA
+    vf_brushed$click_counter[[i]] <- NA
+    
+    print(gc())
 }
 
 # reaction on event of loading .bio file into tool putting a loaded model into text field
@@ -788,34 +820,7 @@ observe({
     if(!is.null(loading_vf_file())) {
         for(i in vf_chosen$data) {
             if(!is.null(input[[paste0("cancel_vf_",i)]]) && input[[paste0("cancel_vf_",i)]] > 0) {
-                vf_chosen$data <- vf_chosen$data[vf_chosen$data != i]
-                # some kind of garbage collector would be very convenient in this phase
-                # either gc() or rm()
-#                rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("vf_selector_y_",i)]]) #TODO: doplnit dalsie
-                
-                # removeUI function
-                transition_state_space$data[[i]] <- NA
-                transition_state_space$globals[[i]] <- NA
-                state_space_clicked$data[[i]] <- NA
-                state_space_clicked$click_counter[[i]] <- NA
-                state_space_clicked$apply_to_all_click_counter[[i]] <- NA
-                state_space_clicked$old_point[[i]] <- NA
-                state_space_clicked$point[[i]] <- NA
-                ss_brushed$data[[i]] <- NA
-                ss_brushed$click_counter[[i]] <- NA
-                
-                vector_field_space$data[[i]] <- NA
-                vector_field_space$globals[[i]] <- NA
-                vector_field_clicked$data[[i]] <- NA
-                vector_field_clicked$apply_to_all_click_counter[[i]] <- NA
-                vector_field_clicked$apply_to_tss_click_counter[[i]] <- NA
-                vector_field_clicked$click_counter[[i]] <- NA
-                vector_field_clicked$point[[i]] <- NA
-                vector_field_clicked$old_point[[i]] <- NA
-                vf_brushed$data[[i]] <- NA
-                vf_brushed$click_counter[[i]] <- NA
-                
-                print(gc())
+                reset_globals(i)
             }
         }
     }
@@ -2000,10 +2005,39 @@ draw_1D_state_space <- function(name_x, plot_index, boundaries) {
 #=============== RESULT TAB ============================================
 #=======================================================================
 
-reset_globals_param <- function() {
-    for(i in param_update()) {
-        stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$data <- param_update()[param_update() != i]
+reset_globals_param <- function(i=NA) {
+    if(is.na(i)) {
+        for(i in param_update()) reset_particular_global_param(i)
+    } else {
+        reset_particular_global_param(i)
     }
+}
+reset_particular_global_param <- function(i) {
+    stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$data <- param_update()[param_update() != i]
+    # some kind of garbage collector would be very convenient in this phase
+    # either gc() or rm()
+    #rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("param_selector_y_",i)]]) #TODO: doplnit dalsie
+    param_space$data[[i]] <- NA
+    param_space$globals[[i]] <- NA
+    param_space_clicked$data[[i]] <- NA
+    param_space_clicked$click_counter[[i]] <- NA
+    param_space_clicked$apply_to_all_click_counter[[i]] <- NA
+    param_space_clicked$old_point[[i]] <- NA
+    param_space_clicked$point[[i]] <- NA
+    ps_brushed$data[[i]] <- NA
+    ps_brushed$click_counter[[i]] <- NA
+    
+    param_state_space$data[[i]] <- NA
+    param_state_space$globals[[i]] <- NA
+    param_ss_clicked$data[[i]] <- NA
+    param_ss_clicked$apply_to_all_click_counter[[i]] <- NA
+    param_ss_clicked$click_counter[[i]] <- NA
+    param_ss_clicked$point[[i]] <- NA
+    param_ss_clicked$old_point[[i]] <- NA
+    param_ss_brushed$data[[i]] <- NA
+    param_ss_brushed$click_counter[[i]] <- NA
+    
+    print(gc())
 }
 
 observeEvent(c(resultFile()),{
@@ -2239,31 +2273,7 @@ observe({
     if(!is.null(loading_ps_file())) {
         for(i in param_update()) {
             if(!is.null(input[[paste0("cancel_ps_",i)]]) && input[[paste0("cancel_ps_",i)]] > 0) {
-                stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$data <- param_update()[param_update() != i]
-                # some kind of garbage collector would be very convenient in this phase
-                # either gc() or rm()
-                #rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("param_selector_y_",i)]]) #TODO: doplnit dalsie
-                param_space$data[[i]] <- NA
-                param_space$globals[[i]] <- NA
-                param_space_clicked$data[[i]] <- NA
-                param_space_clicked$click_counter[[i]] <- NA
-                param_space_clicked$apply_to_all_click_counter[[i]] <- NA
-                param_space_clicked$old_point[[i]] <- NA
-                param_space_clicked$point[[i]] <- NA
-                ps_brushed$data[[i]] <- NA
-                ps_brushed$click_counter[[i]] <- NA
-                
-                param_state_space$data[[i]] <- NA
-                param_state_space$globals[[i]] <- NA
-                param_ss_clicked$data[[i]] <- NA
-                param_ss_clicked$apply_to_all_click_counter[[i]] <- NA
-                param_ss_clicked$click_counter[[i]] <- NA
-                param_ss_clicked$point[[i]] <- NA
-                param_ss_clicked$old_point[[i]] <- NA
-                param_ss_brushed$data[[i]] <- NA
-                param_ss_brushed$click_counter[[i]] <- NA
-                
-                print(gc())
+                reset_globals_param(i)
             }
         }
     }
@@ -2736,8 +2746,8 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
             } else {
                 # for rectangular parameters
                 ids <- ps$row_id    # all ids at first
-                for(x in 1:length(loading_ps_file()$param_names)) {
-                    name <- loading_ps_file()$param_names[x]
+                for(x in 1:length(params)) {
+                    name <- params[x]
                     if(!name %in% c(input[[paste0("param_selector_x_",plot_index)]],input[[paste0("param_selector_y_",plot_index)]]) ) {
                         if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
                             sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
@@ -2752,12 +2762,12 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
             
             blue_ids <- loading_ps_file()$param_space[(param+1) %in% ids & formula==chosen_ps_formulae_clean(),state+1]
             if(input[[paste0("param_selector_x_",plot_index)]] %in% variables || input[[paste0("param_selector_y_",plot_index)]] %in% variables) {
-                for(x in 1:length(loading_ps_file()$var_names)) {
-                    name <- loading_ps_file()$var_names[x]
+                for(x in 1:length(variables)) {
+                    name <- variables[x]
                     if(!name %in% c(input[[paste0("param_selector_x_",plot_index)]],input[[paste0("param_selector_y_",plot_index)]]) ) {
-                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x+length(loading_ps_file()$param_names))]]) && 
-                           input[[paste0("scale_switch_ps_",plot_index,"_",x+length(loading_ps_file()$param_names))]]) {
-                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(loading_ps_file()$param_names))]] # right state value in dimension x
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x+length(params))]]) && 
+                           input[[paste0("scale_switch_ps_",plot_index,"_",x+length(params))]]) {
+                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
                             blue_ids <- intersect(blue_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, id])
                         }
                     # } else {
@@ -2771,8 +2781,8 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
             #        !identical(param_state_space$globals[[plot_index]],checkpoint) || !identical(param_ss_clicked$point[[plot_index]],param_ss_clicked$old_point[[plot_index]])) {
             # 
             #     ids <- loading_ps_file()$params$row_id    # all ids at first
-            #     for(x in 1:length(loading_ps_file()$param_names)) {
-            #         name <- loading_ps_file()$param_names[x]
+            #     for(x in 1:length(params)) {
+            #         name <- params[x]
             #         ids <- intersect(ids, loading_ps_file()$params[get(paste0("V",x*2-1)) < point[[name]][2] & get(paste0("V",x*2)) >= point[[name]][2] |
             #                                                        get(paste0("V",x*2-1)) <= point[[name]][1] & get(paste0("V",x*2)) > point[[name]][1] |
             #                                                        get(paste0("V",x*2-1)) >= point[[name]][1] & get(paste0("V",x*2)) <= point[[name]][2], row_id])
@@ -2899,9 +2909,9 @@ draw_1D_param_ss <- function(name_x, plot_index, boundaries) {
                 for(x in 1:length(variables)) {
                     name <- variables[[x]]
                     if(!name %in% c(input[[paste0("param_selector_x_",plot_index)]],input[[paste0("param_selector_y_",plot_index)]]) ) {
-                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x+length(loading_ps_file()$param_names))]]) && 
-                           input[[paste0("scale_switch_ps_",plot_index,"_",x+length(loading_ps_file()$param_names))]]) {
-                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(loading_ps_file()$param_names))]] # right state value in dimension x
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x+length(params))]]) && 
+                           input[[paste0("scale_switch_ps_",plot_index,"_",x+length(params))]]) {
+                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
                             blue_ids <- intersect(blue_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, id])
                         }
                         # } else {
