@@ -2007,13 +2007,13 @@ draw_1D_state_space <- function(name_x, plot_index, boundaries) {
 
 reset_globals_param <- function(i=NA) {
     if(is.na(i)) {
-        for(i in param_chosen$data) reset_particular_global_param(i)
+        for(i in param_update()) reset_particular_global_param(i)
     } else {
         reset_particular_global_param(i)
     }
 }
 reset_particular_global_param <- function(i) {
-    param_chosen$data <- param_chosen$data[param_chosen$data != i]
+    stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$data <- param_update()[param_update() != i]
     # some kind of garbage collector would be very convenient in this phase
     # either gc() or rm()
     #rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("param_selector_y_",i)]]) #TODO: doplnit dalsie
@@ -2074,13 +2074,13 @@ output$result_help_text <- renderUI({
     }
 })
 
-manage_result_experiments <- observe({
+manage_result_experiments <- observeEvent(loaded_ps_file$filedata,{
     filedata <- loaded_ps_file$filedata
     if(!is.null(filedata)) {
         
-        # Here will be core of managing switching between experiments result
         if(stored_ps_files$max == 1 || !identical(filedata,stored_ps_files$data[[stored_ps_files$max-1]]$filedata)) {
-            stored_ps_files$data[[stored_ps_files$max]] <- list(filedata=filedata,filepath=loaded_ps_file$filename,timestamp=Sys.time())
+            stored_ps_files$data[[stored_ps_files$max]] <- list(filedata=filedata, filepath=loaded_ps_file$filename, timestamp=Sys.time(), 
+                                                                data=list(chosen_ps_formula=1, param_chosen=list(data=NULL), parsed_data=list()) )
             # loaded_ps_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
             if(stored_ps_files$max==1)  {
                 stored_ps_files$current <- stored_ps_files$max
@@ -2093,7 +2093,8 @@ manage_result_experiments <- observe({
     }
 })
 manage_result_next <- observeEvent(input$result_next,{
-    reset_globals_param()
+    # reset_globals_param()
+    stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
     stored_ps_files$current <- stored_ps_files$current + 1
     updateButton(session,"result_prev",style="default",disabled=F)
     if(stored_ps_files$current+1 == stored_ps_files$max) {
@@ -2103,7 +2104,8 @@ manage_result_next <- observeEvent(input$result_next,{
     }
 })
 manage_result_prev <- observeEvent(input$result_prev,{
-    reset_globals_param()
+    # reset_globals_param()
+    stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
     stored_ps_files$current <- stored_ps_files$current - 1
     updateButton(session,"result_next",style="default",disabled=F)
     if(stored_ps_files$current == 1) {
@@ -2114,7 +2116,7 @@ manage_result_prev <- observeEvent(input$result_prev,{
 })
 manage_result_del <- observeEvent(input$result_del,{
     if(stored_ps_files$current > 0) {
-        reset_globals_param()
+        # reset_globals_param()
         stored_ps_files$max <- stored_ps_files$max - 1
         stored_ps_files$data[[stored_ps_files$current]] <- NULL
         if(stored_ps_files$current == stored_ps_files$max) {
@@ -2140,60 +2142,69 @@ preloading_ps_file <- eventReactive(c(stored_ps_files$data,stored_ps_files$curre
         return(NULL)
 })
 loading_ps_file <- reactive({
-    if(!is.null(preloading_ps_file()) && nchar(preloading_ps_file()$filedata) != 0) {
-        file <- fromJSON(preloading_ps_file()$filedata)
+    if(!is.null(preloading_ps_file())) {
+        if(!isempty(preloading_ps_file()$data$parsed_data)) {
+            return(preloading_ps_file()$data$parsed_data)
+        }
+        if(nchar(preloading_ps_file()$filedata) != 0) {
+            file <- fromJSON(preloading_ps_file()$filedata)
+                
+            # musi byt kontrola ci result file vobec nieco obsahuje !!!!
             
-        # musi byt kontrola ci result file vobec nieco obsahuje !!!!
-        
-        table <- rbindlist(lapply(file$results,function(x) {
-            if(length(x$data)==0) x$data <- NA 
-            as.data.table(x,fill=T)
-        }))
-        # table <- rbindlist(lapply(file$results,function(x) if(length(x$data)!=0) as.data.table(x))) # temporary measure: empty results are omitted
-        setkeyv(table,"formula")
-        table[,state:=sapply(data,function(x)unlist(x[1]))]
-        table[,param:=sapply(data,function(x)unlist(x[2]))]
-        table[,cov:=nrow(.SD), by=list(formula,param)]
-        table[,data:=NULL]
-        
-        states <- as.data.table(t(sapply(lapply(1:length(file$states),function(x) file$states[[x]]$bounds), function(s) unlist(s))))
-        states[, id:=1:nrow(states)]
-        
-        if(file$type == "rectangular") {    
-            # file$parameter_values [[1]] [[1]] [[1]] [1:2]
-            #                        set  rect   dim  range
-            params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
-            not_empty_ids <- 1:length(file$parameter_values)
-            times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
-            params[, id:=unlist(sapply(1:length(not_empty_ids),function(x) rep.int(not_empty_ids[x],times[x])))]
-            params[, row_id:=1:nrow(params)]
-        }
-        if(file$type == "smt") {
-            # params <- data.table(expr=sapply(1:length(file$parameter_values),function(x) file$parameter_values[[x]]$Rexpression))
-            params <- data.table(expr=paste0("function(ip)",gsub("||","|",gsub("&&","&", sapply(1:length(file$parameter_values),
-                                                                                    function(x) file$parameter_values[[x]]$Rexpression),fixed=T),fixed=T)))
-            params[, id:=1:nrow(params)]
-            params[, row_id:=1:nrow(params)]
-            setkey(params,id)
-        }
-        
-        thrs <- file$thresholds
-        names(thrs) <- file$variables
-        
-        param_bounds <- file$parameter_bounds
-        names(param_bounds) <- file$parameters
-        
-        return(list(param_space=table,  # DT( formula:string, data:list_of_state_and_param_indices, state:numeric_index_to_states, param:numeric_index_to_params, 
-                                        #     cov:numeric_with_states_count_for_this_param )
-                    states=states,      # DT( V1,V2,... ) - each pair of columns (e.g., V1,V2) contains boundary threshodls of state (each row), 3D SS has 6 columns
-                    formulae=unique(table$formula),     # vector of unique formulae from table 'table' or 'param_space'
-                    param_names=file$parameters,        # vector of param names in order of appearence in bio file
-                    params=params,                      # DT( V1,V2,... ) - each row is satisfied rectangle (of param set with same ID) in PS (each param has two columns: P1 has V1,V2 ...)
-                    var_names=file$variables,           # vector of unique variable names in order of appearence in bio file
-                    thresholds=thrs,                    # list of thresholds for each variable
-                    type=file$type,
-                    param_bounds=param_bounds
-        ))
+            table <- rbindlist(lapply(file$results,function(x) {
+                if(length(x$data)==0) x$data <- NA 
+                as.data.table(x,fill=T)
+            }))
+            # table <- rbindlist(lapply(file$results,function(x) if(length(x$data)!=0) as.data.table(x))) # temporary measure: empty results are omitted
+            setkeyv(table,"formula")
+            table[,state:=sapply(data,function(x)unlist(x[1]))]
+            table[,param:=sapply(data,function(x)unlist(x[2]))]
+            table[,cov:=nrow(.SD), by=list(formula,param)]
+            table[,data:=NULL]
+            
+            states <- as.data.table(t(sapply(lapply(1:length(file$states),function(x) file$states[[x]]$bounds), function(s) unlist(s))))
+            states[, id:=1:nrow(states)]
+            
+            if(file$type == "rectangular") {    
+                # file$parameter_values [[1]] [[1]] [[1]] [1:2]
+                #                        set  rect   dim  range
+                params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
+                not_empty_ids <- 1:length(file$parameter_values)
+                times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
+                params[, id:=unlist(sapply(1:length(not_empty_ids),function(x) rep.int(not_empty_ids[x],times[x])))]
+                params[, row_id:=1:nrow(params)]
+            }
+            if(file$type == "smt") {
+                # params <- data.table(expr=sapply(1:length(file$parameter_values),function(x) file$parameter_values[[x]]$Rexpression))
+                params <- data.table(expr=paste0("function(ip)",gsub("||","|",gsub("&&","&", sapply(1:length(file$parameter_values),
+                                                                                        function(x) file$parameter_values[[x]]$Rexpression),fixed=T),fixed=T)))
+                params[, id:=1:nrow(params)]
+                params[, row_id:=1:nrow(params)]
+                setkey(params,id)
+            }
+            
+            thrs <- file$thresholds
+            names(thrs) <- file$variables
+            
+            param_bounds <- file$parameter_bounds
+            names(param_bounds) <- file$parameters
+            
+            # stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- 1
+            # stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen <- list(data=NULL)#,max=1)
+            stored_ps_files$data[[stored_ps_files$current]]$data$parsed_data <- list(
+                param_space=table,  # DT( formula:string, data:list_of_state_and_param_indices, state:numeric_index_to_states, param:numeric_index_to_params, 
+                                    #     cov:numeric_with_states_count_for_this_param )
+                states=states,      # DT( V1,V2,... ) - each pair of columns (e.g., V1,V2) contains boundary threshodls of state (each row), 3D SS has 6 columns
+                formulae=unique(table$formula),     # vector of unique formulae from table 'table' or 'param_space'
+                param_names=file$parameters,        # vector of param names in order of appearence in bio file
+                params=params,                      # DT( V1,V2,... ) - each row is satisfied rectangle (of param set with same ID) in PS (each param has two columns: P1 has V1,V2 ...)
+                var_names=file$variables,           # vector of unique variable names in order of appearence in bio file
+                thresholds=thrs,                    # list of thresholds for each variable
+                type=file$type,
+                param_bounds=param_bounds
+            )
+            return(preloading_ps_file()$data$parsed_data)
+        } else return(NULL)
     } else return(NULL)
 })
 
@@ -2204,13 +2215,13 @@ output$param_selector <- renderUI({
         #list_of_param_names <- as.list(c(loading_ps_file()$param_names, "Choose"=empty_sign))
         lapply(param_update(), function(i) {
             idx <- paste0("param_selector_x_",i)
-            labelx <- paste0("horizontal axis in plot ",i)
+            labelx <- paste0("horizontal")# axis in plot ",i)
             choicesx <- list_of_param_names
             selectedx <- ifelse(!is.null(input[[paste0("param_selector_x_",i)]]), input[[paste0("param_selector_x_",i)]], #empty_sign)
                                 list_of_param_names[1])
             
             idy <- paste0("param_selector_y_",i)
-            labely <- paste0("vertical axis in plot ",i)
+            labely <- paste0("vertical")# axis in plot ",i)
             choicesy <- list_of_param_names
             selectedy <- ifelse(!is.null(input[[paste0("param_selector_y_",i)]]), input[[paste0("param_selector_y_",i)]], #empty_sign)
                                 ifelse(length(list_of_param_names) > 1, list_of_param_names[2], list_of_param_names[1]))
@@ -2260,7 +2271,7 @@ observe({
 # observer caring for canceling a plot
 observe({
     if(!is.null(loading_ps_file())) {
-        for(i in param_chosen$data) {
+        for(i in param_update()) {
             if(!is.null(input[[paste0("cancel_ps_",i)]]) && input[[paste0("cancel_ps_",i)]] > 0) {
                 reset_globals_param(i)
             }
@@ -2287,17 +2298,17 @@ observeEvent(input$add_param_plot,{
         param_state_space$globals[[param_chosen$max]] <- NA
         #satisfiable_ps$data[[param_chosen$max]] <- NA
         
-        param_chosen$data <- c(param_chosen$data,param_chosen$max)
-        param_chosen$max <<- param_chosen$max + 1
+        stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$data <- c(param_update(),param_chosen$max)
+        param_chosen$max  <- param_chosen$max + 1
     }
 })
 param_update <- reactive({
-    return(param_chosen$data)
+    return(preloading_ps_file()$data$param_chosen$data)
 })
 visible_ps_plots <- reactive({
     if(!is.null(loading_ps_file())) {
         local_result <- c()
-        for(i in param_chosen$data) {
+        for(i in param_update()) {
             if(!is.null(input[[paste0("param_selector_x_",i)]]) && input[[paste0("param_selector_x_",i)]] != empty_sign && !input[[paste0("hide_ps_",i)]] &&
                    !is.null(input[[paste0("param_selector_y_",i)]]) && input[[paste0("param_selector_y_",i)]] != empty_sign)
                 local_result <- c(local_result,i)
@@ -2461,8 +2472,8 @@ output$param_space_plots <- renderUI({
                            helpText("parameter space of the model"),
                        div(id = "plot-container",
                            tags$img(
-                               src="circle.png",
-                               # src = "spinner.gif",
+                               # src = "circle.png",
+                               src = "spinner.gif",
                                id = "loading-spinner"),
                            imageOutput(paste0("param_space_plot_",i),"auto","auto", click=paste0("ps_",i,"_click"), dblclick=paste0("ps_",i,"_dblclick"),
                                        hover=hoverOpts(id=paste0("ps_",i,"_hover"),delayType="debounce",delay=hover_delay_limit),
@@ -3410,9 +3421,11 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
         ##======= draw point due to click inside a plot =========================
         if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]])) ) {
             point <- param_space_clicked$point[[plot_index]]
-            points(point[[index_x]], point[[index_y]],
-                   col=param_space_clicked_point$color, pch=param_space_clicked_point$type, ps=param_space_clicked_point$size, lwd=param_space_clicked_point$width)
+            if(!F %in% (c(name_x,name_y) %in% names(point))) {
+                points(point[[index_x]], point[[index_y]],
+                       col=param_space_clicked_point$color, pch=param_space_clicked_point$type, ps=param_space_clicked_point$size, lwd=param_space_clicked_point$width)
             # rect(point[[name_x]][1], point[[name_y]][1], point[[name_x]][2], point[[name_y]][2], col=param_space_clicked_point$color, lwd=param_space_clicked_point$width)
+            }
         }
         # this must be at the end
         param_space$globals[[plot_index]] <- checkpoint
@@ -3612,12 +3625,11 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
 
 output$chosen_ps_states_ui <- renderUI({
     if(!is.null(loading_ps_file()) && nrow(loading_ps_file()$param_space) != 0) {
+        id <- paste0("chosen_ps_formula_",stored_ps_files$current)
         formulae_list <- loading_ps_file()$formulae
-        selected_formula <- 1
-        
-        widgets <- list()
-        widgets[[1]] <- selectInput("chosen_ps_formula","choose formula of interest:",formulae_list,selected_formula,selectize=F,size=1,width="100%")
-        do.call(tagList,widgets)
+        names(formulae_list) <- loading_ps_file()$formulae
+        selected_formula <- ifelse(!is.null(input[[id]]), input[[id]], preloading_ps_file()$data$chosen_ps_formula)
+        list(selectInput(id,"choose formula of interest:",formulae_list,selected_formula,selectize=F,size=1,width="100%"))
     } else
         h3("Parameter synthesis has to be run or result file loaded before showing some results")
 })
@@ -3905,8 +3917,9 @@ apply_to_all_in_param_ss <- observe({
 })
 
 
-chosen_ps_formulae_clean <- reactive({
-    return(input$chosen_ps_formula)
+chosen_ps_formulae_clean <- eventReactive(input[[paste0("chosen_ps_formula_",stored_ps_files$current)]],{
+    # stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
+    return(input[[paste0("chosen_ps_formula_",stored_ps_files$current)]])
 })
 
 grey_shade <- reactive({
