@@ -28,7 +28,6 @@ session_random <- sample(1000^2,1)
     
 # .Platform$OS.type=="windows"  or Sys.info()["sysname"]=="Windows"
 files_path <- ifelse(.Platform$OS.type=="windows", paste0("..//Temp//"), ifelse(Sys.info()["nodename"]=="psyche05",paste0("..//Temp//"),paste0("~//skola//newbiodivine//") ))
-# java_programs_path <- ifelse(Sys.info()["nodename"]=="psyche05","//mirror//new_new_biodivine//","~//skola//newbiodivine//")
 new_programs_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"), 
                             ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//","~//skola//newbiodivine//"))
 
@@ -43,18 +42,19 @@ resultFile <- reactiveFileReader(1000,session,resultFileName,readLines)
 configFileName <- paste0(files_path,"config.",session_random,".json")
 file.create(configFileName)
 
-#session$onSessionEnded(for(i in c(progressFileName,resultFileName,configFileName)) if(file.exists(i)) file.remove(i))
-#session$onSessionEnded(stopApp)
-#session$onSessionEnded(file.remove(configFileName,progressFileName,resultFileName))
 session$onSessionEnded(function() {
     for(i in c(progressFileName,resultFileName,configFileName)) if(file.exists(i)) file.remove(i)
 })
 
-# loaded_vf_file_name <<- "nothing"
+
 loaded_prop_file    <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_vf_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_ss_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_ps_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
+
+stored_vf_files     <- reactiveValues(data=list(),current=0,max=1)
+stored_ss_files     <- reactiveValues(data=list(),current=0,max=1)
+stored_ps_files     <- reactiveValues(data=list(),current=0,max=1)
 
 vf_brushed          <- reactiveValues(data=list(),click_counter=list())
 ss_brushed          <- reactiveValues(data=list(),click_counter=list())
@@ -107,10 +107,10 @@ param_chosen        <- reactiveValues(data=NULL,max=1)
 #=======================================================================
 
 observeEvent(input$process_run,{
-    if(!is.null(loaded_ss_file$data) && input$process_run != 0) {
+    if(!is.null(loaded_ss_file$filedata) && input$process_run != 0) {
         cat("Parameter synthesis is started\n",file=progressFileName)
         modelTempName  <- paste0(files_path,"model.",session_random,".abst.bio")
-        writeLines(loaded_ss_file$data,modelTempName)
+        writeLines(loaded_ss_file$filedata,modelTempName)
         propTempName   <- paste0(files_path,"prop.",session_random,".ctl")
         writeLines(loaded_prop_file$data,propTempName)
         system2(paste0(new_programs_path,"combine"),c(modelTempName, propTempName), stdout=configFileName, stderr=progressFileName, wait=T)
@@ -119,7 +119,7 @@ observeEvent(input$process_run,{
         if(file.exists(configFileName) && length(readLines(configFileName)) > 0) {
             cat("config file is created\n")
             cat("Config file is created\n",file=progressFileName,append=T)
-            updateButton(session,"process_run",style="default",disabled=T)
+            updateButton(session,"process_run",style="default",disabled=F)
             updateButton(session,"process_stop",style="danger",disabled=F)
             checker_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"),
                                    ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//",
@@ -132,7 +132,7 @@ observeEvent(input$process_run,{
 })
 
 observeEvent(input$process_stop,{
-    if(!is.null(loaded_ss_file$data) && input$process_stop != 0) {
+    if(!is.null(loaded_ss_file$filedata) && input$process_stop != 0) {
         if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0 && !T %in% grepl("^!!DONE!!$",progressFile())) {
             pid <- gsub("PID: ","",grep("^PID: [0-9]+$",progressFile(),value=T))
             command <- ifelse(.Platform$OS.type=="windows", paste0("taskkill /f /pid ",pid), paste0("kill -9 ",pid))
@@ -147,18 +147,29 @@ observeEvent(input$process_stop,{
 output$progress_output <- renderPrint({
     if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0) {
         # progress$set(value = as.numeric(progressFile()[length(progressFile())]))
-        if(T %in% grepl("Model does not contain threshold",progressFile())) cat("chyba threshold\n")
+        # if(T %in% grepl("Model does not contain threshold",progressFile())) cat("chyba threshold\n")
+        
+        # TEMPLATE: You have to use an exact threshold in propositions! Proposition: y > 8.0,
+        if(T %in% grepl("You have to use an exact threshold in propositions! Proposition: [^,]+,",progressFile())) {
+            # # cat("chyba threshold\n")
+            # string <- gsub(", \t","",gsub("You have to use an exact threshold in propositions! Proposition:","",
+            #                grep("You have to use an exact threshold in propositions! Proposition: [^,]+,",progressFile(),value=T)))
+            # print(string)
+            js_string <- 'alert("Missing threshold!");'
+            session$sendCustomMessage(type='jsCode', list(value = js_string))
+        }
         if(T %in% grepl("^!!DONE!!$",progressFile())) {
             # TODO: here should be call for message window
             updateButton(session,"process_stop",style="default",disabled=T)
             updateButton(session,"add_result_plot", disabled=F)
+            js_string <- 'alert("Parameter synthesis done!");'
+            session$sendCustomMessage(type='jsCode', list(value = js_string))
         }
         
         # if(length(progressFile()) > progressMaxLength)
         #     cat(paste0(progressFile()[(length(progressFile())-progressMaxLength+1):length(progressFile())],collapse="\n"))
         # else
         cat(paste0(progressFile(),collapse="\n"))
-        #on.exit(file.remove(progressFileName))
     }
 })
 
@@ -175,7 +186,7 @@ output$progress_output <- renderPrint({
 
 observeEvent(input$prop_input_area,{
     loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
-    if(!is.null(loaded_ss_file$data)) updateButton(session,"process_run",style="success",disabled=F)
+    if(!is.null(loaded_ss_file$filedata)) updateButton(session,"process_run",style="success",disabled=F)
 })
 # observeEvent(input$accept_prop_changes,{
 #     if(!is.null(input$prop_input_area) && input$prop_input_area != "")
@@ -188,14 +199,14 @@ observeEvent(c(input$prop_file,input$reset_prop),{
 #             #session$reload()
 #             reset_globals()
 #         }
-        loaded_prop_file$filename <- input$prop_file$datapath
-        loaded_prop_file$data <- readLines(loaded_prop_file$filename)
+        loaded_prop_file$filename <- input$prop_file$name
+        loaded_prop_file$data <- readLines(input$prop_file$datapath)
     } else {
         # initial example file (temporary)
         loaded_prop_file$filename <- paste0(examples_dir,"//repressilator_2D//bistability.ctl")
         loaded_prop_file$data <- readLines(loaded_prop_file$filename)
     }
-    updateTextInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
+    updateTextAreaInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
 })
 
 output$save_prop_file <- downloadHandler(
@@ -205,25 +216,57 @@ output$save_prop_file <- downloadHandler(
         else return("property.ctl")
     },
     content = function(file) {
-        if(!is.null(loaded_prop_file$data))
-            writeLines(loaded_prop_file$data, file)
-        else writeLines("", file)
+        if(!is.null(loaded_prop_file$data)) writeLines(loaded_prop_file$data, file)
+        else                                writeLines("", file)
     }
 )
 
 #=============== MODEL INPUT TAB =======================================
 #=======================================================================
 
-reset_globals <- function() {
-    for(i in vf_chosen$data) {
-        vf_chosen$data <- vf_chosen$data[vf_chosen$data != i]
+reset_globals <- function(i=NA) {
+    if(is.na(i)) {
+        for(i in vf_chosen$data) reset_particular_global(i)
+    } else {
+        reset_particular_global(i)
     }
+}
+reset_particular_global <- function(i) {
+    stored_vf_files$data[[stored_vf_files$max]]$data$vf_chosen$data <- vf_update()[vf_update() != i]
+    # vf_chosen$data <- vf_chosen$data[vf_chosen$data != i]
+    # some kind of garbage collector would be very convenient in this phase
+    # either gc() or rm()
+    #                rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("vf_selector_y_",i)]]) #TODO: doplnit dalsie
+    
+    # removeUI function
+    transition_state_space$data[[i]] <- NA
+    transition_state_space$globals[[i]] <- NA
+    state_space_clicked$data[[i]] <- NA
+    state_space_clicked$click_counter[[i]] <- NA
+    state_space_clicked$apply_to_all_click_counter[[i]] <- NA
+    state_space_clicked$old_point[[i]] <- NA
+    state_space_clicked$point[[i]] <- NA
+    ss_brushed$data[[i]] <- NA
+    ss_brushed$click_counter[[i]] <- NA
+    
+    vector_field_space$data[[i]] <- NA
+    vector_field_space$globals[[i]] <- NA
+    vector_field_clicked$data[[i]] <- NA
+    vector_field_clicked$apply_to_all_click_counter[[i]] <- NA
+    vector_field_clicked$apply_to_tss_click_counter[[i]] <- NA
+    vector_field_clicked$click_counter[[i]] <- NA
+    vector_field_clicked$point[[i]] <- NA
+    vector_field_clicked$old_point[[i]] <- NA
+    vf_brushed$data[[i]] <- NA
+    vf_brushed$click_counter[[i]] <- NA
+    
+    print(gc())
 }
 
 # reaction on event of loading .bio file into tool putting a loaded model into text field
-# observeEvent(c(loaded_vf_file$data,input$reset_model),{
-#     if(!is.null(loaded_vf_file$data)) {
-#         updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$data,collapse="\n"))
+# observeEvent(c(loaded_vf_file$filedata,input$reset_model),{
+#     if(!is.null(loaded_vf_file$filedata)) {
+#         updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
 #     }
 # })
 
@@ -305,40 +348,38 @@ else {
         
         if(its_ok) {
             cat("Syntax of model is good ;) You may proceed with generating approximation.",file=progressFileName)
-            loaded_vf_file$data <- the_lines
+            loaded_vf_file$filedata <- the_lines
         }
     }
 })
 
 observeEvent(input$model_input_area,{
-    loaded_vf_file$data <- strsplit(input$model_input_area,"\n",fixed=T)[[1]]
+    loaded_vf_file$filedata <- strsplit(input$model_input_area,"\n",fixed=T)[[1]]
     updateButton(session,"generate_abstraction", style="success", disabled=F)
-    updateButton(session,"add_vf_plot", disabled=F)
 })
 
 observeEvent(c(input$vf_file,input$reset_model),{
     cat("Start with button 'generate approximation'.\n",file=progressFileName)
     if(!is.null(input$vf_file) && !is.null(input$vf_file$datapath)) {
-        if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename != input$vf_file$datapath) {
-            #session$reload()
-            reset_globals()
-        }
-        loaded_vf_file$filename <- input$vf_file$datapath
-        loaded_vf_file$data <- readLines(loaded_vf_file$filename)
+        # if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename != input$vf_file$datapath) {
+        #     #session$reload()
+        #     reset_globals()
+        # }
+        loaded_vf_file$filename <- input$vf_file$name
+        loaded_vf_file$filedata <- readLines(input$vf_file$datapath)
     } else {
         # initial example file (temporary)
         loaded_vf_file$filename <- paste0(examples_dir,"//repressilator_2D//model_2D_1P_100R.bio")
-        loaded_vf_file$data <- readLines(loaded_vf_file$filename)
+        loaded_vf_file$filedata <- readLines(loaded_vf_file$filename)
     }
-    updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$data,collapse="\n"))
+    updateTextAreaInput(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
 })
 
 output$save_model_file <- downloadHandler(
-    filename = ifelse(!is.null(input$vf_file) && !is.null(input$vf_file$datapath), paste0(input$vf_file$datapath), "model.bio"),
+    filename = ifelse(!is.null(preloading_vf_file()), paste0(preloading_vf_file()$filepath), "model.bio"),
     content = function(file) {
-        if(!is.null(loaded_vf_file$data))
-            writeLines(loaded_vf_file$data, file)
-        else writeLines("", file)
+        if(!is.null(preloading_vf_file())) writeLines(preloading_vf_file()$filedata, file)
+        else                               writeLines("", file)
     }
 )
 
@@ -347,13 +388,13 @@ output$save_model_file <- downloadHandler(
 
 observeEvent(input$generate_abstraction,{
     if(input$generate_abstraction != 0) {
-        # loaded_ss_file$data <- readLines(paste0(examples_dir,"//model_2D_1P_400R.abst.bio"))
+        # loaded_ss_file$filedata <- readLines(paste0(examples_dir,"//model_2D_1P_400R.abst.bio"))
         cat("tractor is about to run\n")
         cat("Approximation is started\n",file=progressFileName)
         
         withProgress({
             model_temp_name  <- paste0(files_path,"model.",session_random,".bio")
-            writeLines(loaded_vf_file$data,model_temp_name)
+            writeLines(loaded_vf_file$filedata,model_temp_name)
             abstracted_model_temp_name <- paste0(files_path,"model.",session_random,".abst.bio")
             system2(paste0(new_programs_path,"tractor"),c(model_temp_name,
                                                           ifelse(input$fast_approximation,"true","false"),
@@ -368,7 +409,7 @@ observeEvent(input$generate_abstraction,{
             file.remove(c(model_temp_name))
             if(file.exists(abstracted_model_temp_name)) {
                 loaded_ss_file$filename <- abstracted_model_temp_name
-                loaded_ss_file$data <- readLines(abstracted_model_temp_name)
+                loaded_ss_file$filedata <- readLines(abstracted_model_temp_name)
                 file.remove(abstracted_model_temp_name)
                 cat("abstracted file is loaded\n")
                 cat("Approxition is finished\n",file=progressFileName,append=T)
@@ -384,13 +425,13 @@ observeEvent(input$generate_abstraction,{
 
 # observeEvent(input$state_space_file,{
 #     if(!is.null(input$state_space_file) && !is.null(input$state_space_file$datapath)) {
-#         loaded_ss_file$data <- readLines(input$state_space_file$datapath)
+#         loaded_ss_file$filedata <- readLines(input$state_space_file$datapath)
 #     } else {
 #         # initial example file (temporary)
 #         if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename == paste0(examples_dir,"//model_2D_1P_100R.bio"))
-#             loaded_ss_file$data <- paste0(examples_dir,"//model_2D_1P_400R.ss.json")
+#             loaded_ss_file$filedata <- paste0(examples_dir,"//model_2D_1P_400R.ss.json")
 #         else
-#             loaded_ss_file$data <- NULL
+#             loaded_ss_file$filedata <- NULL
 #     }
 # })
     
@@ -398,98 +439,206 @@ observeEvent(input$generate_abstraction,{
 #===================== MODEL EXPLORER ==================================    
 #=============== LOADING OF FILES ======================================
 #=======================================================================
+
+output$model_help_text <- renderUI({
+    if(stored_ss_files$current != 0) {
+        helpText(paste0("Experiment no. ",stored_vf_files$current," (",stored_vf_files$data[[stored_vf_files$current]]$timestamp,")"))
+    }
+})
+
+manage_model_experiments <- observe({
+    filedata <- loaded_ss_file$filedata
+    if(!is.null(filedata)) {
+        
+        # Here will be core of managing switching between experiments models
+        if(stored_ss_files$max == 1 || !identical(filedata,stored_ss_files$data[[stored_ss_files$max-1]]$filedata)) {
+            stored_ss_files$data[[stored_ss_files$max]] <- list(filedata=filedata, filepath=loaded_ss_file$filename, timestamp=Sys.time(), 
+                                                                data=list( parsed_data=list()) )
+            stored_vf_files$data[[stored_vf_files$max]] <- list(filedata=loaded_vf_file$filedata, filepath=loaded_vf_file$filename, timestamp=Sys.time(), 
+                                                                data=list(current_param_sliders=list(), vf_chosen=list(data=NULL), parsed_data=list()) )
+            # loaded_ss_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
+            if(stored_ss_files$max==1)  {
+                stored_ss_files$current <- stored_ss_files$max
+                stored_vf_files$current <- stored_vf_files$max
+                updateButton(session,"model_del",style="default",disabled=F)
+                updateButton(session,"add_vf_plot",style="default",disabled=F)
+            } else    
+                updateButton(session,"model_next",style="success",disabled=F)
+            stored_ss_files$max <- stored_ss_files$max + 1
+            stored_vf_files$max <- stored_vf_files$max + 1
+        }
+    }
+})
+manage_model_next <- observeEvent(input$model_next,{
+    # reset_globals()
+    stored_vf_files$data[[stored_vf_files$current]]$data$current_param_sliders <- current_param_sliders()
+    stored_ss_files$current <- stored_ss_files$current + 1
+    stored_vf_files$current <- stored_vf_files$current + 1
+    updateButton(session,"model_prev",style="default",disabled=F)
+    if(stored_ss_files$current+1 == stored_ss_files$max) {
+        updateButton(session,"model_next",style="default",disabled=T)
+    } else {
+        # updateButton(session,"model_next",style="default")
+    }
+})
+manage_model_prev <- observeEvent(input$model_prev,{
+    # reset_globals()
+    stored_vf_files$data[[stored_vf_files$current]]$data$current_param_sliders <- current_param_sliders()
+    stored_ss_files$current <- stored_ss_files$current - 1
+    stored_vf_files$current <- stored_vf_files$current - 1
+    updateButton(session,"model_next",style="default",disabled=F)
+    if(stored_ss_files$current == 1) {
+        updateButton(session,"model_prev",style="default",disabled=T)
+    } else {
+        # updateButton(session,"model_prev",style="default")
+    }
+})
+manage_model_del <- observeEvent(input$model_del,{
+    if(stored_ss_files$current > 0) {
+        reset_globals()
+        stored_ss_files$max <- stored_ss_files$max - 1
+        stored_ss_files$data[[stored_ss_files$current]] <- NULL
+        stored_vf_files$max <- stored_vf_files$max - 1
+        stored_vf_files$data[[stored_vf_files$current]] <- NULL
+        if(stored_ss_files$current == stored_ss_files$max) {
+            stored_ss_files$current <- stored_ss_files$current - 1
+            stored_vf_files$current <- stored_vf_files$current - 1
+            if(stored_ss_files$current == 0) {
+                updateButton(session,"model_del",style="default",disabled=T)
+                updateButton(session,"add_vf_plot",style="default",disabled=T)
+            }
+        }
+        if(stored_ss_files$current == 1) {
+            updateButton(session,"model_prev",style="default",disabled=T)
+        }
+        if(stored_ss_files$current+1 == stored_ss_files$max) {
+            updateButton(session,"model_next",style="default",disabled=T)
+        }
+    }
+})
+
+
+preloading_vf_file <- eventReactive(c(stored_vf_files$data,stored_vf_files$current),{
+    if(stored_vf_files$current != 0)
+        return(stored_vf_files$data[[stored_vf_files$current]])
+    else
+        return(NULL)
+})
+
+preloading_ss_file <- eventReactive(c(stored_ss_files$data,stored_ss_files$current),{
+    if(stored_ss_files$current != 0)
+        return(stored_ss_files$data[[stored_ss_files$current]])
+    else
+        return(NULL)
+})
     
 loading_vf_file <- reactive({
-    biofile <- loaded_vf_file$data
-    if(!is.null(biofile)) {
-        
-        # VARIABLES
-        # result is vector of VAR NAMES
-        var_line <- biofile[which(str_detect(biofile,"^VARS:"))]
-        if(length(var_line) > 0) {
-            var_names <- as.list(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",var_line)),",")[[1]] ) )
-            names(var_names) <- var_names
-        } else return(NULL)
-        
-        # CONSTANTS
-        # result is named list of CONST VALUEs
-        const_line <- biofile[which(str_detect(biofile,"^CONSTS:"))]
-        if(length(const_line) > 0) {
-            #consts <- str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),",") 
-            consts <- lapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),","),function(x) x[2] )
-            names(consts) <- sapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),","),function(x) x[1] )
-        } else consts <- NULL
-        
-        # PARAMETERS
-        # result is names list of pairs PARAM FIRST VALUE and PARAM SECOND VALUE
-        param_line <- biofile[which(str_detect(biofile,"^PARAMS:"))]
-        if(length(param_line) > 0) {
-            #params <- str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),",") 
-            params <- lapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) c(x[2],x[3]) )
-            names(params) <- sapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) x[1] )
-        } else params <- NULL
-        
-        # THRESHOLDS
-        # result is names list of THRES VALUEs
-        thr_lines <- gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^THRES:"))]))
-        if(length(thr_lines) > 0 && length(thr_lines) == length(var_names)) {
-            thres <- sapply(str_split(thr_lines,":"),function(x) str_split(x[3],",") )
-            names(thres) <- sapply(str_split(thr_lines,":"),function(x) x[2] )
-        } else return(NULL)
-        
-        # EQUATIONS
-        # result is named list of EQUATIONs
-        eq_lines <- gsub("^.*:","",gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^EQ:"))])))
-        if(length(eq_lines) > 0 && length(eq_lines) == length(var_names)) {
-            eqs <- lapply(str_split(eq_lines,"="),function(x) x[2] )
-            names(eqs) <- sapply(str_split(eq_lines,"="),function(x) x[1] )
-            
-            for(e in 1:length(eqs)) {
-                eq <- eqs[[e]]
-                names <- strsplit(eq,"[-+*,() \t]+")[[1]]
-                signs <- strsplit(eq,"[^-+*,() \t]+")[[1]]
-                
-                names <- sapply(names,function(x) ifelse(!is.null(var_names[[x]]) || !is.null(consts[[x]]) || !is.null(params[[x]]), paste0("ip$",x), x))
-                
-                new_eq <- ""
-                if(names[1] == "") {
-                    if(length(names) == length(signs)) {
-                        for(i in 1:length(names)) new_eq <- paste0(new_eq,names[i],signs[i])
-                    } else {
-                        new_eq <- names[1]
-                        for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,signs[i],names[i+1])
-                    }
-                } else {
-                    if(length(names) == length(signs)) {
-                        for(i in 1:length(names)) new_eq <- paste0(new_eq,signs[i],names[i])
-                    } else {
-                        new_eq <- signs[1]
-                        for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,names[i],signs[i+1])
-                    }
-                }
-                eqs[[e]] <- paste0("function(ip) ",new_eq)
-            }
-        } else return(NULL)
-        
-        ranges <- lapply(thres, function(x) range(as.numeric(x)))
-        
-        # setting of GLOBALS
-        list_of_names <<- as.list(c(var_names, "Choose"=empty_sign))
-        funcs <<- list()
-        for(x in unlist(var_names)) {
-            funcs[[x]] <<- parse(text=eqs[[x]])
+    if(!is.null(preloading_vf_file())) {
+        if(!isempty(preloading_vf_file()$data$parsed_data)) {
+            return(preloading_vf_file()$data$parsed_data)
         }
-        
-        return(list(vars=var_names, consts=consts, params=params, thres=thres, eqs=eqs, ranges=ranges))
+        if(length(preloading_vf_file()$filedata) != 0) {
+            biofile <- preloading_vf_file()$filedata
+    
+            # VARIABLES
+            # result is vector of VAR NAMES
+            var_line <- biofile[which(str_detect(biofile,"^VARS:"))]
+            if(length(var_line) > 0) {
+                var_names <- as.list(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",var_line)),",")[[1]] ) )
+                names(var_names) <- var_names
+            } else return(NULL)
+            
+            # CONSTANTS
+            # result is named list of CONST VALUEs
+            const_line <- biofile[which(str_detect(biofile,"^CONSTS:"))]
+            if(length(const_line) > 0) {
+                #consts <- str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),",") 
+                consts <- lapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),","),function(x) x[2] )
+                names(consts) <- sapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),","),function(x) x[1] )
+            } else consts <- NULL
+            
+            # PARAMETERS
+            # result is names list of pairs PARAM FIRST VALUE and PARAM SECOND VALUE
+            param_line <- biofile[which(str_detect(biofile,"^PARAMS:"))]
+            if(length(param_line) > 0) {
+                #params <- str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),",") 
+                params <- lapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) c(x[2],x[3]) )
+                names(params) <- sapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) x[1] )
+            } else params <- NULL
+            
+            # THRESHOLDS
+            # result is names list of THRES VALUEs
+            thr_lines <- gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^THRES:"))]))
+            if(length(thr_lines) > 0 && length(thr_lines) == length(var_names)) {
+                thres <- sapply(str_split(thr_lines,":"),function(x) str_split(x[3],",") )
+                names(thres) <- sapply(str_split(thr_lines,":"),function(x) x[2] )
+            } else return(NULL)
+            
+            # EQUATIONS
+            # result is named list of EQUATIONs
+            eq_lines <- gsub("^.*:","",gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^EQ:"))])))
+            if(length(eq_lines) > 0 && length(eq_lines) == length(var_names)) {
+                eqs <- lapply(str_split(eq_lines,"="),function(x) x[2] )
+                names(eqs) <- sapply(str_split(eq_lines,"="),function(x) x[1] )
+                
+                for(e in 1:length(eqs)) {
+                    eq <- eqs[[e]]
+                    names <- strsplit(eq,"[-+*,() \t]+")[[1]]
+                    signs <- strsplit(eq,"[^-+*,() \t]+")[[1]]
+                    
+                    names <- sapply(names,function(x) ifelse(!is.null(var_names[[x]]) || !is.null(consts[[x]]) || !is.null(params[[x]]), paste0("ip$",x), x))
+                    
+                    new_eq <- ""
+                    if(names[1] == "") {
+                        if(length(names) == length(signs)) {
+                            for(i in 1:length(names)) new_eq <- paste0(new_eq,names[i],signs[i])
+                        } else {
+                            new_eq <- names[1]
+                            for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,signs[i],names[i+1])
+                        }
+                    } else {
+                        if(length(names) == length(signs)) {
+                            for(i in 1:length(names)) new_eq <- paste0(new_eq,signs[i],names[i])
+                        } else {
+                            new_eq <- signs[1]
+                            for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,names[i],signs[i+1])
+                        }
+                    }
+                    eqs[[e]] <- paste0("function(ip) ",new_eq)
+                }
+            } else return(NULL)
+            
+            ranges <- lapply(thres, function(x) range(as.numeric(x)))
+            names(ranges) <- var_names
+            
+            # setting of GLOBALS
+            list_of_names <<- as.list(c(var_names, "Choose"=empty_sign))
+            funcs <<- list()
+            for(x in unlist(var_names)) {
+                funcs[[x]] <<- parse(text=eqs[[x]])
+            }
+            
+            stored_vf_files$data[[stored_vf_files$current]]$data$parsed_data <- list(
+                vars=var_names, 
+                consts=consts, 
+                params=params, 
+                thres=thres, 
+                eqs=eqs, 
+                ranges=ranges
+            )
+            return(preloading_vf_file()$data$parsed_data)
+        } else return(NULL)
     } else return(NULL)
 })
 
 
-# prepared for new .json format
 loading_ss_file <- reactive({
-    if(!is.null(loaded_ss_file$data)) {
-        if(class(loaded_ss_file$data) == "character") {
-            biofile <- loaded_ss_file$data
+    if(!is.null(preloading_ss_file())) {
+        if(!isempty(preloading_ss_file()$data$parsed_data)) {
+            return(preloading_ss_file()$data$parsed_data)
+        }
+        if(length(preloading_ss_file()$filedata) != 0) {
+            biofile <- preloading_ss_file()$filedata
             
             # VARIABLES
             # result is vector of VAR NAMES
@@ -554,6 +703,7 @@ loading_ss_file <- reactive({
             } else return(NULL)
             
             ranges <- lapply(thres, function(x) range(as.numeric(x)))
+            names(ranges) <- var_names
             
             # setting of GLOBALS
             funcs_abst <<- list()
@@ -561,76 +711,17 @@ loading_ss_file <- reactive({
                 funcs_abst[[x]] <<- parse(text=eqs[[x]])
             }
             
-            return(list(var_names=var_names, params_num=length(params), param_names=names(params), params=params, thr=thres, eqs=eqs, ranges=ranges))
-        } else {
-            withProgress(message = paste0('Parsing .json file','...'), value = 1, {
-                timing <- system.time(json_data <- fromJSON(file=loaded_ss_file$data))
-                cat("-------------------------\n")
-                cat("... time of loading file:\n")
-                print(timing)
-                
-                ids <- length(json_data$transitions) # number of rows (all succesors of all states)
-                var_num <- length(json_data$variables) # length(loading_vf_file()$var_names)
-                param_num <- length(json_data$params$names) # length(loading_vf_file()$params)
-                
-                thr_data <- json_data$thresholds
-                var_names <- json_data$variables
-                
-                dividers <- 1
-                for(i in 2:var_num) dividers <- c(dividers[1]*(length(thr_data[[i]])-1),dividers)
-                
-                timing <- proc.time()
-                udata <- as.data.table(as.matrix(unlist(json_data$transitions)))
-                udata$id <- 1:nrow(udata)
-                setkeyv(udata,"id")
-                cat("... time of parsing json file:\n")
-                print(proc.time() - timing)
-                
-                states <- data.table(id=1:ids)
-                timing <- system.time({
-                    indices <- udata[(id%%3)==(1), V1]
-                    for(i in 1:var_num) {
-                        states[[paste0("V",i)]] <- indices%/%dividers[i]
-                        indices <- indices%%dividers[i]
-                    }
-                })
-                cat("... time of parsing states:\n")
-                print(timing)
-                
-                succs <- data.table(id=1:ids)
-                timing <- system.time({
-                    indices <- udata[(id%%3)==(2), V1]
-                    for(i in 1:var_num) {
-                        succs[[paste0("V",i)]] <- indices%/%dividers[i]
-                        indices <- indices%%dividers[i]
-                    }
-                })
-                cat("... time of parsing succs:\n")
-                print(timing)
-                
-                if(param_num != 0) {
-                    timing <- system.time({#for(i in 1:(2*np)) params[[paste0("V",i)]] <- udata[(id%%one_part)==((i+2*nv)%%one_part),V1])
-                        params <- udata[(id%%3) == 0, as.data.table(t(matrix(unlist(json_data$params$rectangles[V1+1]),nrow=2*param_num))) ]
-                    })
-                    params[,id:=1:ids]
-                    setkeyv(params,"id")
-                    cat("... time of parsing params:\n")
-                    print(timing)
-                    #g_param_slider <<- as.numeric(params[1])[-1]
-                    p_num <- (ncol(params)-1)/2
-                } else {
-                    params <- NULL
-                    p_num <- 0
-                }
-                
-                ranges <- lapply(thr_data, range)
-                names(ranges) <- json_data$params$names
-            })
-            
-            udata <- NULL
-            return(NULL)
-            #return(list(thr = thr_data, states = states, succs = succs, params = params, params_num = p_num, var_names = var_names, ranges = ranges))
-        }
+            stored_ss_files$data[[stored_ss_files$current]]$data$parsed_data <- list(
+                var_names=var_names, 
+                params_num=length(params), 
+                param_names=names(params), 
+                params=params, 
+                thr=thres, 
+                eqs=eqs, 
+                ranges=ranges
+            )
+            return(preloading_ss_file()$data$parsed_data)
+        } else return(NULL)
     } else return(NULL)
 })
 
@@ -641,27 +732,24 @@ output$param_sliders_bio <- renderUI({
     if(!is.null(loading_vf_file()) && !is.null(loading_vf_file()$params)) {
         lapply(1:length(loading_vf_file()$params), function(i) {
             label <- paste0("parameter ",names(loading_vf_file()$params)[i])
-            name <- paste0("param_slider_vf_",i)
+            name <- paste0("param_slider_vf_",stored_vf_files$current,"_",i)
+            # name <- paste0("param_slider_vf_",i)
             values <- c(min(as.numeric(loading_vf_file()$params[[i]])),max(as.numeric(loading_vf_file()$params[[i]])))
+            selected_value <- ifelse(!is.null(input[[name]]), input[[name]], 
+                                     ifelse(isempty(preloading_vf_file()$data$current_param_sliders), ((values[2]-values[1])*0.1),
+                                            preloading_vf_file()$data$current_param_sliders[[i]])) # used to be: ((values[2]-values[1])*0.1)
             fluidRow(
                 column(12,
-            numericInput(name,label=label,min=values[1],max=values[2],value=((values[2]-values[1])*0.1),step=((values[2]-values[1])/1000))
+            numericInput(name,label=label,min=values[1],max=values[2],value=selected_value,step=((values[2]-values[1])/1000))
             #,sliderInput(paste0("num_",name),NULL,min=values[1],max=values[2],value=((values[2]-values[1])*0.1),step=((values[2]-values[1])/1000))
                 )
             )
         })
     }
-    ####### NEW PART ########
-#     else {
-#         if(!is.null(loading_ss_file()) && !is.null(loading_ss_file()$params)) {
-#             lapply(1:loading_ss_file()$params_num, function(i) {
-#                 label <- paste0("parameter ",names(loading_vf_file()$params)[i])
-#                 name <- paste0("param_slider_vf_",i)
-#                 values <- c(min(as.numeric(loading_ss_file()$params[[paste0("V",2*i)]]),na.rm=T),max(as.numeric(loading_ss_file()$params[[paste0("V",2*i+1)]]),na.rm=T))
-#                 numericInput(name,label=label,min=values[1],max=values[2],value=((values[2]-values[1])*0.1),step=((values[2]-values[1])/1000))
-#             })
-#         }
-#     }
+})
+current_param_sliders <- reactive({
+    # return(lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",i)]]))
+    return(lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",stored_vf_files$current,"_",i)]]))
 })
 # update_param_sliders <- observe({
 #     if(!is.null(loading_vf_file())) {
@@ -695,10 +783,9 @@ output$param_sliders_bio <- renderUI({
 
 
 output$selector <- renderUI({
-#    input$add_vf_plot
     if(!is.null(loading_vf_file())) {
         variables <- loading_vf_file()$vars
-        lapply(vf_update(),function(i) {
+        lapply(vf_update(), function(i) {
             idx <- paste0("vf_selector_x_",i)
             labelx <- paste0("horizontal")
             choicesx <- list_of_names
@@ -769,36 +856,9 @@ observe({
 # observer caring for canceling a plot
 observe({
     if(!is.null(loading_vf_file())) {
-        for(i in vf_chosen$data) {
+        for(i in vf_update()) {
             if(!is.null(input[[paste0("cancel_vf_",i)]]) && input[[paste0("cancel_vf_",i)]] > 0) {
-                vf_chosen$data <- vf_chosen$data[vf_chosen$data != i]
-                # some kind of garbage collector would be very convenient in this phase
-                # either gc() or rm()
-#                rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("vf_selector_y_",i)]]) #TODO: doplnit dalsie
-                
-                # removeUI function
-                transition_state_space$data[[i]] <- NA
-                transition_state_space$globals[[i]] <- NA
-                state_space_clicked$data[[i]] <- NA
-                state_space_clicked$click_counter[[i]] <- NA
-                state_space_clicked$apply_to_all_click_counter[[i]] <- NA
-                state_space_clicked$old_point[[i]] <- NA
-                state_space_clicked$point[[i]] <- NA
-                ss_brushed$data[[i]] <- NA
-                ss_brushed$click_counter[[i]] <- NA
-                
-                vector_field_space$data[[i]] <- NA
-                vector_field_space$globals[[i]] <- NA
-                vector_field_clicked$data[[i]] <- NA
-                vector_field_clicked$apply_to_all_click_counter[[i]] <- NA
-                vector_field_clicked$apply_to_tss_click_counter[[i]] <- NA
-                vector_field_clicked$click_counter[[i]] <- NA
-                vector_field_clicked$point[[i]] <- NA
-                vector_field_clicked$old_point[[i]] <- NA
-                vf_brushed$data[[i]] <- NA
-                vf_brushed$click_counter[[i]] <- NA
-                
-                print(gc())
+                reset_globals(i)
             }
         }
     }
@@ -819,12 +879,14 @@ observeEvent(input$add_vf_plot,{
         vector_field_space$globals[[vf_chosen$max]] <- NA
         transition_state_space$globals[[vf_chosen$max]] <- NA
         
-        vf_chosen$data <- c(vf_chosen$data,vf_chosen$max)
+        stored_vf_files$data[[stored_vf_files$current]]$data$vf_chosen$data <- c(vf_update(),vf_chosen$max)
+        # vf_chosen$data <- c(vf_chosen$data,vf_chosen$max)
         vf_chosen$max  <- vf_chosen$max + 1
     }
 })
 vf_update <- reactive({
-    return(vf_chosen$data)
+    return(preloading_vf_file()$data$vf_chosen$data)
+    # return(vf_chosen$data)
 })
 visible_vf_plots <- reactive({
     if(!is.null(loading_vf_file())) {
@@ -843,54 +905,42 @@ visible_vf_plots <- reactive({
 
 
 output$plots <- renderUI({
-#    input$add_vf_plot
     if(!is.null(loading_vf_file())) {
         one_line <- lapply(visible_vf_plots(), function(i) {
             fluidRow(
                 column(2,
-                       if(!is.null(loading_vf_file())) {
-                           #downloadButton(paste0("download_vf_",i),"Download image"),
-                           actionButton(paste0("apply_plot_vf_",i),"Apply to all")
-                       },
-                       if(!is.null(loading_vf_file()) && !is.null(loading_ss_file())) {
+                       actionButton(paste0("apply_plot_vf_",i),"Apply to all"),
+                       if(!is.null(loading_ss_file())) {
                            actionButton(paste0("apply_to_tss_vf_",i),"Apply to TSS")
                        },
-                       if(!is.null(loading_vf_file())) {
-                           actionButton(paste0("clear_plot_vf_",i),"Clear plot")
-                       },
-                       if(!is.null(loading_vf_file())) {
-                           actionButton(paste0("unzoom_plot_vf_",i),"Unzoom")
-                       },
-                       if(!is.null(loading_vf_file()) && !is.null(loading_ss_file())) {
+                       actionButton(paste0("clear_plot_vf_",i),"Clear plot"),
+                       actionButton(paste0("unzoom_plot_vf_",i),"Unzoom"),
+                       if(!is.null(loading_ss_file())) {
                            conditionalPanel(
                                condition = "input.advanced == true",
                                checkboxInput(paste0("abst_vf_",i),"use PWA model",ifelse(!is.null(input[[paste0("abst_vf_",i)]]), input[[paste0("abst_vf_",i)]], F))
                            )
                        },
-                       if(!is.null(loading_vf_file()) && length(loading_vf_file()$vars) > 2) {
-                           lapply(1:length(loading_vf_file()$vars), function(t) {
-                               if(!loading_vf_file()$vars[[t]] %in% c(input[[paste0("vf_selector_x_",i)]],input[[paste0("vf_selector_y_",i)]])) {
-                                   label <- paste0("continues scale in ",loading_vf_file()$vars[[t]])
-                                   name <- paste0("scale_slider_vf_",i,"_",t)
-                                   values <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]],
-                                                    loading_ss_file()$ranges[[loading_vf_file()$vars[[t]] ]],
-                                                    loading_vf_file()$ranges[[loading_vf_file()$vars[[t]] ]])
-                                   sliderInput(name,label=label,min=values[1],max=values[2],step=zoom_granul,
-                                               value=ifelse(is.null(input[[name]]),values[1],input[[name]]))
-                               }
-                           })
-                       },
-                       if(!is.null(loading_vf_file())) {
-                           verbatimTextOutput(paste0("hover_text_vf_",i))
-                       }
+                       lapply(1:length(loading_vf_file()$vars), function(t) {
+                           name <- loading_vf_file()$vars[[t]]
+                           if(!name %in% c(input[[paste0("vf_selector_x_",i)]],input[[paste0("vf_selector_y_",i)]])) {
+                               label <- paste0("continues scale in ",loading_vf_file()$vars[[t]])
+                               wname <- paste0("scale_slider_vf_",i,"_",t)
+                               if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]])
+                                   values <- loading_ss_file()$ranges[[name]]
+                               else
+                                   values <- loading_vf_file()$ranges[[name]]
+                               sliderInput(wname,label=label,min=values[1],max=values[2],step=zoom_granul,
+                                           value=ifelse(is.null(input[[wname]]),values[1],input[[wname]]))
+                           }
+                       }),
+                       verbatimTextOutput(paste0("hover_text_vf_",i))
                 ),
                 column(4,
-                       if(!is.null(loading_vf_file()))
-                           helpText("vector field of the model"),
-                       if(!is.null(loading_vf_file()))
-                           imageOutput(paste0("plot_vf_",i),"auto","auto",click=paste0("vf_",i,"_click"),dblclick=paste0("vf_",i,"_dblclick"),
-                                       brush=brushOpts(id=paste0("vf_",i,"_brush"),delayType="debounce",delay=brush_delay_limit,resetOnNew=T),
-                                       hover=hoverOpts(id=paste0("vf_",i,"_hover"),delayType="debounce",delay=hover_delay_limit))
+                       helpText("vector field of the model"),
+                       imageOutput(paste0("plot_vf_",i),"auto","auto",click=paste0("vf_",i,"_click"),dblclick=paste0("vf_",i,"_dblclick"),
+                                   brush=brushOpts(id=paste0("vf_",i,"_brush"),delayType="debounce",delay=brush_delay_limit,resetOnNew=T),
+                                   hover=hoverOpts(id=paste0("vf_",i,"_hover"),delayType="debounce",delay=hover_delay_limit))
                 ),
                 column(4,
                        if(!is.null(loading_ss_file()))
@@ -904,7 +954,6 @@ output$plots <- renderUI({
                 ),
                 column(2,
                        if(!is.null(loading_ss_file())) {
-                           #downloadButton(paste0("download_ss_",i),"Download image")
                            actionButton(paste0("apply_plot_ss_",i),"Apply to all")
                        },
                        if(!is.null(loading_ss_file())) {
@@ -913,19 +962,17 @@ output$plots <- renderUI({
                        if(!is.null(loading_ss_file())) {
                            actionButton(paste0("unzoom_plot_ss_",i),"Unzoom")
                        },
-                       #                        if(!is.null(loading_ss_file())) {
-                       #                            checkboxInput(paste0("log_scale_ss_",i),"Log-scale")
-                       #                        },
-                       if(!is.null(loading_ss_file()) && length(loading_ss_file()$var_names) > 2) {
+                       if(!is.null(loading_ss_file())) {
                            lapply(1:length(loading_ss_file()$var_names), function(t) {
                                if(!loading_ss_file()$var_names[[t]] %in% c(input[[paste0("vf_selector_x_",i)]],input[[paste0("vf_selector_y_",i)]])) {
                                    label <- paste0("discrete scale in ",loading_ss_file()$var_names[[t]])
-                                   name <- paste0("scale_slider_ss_",i,"_",t)
-                                   values <- c(1,ifelse(max(loading_ss_file()$thr[[t]]) > loading_vf_file()$ranges[[t]][2],
-                                                        length(loading_ss_file()$thr[[t]][which(loading_ss_file()$thr[[t]] <= loading_vf_file()$ranges[[t]][2])]),
-                                                        length(loading_ss_file()$thr[[t]])-1))
-                                   sliderInput(name,label=label,min=values[1],max=values[2],step=1,
-                                               value=ifelse(is.null(input[[name]]),values[1],input[[name]]))
+                                   wname <- paste0("scale_slider_ss_",i,"_",t)
+                                   # values <- c(1,ifelse(max(loading_ss_file()$thr[[t]]) > loading_vf_file()$ranges[[t]][2],
+                                   #                      length(loading_ss_file()$thr[[t]][which(loading_ss_file()$thr[[t]] <= loading_vf_file()$ranges[[t]][2])]),
+                                   #                      length(loading_ss_file()$thr[[t]])-1))
+                                   values <- c(1, length(loading_ss_file()$thr[[t]])-1)
+                                   sliderInput(wname,label=label,min=values[1],max=values[2],step=1,
+                                               value=ifelse(is.null(input[[wname]]),values[1],input[[wname]]))
                                }
                            })
                        },
@@ -945,7 +992,7 @@ output$plots <- renderUI({
 # observers providing zooming and unzooming of vector-field plots
 zoom_vf_ranges <- observe({
     #arrows_number <- input$arrows_number
-    if(!is.null(loading_vf_file()) ) { # && input$add_vf_plot > 0) {
+    if(!is.null(loading_vf_file()) ) {
         for(i in visible_vf_plots()) {
             if(!is.null(input[[paste0("vf_",i,"_brush")]])) isolate({
                 brush <- input[[paste0("vf_",i,"_brush")]]
@@ -954,30 +1001,28 @@ zoom_vf_ranges <- observe({
                     if(x == input[[paste0("vf_selector_x_",i)]]) return(c(brush$xmin, brush$xmax))
                     if(x == input[[paste0("vf_selector_y_",i)]]) return(c(brush$ymin, brush$ymax))
                     # return(loading_vf_file()$ranges[[x]])
-                    if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) return(loading_ss_file()$ranges[[x]])
-                    else return(loading_vf_file()$ranges[[x]])
+                    
+                    # if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) return(loading_ss_file()$ranges[[x]])
+                    # else return(loading_vf_file()$ranges[[x]])
+                    
+                    return(loading_ss_file()$ranges[[x]])
                 })
-#                 vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) {
-#                     if(x==input[[paste0("vf_selector_y_",i)]] || x==input[[paste0("vf_selector_x_",i)]]) {
-#                         if(x==input[[paste0("vf_selector_x_",i)]]) seq(brush$xmin, brush$xmax, (brush$xmax-brush$xmin)/arrows_number)
-#                         else seq(brush$ymin, brush$ymax, (brush$ymax-brush$ymin)/arrows_number)
-#                     } else seq(loading_vf_file()$ranges[[x]][1], loading_vf_file()$ranges[[x]][2], 
-#                                (loading_vf_file()$ranges[[x]][2]-loading_vf_file()$ranges[[x]][1])/arrows_number)
-#                 })
             })
         }
     }
 })
 unzoom_vf_ranges <- observe({
     #arrows_number <- input$arrows_number
-    if(!is.null(loading_vf_file()) ) { # && input$add_vf_plot > 0) {
+    if(!is.null(loading_vf_file()) ) {
         for(i in visible_vf_plots()) {
             button <- input[[paste0("unzoom_plot_vf_",i)]]
             if(!is.null(button) && (button > vf_brushed$click_counter[[i]])) isolate({
                 # vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) loading_vf_file()$ranges[[x]] )
                 vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) {
-                    if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) loading_ss_file()$ranges[[x]]
-                    else loading_vf_file()$ranges[[x]]
+                    # if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) loading_ss_file()$ranges[[x]]
+                    # else loading_vf_file()$ranges[[x]]
+                    
+                    return(loading_ss_file()$ranges[[x]])
                 })
                 vf_brushed$click_counter[[i]] <- button
             })
@@ -987,7 +1032,7 @@ unzoom_vf_ranges <- observe({
 
 # observers providing zooming and unzooming of state-space plots
 zoom_ss_ranges <- observe({
-    if(!is.null(loading_ss_file()) ) { # && input$add_vf_plot > 0) {
+    if(!is.null(loading_ss_file()) ) {
         for(i in visible_vf_plots()) {
             if(!is.null(input[[paste0("ss_",i,"_brush")]])) isolate({
                 brush <- input[[paste0("ss_",i,"_brush")]]
@@ -1003,7 +1048,7 @@ zoom_ss_ranges <- observe({
     }
 })
 unzoom_ss_ranges <- observe({
-    if(!is.null(loading_ss_file()) ) { # && input$add_vf_plot > 0) {
+    if(!is.null(loading_ss_file()) ) {
         for(i in visible_vf_plots()) {
             button <- input[[paste0("unzoom_plot_ss_",i)]]
             if(!is.null(button) && (button > ss_brushed$click_counter[[i]])) isolate({
@@ -1023,9 +1068,9 @@ set_input_params <- reactive({
             }
         if(!is.null(loading_vf_file()$params))
             for(i in 1:length(loading_vf_file()$params)) {
-                inpar <- paste0(inpar,names(loading_vf_file()$params)[i],"=",ifelse(is.null(input[[paste0("param_slider_vf_",i)]]) | 
-                                                                                     is.na(input[[paste0("param_slider_vf_",i)]]),
-                                                                                     no_param_const, input[[paste0("param_slider_vf_",i)]]),",")
+                inpar <- paste0(inpar,names(loading_vf_file()$params)[i],"=",ifelse(is.null(current_param_sliders()[[i]]) | 
+                                                                                     is.na(current_param_sliders()[[i]]),
+                                                                                     no_param_const, current_param_sliders()[[i]]),",")
             }
         return(inpar)
     } else return(NULL)
@@ -1033,15 +1078,11 @@ set_input_params <- reactive({
 set_abst_input_params <- reactive({
     if(!is.null(loading_ss_file())) {
         inpar <- "list("
-#         if(!is.null(loading_vf_file()$consts))
-#             for(i in 1:length(loading_vf_file()$consts)) {
-#                 inpar <- paste0(inpar,names(loading_vf_file()$consts)[i],"=",loading_vf_file()$consts[[i]],",")
-#             }
         if(!is.null(loading_ss_file()$params))
             for(i in 1:length(loading_ss_file()$params)) {
-                inpar <- paste0(inpar,names(loading_ss_file()$params)[i],"=",ifelse(is.null(input[[paste0("param_slider_vf_",i)]]) | 
-                                                                                        is.na(input[[paste0("param_slider_vf_",i)]]),
-                                                                                    no_param_const, input[[paste0("param_slider_vf_",i)]]),",")
+                inpar <- paste0(inpar,names(loading_ss_file()$params)[i],"=",ifelse(is.null(current_param_sliders()[[i]]) | 
+                                                                                        is.na(current_param_sliders()[[i]]),
+                                                                                    no_param_const, current_param_sliders()[[i]]),",")
             }
         return(inpar)
     } else return(NULL)
@@ -1057,16 +1098,21 @@ change_height <- reactive({
 
 
 clicked_in_vf <- observe({
-    if(!is.null(loading_vf_file()) ) { # && input$add_vf_plot > 0) {
+    if(!is.null(loading_vf_file()) ) {
         variables <- loading_vf_file()$vars
         for(i in visible_vf_plots()) {
             clicked_point <- input[[paste0("vf_",i,"_dblclick")]]
-            if(!is.null(clicked_point) ) isolate({ #&& is.null(input[[paste0("vf_",i,"_brush")]])) {
+            if(!is.null(clicked_point) ) isolate({
                 cat("drawing curve in vf ",i,": ",clicked_point$x,",",clicked_point$y,"\n")
                 vector_field_clicked$point[[i]] <- sapply(1:length(variables), function(t) {
-                    if(variables[t] == input[[paste0("vf_selector_x_",i)]]) return(clicked_point$x)
-                    if(variables[t] == input[[paste0("vf_selector_y_",i)]]) return(clicked_point$y)
-                    return(input[[paste0("scale_slider_vf_",i,"_",t)]])
+                    if(input[[paste0("vf_selector_x_",i)]] != input[[paste0("vf_selector_y_",i)]]) {
+                        if(variables[t] == input[[paste0("vf_selector_x_",i)]]) return(clicked_point$x)
+                        if(variables[t] == input[[paste0("vf_selector_y_",i)]]) return(clicked_point$y)
+                        return(input[[paste0("scale_slider_vf_",i,"_",t)]])
+                    } else {
+                        if(variables[t] == input[[paste0("vf_selector_x_",i)]]) return(clicked_point$x)
+                        return(input[[paste0("scale_slider_vf_",i,"_",t)]])
+                    }
                 })
                 names(vector_field_clicked$point[[i]]) <- variables
             })
@@ -1074,7 +1120,7 @@ clicked_in_vf <- observe({
     }
 })
 erase_in_vector_field <- observe({
-    if(!is.null(loading_vf_file()) ) { # && input$add_vf_plot > 0) {
+    if(!is.null(loading_vf_file()) ) {
         for(i in visible_vf_plots()) {
             button <- input[[paste0("clear_plot_vf_",i)]]
             if(!is.null(button) && (button > vector_field_clicked$click_counter[[i]])) isolate({
@@ -1085,7 +1131,7 @@ erase_in_vector_field <- observe({
     }
 })
 apply_to_all_in_vf <- observe({
-    if(!is.null(loading_vf_file()) ) { # && input$add_vf_plot > 0) {
+    if(!is.null(loading_vf_file()) ) {
         for(i in visible_vf_plots()) {
             button <- input[[paste0("apply_plot_vf_",i)]]
             if(!is.null(button) && (button > vector_field_clicked$apply_to_all_click_counter[[i]])) isolate({
@@ -1121,9 +1167,14 @@ clicked_in_state_space <- observe({
             if(!is.null(clicked) ) isolate({
                 cat("drawing reachable in ss ",i,": ",clicked$x,",",clicked$y,"\n")
                 state_space_clicked$point[[i]] <- sapply(1:length(variables), function(t) {
-                    if(variables[t] == input[[paste0("vf_selector_x_",i)]]) return(clicked$x)
-                    if(variables[t] == input[[paste0("vf_selector_y_",i)]]) return(clicked$y)
-                    return(loading_ss_file()$thr[[input[[paste0("scale_slider_ss_",i,"_",t)]] ]])
+                    if(input[[paste0("vf_selector_x_",i)]] != input[[paste0("vf_selector_y_",i)]]) {
+                        if(variables[t] == input[[paste0("vf_selector_x_",i)]]) return(clicked$x)
+                        if(variables[t] == input[[paste0("vf_selector_y_",i)]]) return(clicked$y)
+                        return(loading_ss_file()$thr[[input[[paste0("scale_slider_ss_",i,"_",t)]] ]])
+                    } else {
+                        if(variables[t] == input[[paste0("vf_selector_x_",i)]]) return(clicked$x)
+                        return(loading_ss_file()$thr[[input[[paste0("scale_slider_ss_",i,"_",t)]] ]])
+                    }
                 })
                 names(state_space_clicked$point[[i]]) <- variables
             })
@@ -1142,7 +1193,7 @@ erase_in_state_space <- observe({
     }
 })
 apply_to_all_in_state_space <- observe({
-    if(!is.null(loading_ss_file()) ) { # && input$add_vf_plot > 0) {
+    if(!is.null(loading_ss_file()) ) {
         for(i in visible_vf_plots()) {
             button <- input[[paste0("apply_plot_ss_",i)]]
             if(!is.null(button) && (button > state_space_clicked$apply_to_all_click_counter[[i]])) isolate({
@@ -1166,18 +1217,9 @@ draw_vf_plots <- observe({
             local({
                 my_i <- i
                 plotname <- paste0("plot_vf_",my_i)
-                if(input[[paste0("vf_selector_x_",my_i)]] != input[[paste0("vf_selector_y_",my_i)]]) {
-                #if(length(loading_vf_file()$vars) > 1) {
-                    output[[plotname]] <- renderPlot({ 
-                        draw_vector_field(isolate(input[[paste0("vf_selector_x_",my_i)]]), isolate(input[[paste0("vf_selector_y_",my_i)]]), my_i, vf_brushed$data[[my_i]])
-                    },height=change_height() # input$height
-                    )
-                } else {
-                    output[[plotname]] <- renderPlot({
-                        draw_1D_vector_field(isolate(input[[paste0("vf_selector_x_",my_i)]]), my_i, vf_brushed$data[[my_i]])
-                    },height=change_height() # input$height
-                    )
-                }
+                output[[plotname]] <- renderPlot({
+                    draw_vector_field_crossroad(isolate(input[[paste0("vf_selector_x_",my_i)]]), isolate(input[[paste0("vf_selector_y_",my_i)]]), my_i, vf_brushed$data[[my_i]])
+                },height=change_height() )
             })
         }
     }
@@ -1194,7 +1236,8 @@ hover_over_vf_plots <- observe({
                         sapply(1:length(list_of_all_names), function(x) {
                             name <- list_of_all_names[[x]]
                             if(!name %in% c(input[[paste0("vf_selector_x_",my_i)]],input[[paste0("vf_selector_y_",my_i)]])) {
-                                paste0(name,": ",round(input[[paste0("scale_slider_vf_",my_i,"_",x)]],rounding_in_hover) )
+                                ifelse(is.null(input[[paste0("scale_slider_vf_",my_i,"_",x)]]), paste0(name,": "),
+                                       paste0(name,": ",round(input[[paste0("scale_slider_vf_",my_i,"_",x)]],rounding_in_hover)) )
                             } else {
                                 ifelse(is.null(hover), paste0(name,": "),
                                        ifelse(name %in% input[[paste0("vf_selector_x_",my_i)]], paste0(name,": ",round(hover$x,rounding_in_hover)),
@@ -1213,18 +1256,9 @@ draw_ss_plots <- observe({
             local({
                 my_i <- i
                 plotname <- paste0("plot_ss_",my_i)
-                if(input[[paste0("vf_selector_x_",my_i)]] != input[[paste0("vf_selector_y_",my_i)]]) {
-                #if(length(loading_ss_file()$var_names) > 1) {
-                    output[[plotname]] <- renderPlot({
-                        #draw_vector_field_2(isolate(input[[paste0("vf_selector_x_",my_i)]]), isolate(input[[paste0("vf_selector_y_",my_i)]]), my_i, vf_brushed$data[[my_i]])
-                        draw_state_space_new_2(isolate(input[[paste0("vf_selector_x_",my_i)]]), isolate(input[[paste0("vf_selector_y_",my_i)]]), my_i, ss_brushed$data[[my_i]])
-#                        draw_state_space(isolate(input[[paste0("vf_selector_x_",my_i)]]), isolate(input[[paste0("vf_selector_y_",my_i)]]), my_i, ss_brushed$data[[my_i]])
-                    },height=change_height() )
-                } else {
-                    output[[plotname]] <- renderPlot({
-                        draw_1D_state_space(isolate(input[[paste0("vf_selector_x_",my_i)]]), my_i, ss_brushed$data[[my_i]])
-                    },height=change_height() )
-                }
+                output[[plotname]] <- renderPlot({
+                    draw_state_space_crossroad(isolate(input[[paste0("vf_selector_x_",my_i)]]), isolate(input[[paste0("vf_selector_y_",my_i)]]), my_i, ss_brushed$data[[my_i]])
+                },height=change_height() )
             })
         }
     }
@@ -1241,9 +1275,10 @@ hover_over_ss_plots <- observe({
                         sapply(1:length(list_of_all_names), function(x) {
                             name <- list_of_all_names[[x]]
                             if(!name %in% c(input[[paste0("vf_selector_x_",my_i)]],input[[paste0("vf_selector_y_",my_i)]])) {
-                                paste0(name,": ",round(loading_ss_file()$thr[[name]][input[[paste0("scale_slider_ss_",my_i,"_",x)]]  ],rounding_in_hover)," - ",
-                                       round(loading_ss_file()$thr[[name]][input[[paste0("scale_slider_ss_",my_i,"_",x)]]+1],rounding_in_hover),
-                                       " : layer (",input[[paste0("scale_slider_ss_",my_i,"_",x)]],")")
+                                ifelse(is.null(input[[paste0("scale_slider_ss_",my_i,"_",x)]]), paste0(name,": "),
+                                       paste0(name,": ",round(loading_ss_file()$thr[[name]][input[[paste0("scale_slider_ss_",my_i,"_",x)]] ],rounding_in_hover)," - ",
+                                              round(loading_ss_file()$thr[[name]][input[[paste0("scale_slider_ss_",my_i,"_",x)]]+1],rounding_in_hover),
+                                              " : layer (",input[[paste0("scale_slider_ss_",my_i,"_",x)]],")") )
                             } else {
                                 ifelse(is.null(hover), paste0(name,": "),
                                        ifelse(name %in% input[[paste0("vf_selector_x_",my_i)]], paste0(name,": ",round(hover$x,rounding_in_hover)),
@@ -1256,6 +1291,10 @@ hover_over_ss_plots <- observe({
     }
 })
 
+draw_vector_field_crossroad <- function(name_x, name_y, plot_index, boundaries) {
+    if(name_x == name_y) return(draw_1D_vector_field(name_x, plot_index, boundaries))
+    else                 return(draw_vector_field(name_x, name_y, plot_index, boundaries))
+}
 draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
     variables <- loading_vf_file()$vars
     index_x <- match(name_x,variables)
@@ -1271,26 +1310,29 @@ draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
                        parameters=list(),
                        sliders=list() )
     if(!is.null(loading_vf_file()$params)) {
-        for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- input[[paste0("param_slider_vf_",p)]]
+        for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- current_param_sliders()[[p]]
     }
-    if(length(variables) > 2) {
-        for(t in 1:length(variables)) {
-            if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
-                checkpoint$sliders[[variables[[t]] ]] <- input[[paste0("scale_slider_vf_",plot_index,"_",t)]]
-            }
+    for(t in 1:length(variables)) {
+        if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
+            checkpoint$sliders[[variables[[t]] ]] <- input[[paste0("scale_slider_vf_",plot_index,"_",t)]]
         }
     }
     # check for any change in globals for particular plot
     if(is.na(vector_field_space$globals[[plot_index]]) || !identical(vector_field_space$globals[[plot_index]],checkpoint)) {
+        
         mesh <- meshgrid(seq(boundaries[[name_x]][1],boundaries[[name_x]][2],(boundaries[[name_x]][2]-boundaries[[name_x]][1])/input$arrows_number),
                          seq(boundaries[[name_y]][1],boundaries[[name_y]][2],(boundaries[[name_y]][2]-boundaries[[name_y]][1])/input$arrows_number))
-        # drawing of vector field =================================================
         input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
         for(i in 1:length(variables)) {
             if(variables[[i]] == name_x || variables[[i]] == name_y) {
                 if(variables[[i]] == name_x)  input_params <- paste0(input_params,variables[[i]],"=","mesh$X",",")
                 else                                        input_params <- paste0(input_params,variables[[i]],"=","mesh$Y",",")
-            } else input_params <- paste0(input_params,variables[[i]],"=",input[[paste0("scale_slider_vf_",plot_index,"_",i)]],",")
+            } else {
+                if(is.null(input[[paste0("scale_slider_vf_",plot_index,"_",i)]]))
+                    input_params <- paste0(input_params,variables[[i]],"=",0,",")
+                else
+                    input_params <- paste0(input_params,variables[[i]],"=",input[[paste0("scale_slider_vf_",plot_index,"_",i)]],",")
+            }
         }
         substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
         
@@ -1320,6 +1362,7 @@ draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
     
     #============== drawing of flow =================================================
     if(length(vector_field_clicked$point) >= plot_index && !(is.null(vector_field_clicked$point[[plot_index]]) || is.na(vector_field_clicked$point[[plot_index]]))) {
+        
         point <- vector_field_clicked$point[[plot_index]]
         if(is.na(vector_field_clicked$old_point[[plot_index]]) || !identical(vector_field_clicked$old_point[[plot_index]],point) ||
                !identical(vector_field_space$globals[[plot_index]],checkpoint)) {
@@ -1370,96 +1413,105 @@ draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
     # it has to be at the end
     vector_field_space$globals[[plot_index]] <- checkpoint
 }
-# draw_vector_field_2 <- function(name_x, name_y, plot_index, boundaries) {
-#     variables <- loading_vf_file()$vars
-#     index_x <- match(name_x,variables)
-#     index_y <- match(name_y,variables)
-#     
-#     # create current set of globals
-#     checkpoint <- list(selectors =list(x=input[[paste0("vf_selector_x_",plot_index)]], y=input[[paste0("vf_selector_y_",plot_index)]]),
-#                        boundaries=boundaries,
-#                        arrows_number=input$arrows_number,
-#                        parameters=list(),
-#                        sliders=list() )
-#     if(!is.null(loading_vf_file()$params)) {
-#         for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- input[[paste0("param_slider_vf_",p)]]
-#     }
-#     if(length(variables) > 2) {
-#         for(t in 1:length(variables)) {
-#             if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
-#                 checkpoint$sliders[[variables[[t]] ]] <- input[[paste0("scale_slider_vf_",plot_index,"_",t)]]
-#             }
-#         }
-#     }
-#     # check for any change in globals for particular plot
-#     if(is.na(vector_field_space$globals[[plot_index]]) || !identical(vector_field_space$globals[[plot_index]],checkpoint)) {
-#         mesh <- meshgrid(seq(boundaries[[name_x]][1],boundaries[[name_x]][2],(boundaries[[name_x]][2]-boundaries[[name_x]][1])/input$arrows_number),
-#                          seq(boundaries[[name_y]][1],boundaries[[name_y]][2],(boundaries[[name_y]][2]-boundaries[[name_y]][1])/input$arrows_number))
-#         # drawing of vector field =================================================
-#         input_params <- set_abst_input_params()
-#         for(i in 1:length(variables)) {
-#             if(variables[[i]] == name_x || variables[[i]] == name_y) {
-#                 if(variables[[i]] == name_x)  input_params <- paste0(input_params,variables[[i]],"=","mesh$X",",")
-#                 else                                        input_params <- paste0(input_params,variables[[i]],"=","mesh$Y",",")
-#             } else input_params <- paste0(input_params,variables[[i]],"=",input[[paste0("scale_slider_vf_",plot_index,"_",i)]],",")
-#         }
-#         substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
-#         
-#         fx = eval(funcs_abst[[name_x]])(eval(parse(text=input_params)))
-#         fy = eval(funcs_abst[[name_y]])(eval(parse(text=input_params)))
-#         
-#         direction <- switch(input$colVariant,
-#                             "both" = fx + fy,
-#                             "horizontal" = fx,
-#                             "vertical" = fy,
-#                             "none" = 0)
-#         vector_field_space$data[[plot_index]] <- list(mesh=mesh,
-#                                                       fx=fx,
-#                                                       fy=fy,
-#                                                       direction=direction)
-#         cat(paste0("computing vector-field for ",plot_index,"\n"))
-#     }
-#     data <- vector_field_space$data[[plot_index]]
-#     plot(range(boundaries[[name_x]]), range(boundaries[[name_y]]), type="n", xlab=name_x, ylab=name_y, xaxs="i", yaxs="i")
-#     suppressWarnings(quiver(data$mesh$X, data$mesh$Y, data$fx, data$fy,
-#                             scale=input$arrowSize, length=0.08, angle=30, lwd=input$transWidth,
-#                             col=ifelse(data$direction > input$colThr, positive_color, ifelse(data$direction < -input$colThr, negative_color, neutral_color))))
-#     
-#     #============== drawing of flow =================================================
-#     if(length(vector_field_clicked$point) >= plot_index && !(is.null(vector_field_clicked$point[[plot_index]]) || is.na(vector_field_clicked$point[[plot_index]]))) {
-#         point <- vector_field_clicked$point[[plot_index]]
-#         if(is.na(vector_field_clicked$old_point[[plot_index]]) || !identical(vector_field_clicked$old_point[[plot_index]],point) ||
-#                !identical(vector_field_space$globals[[plot_index]],checkpoint)) {
-#             flow_data <- matrix(,nrow=num_of_flow_points+1,ncol=length(variables))
-#             flow_data[1,] <- point
-#             for(r in seq(num_of_flow_points)) {
-#                 input_params <- set_abst_input_params()
-#                 for(i in 1:length(variables)) {
-#                     input_params <- paste0(input_params,variables[i],"=",flow_data[r,i],",")
-#                 }
-#                 substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
-#                 new_move <- sapply(1:length(variables), function(i) eval(funcs_abst[[i]])(eval(parse(text=input_params))))
-#                 flow_data[r+1,] <- flow_data[r,]+new_move
-#             }
-#             vector_field_clicked$data[[plot_index]] <- flow_data
-#         }
-#         flow_data <- vector_field_clicked$data[[plot_index]]
-#         xspline(flow_data[,index_x], flow_data[,index_y], shape=1, col="blue", border="blue", lwd=size_of_flow_points)
-#         # it has to be at the end
-#         vector_field_clicked$old_point[[plot_index]] <- point
-#     }
-#     # it has to be at the end
-#     vector_field_space$globals[[plot_index]] <- checkpoint
-# }
 draw_1D_vector_field <- function(name_x, plot_index, boundaries) {
     variables <- loading_vf_file()$vars
     index_x <- match(name_x,variables)
-    plot(range(boundaries[[name_x]]), c(0,1), type="n", xlab=name_x, ylab="", yaxt="n")
     
-    #TODO:
+    # create current set of globals
+    checkpoint <- list(selectors =list(x=input[[paste0("vf_selector_x_",plot_index)]], y=input[[paste0("vf_selector_y_",plot_index)]]),
+                       boundaries=boundaries,
+                       arrows_number=input$arrows_number,
+                       color_variant=input$colVariant,
+                       abst_model=input[[paste0("abst_vf_",plot_index)]],
+                       counter=input$accept_model_changes,
+                       parameters=list(),
+                       sliders=list() )
+    if(!is.null(loading_vf_file()$params)) {
+        for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- current_param_sliders()[[p]]
+    }
+    for(t in 1:length(variables)) {
+        if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
+            checkpoint$sliders[[variables[[t]] ]] <- input[[paste0("scale_slider_vf_",plot_index,"_",t)]]
+        }
+    }
+    
+    # check for any change in globals for particular plot
+    if(is.na(vector_field_space$globals[[plot_index]]) || !identical(vector_field_space$globals[[plot_index]],checkpoint)) {
+        
+        mesh <- list(X=seq(boundaries[[name_x]][1],boundaries[[name_x]][2],(boundaries[[name_x]][2]-boundaries[[name_x]][1])/input$arrows_number),
+                     Y=rep(0.5,input$arrows_number+1) )
+        input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
+        for(i in 1:length(variables)) {
+            if(variables[[i]] == name_x) input_params <- paste0(input_params,variables[[i]],"=","mesh$X",",")
+            else {
+                if(is.null(input[[paste0("scale_slider_vf_",plot_index,"_",i)]]))
+                    input_params <- paste0(input_params,variables[[i]],"=",0,",")
+                else
+                    input_params <- paste0(input_params,variables[[i]],"=",input[[paste0("scale_slider_vf_",plot_index,"_",i)]],",")
+            }
+        }
+        substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
+        
+        if(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]]) {
+            fx = eval(funcs_abst[[name_x]])(eval(parse(text=input_params)))
+            fy = rep(0,input$arrows_number)
+        } else {
+            fx = eval(funcs[[name_x]])(eval(parse(text=input_params)))
+            fy = rep(0,input$arrows_number)
+        }
+        
+        direction <- switch(input$colVariant,
+                            "both" = fx,       # temporary: better would be to edit 'input$colVariant' so for 1D plot it will offer just options for horizontal and none
+                            "horizontal" = fx,
+                            "vertical" = 0,    # temporary: better would be to edit 'input$colVariant' so for 1D plot it will offer just options for horizontal and none
+                            "none" = 0)
+        vector_field_space$data[[plot_index]] <- list(mesh=mesh,
+                                                      fy=fy,
+                                                      fx=fx,
+                                                      direction=direction)
+    }
+    data <- vector_field_space$data[[plot_index]]
+    plot(range(boundaries[[name_x]]), c(0,1), type="n", xlab=name_x, ylab="", xaxs="i", yaxs="i", yaxt="n")
+    suppressWarnings(quiver(data$mesh$X, data$mesh$Y, data$fx, data$fy,
+                            scale=input$arrowSize, length=0.08, angle=60, lwd=input$transWidth,
+                            col=ifelse(data$direction > input$colThr, positive_color, ifelse(data$direction < -input$colThr, negative_color, neutral_color))))
+    #============== drawing of flow =================================================
+    if(length(vector_field_clicked$point) >= plot_index && !(is.null(vector_field_clicked$point[[plot_index]]) || is.na(vector_field_clicked$point[[plot_index]]))) {
+        
+        point <- vector_field_clicked$point[[plot_index]]
+        if(is.na(vector_field_clicked$old_point[[plot_index]]) || !identical(vector_field_clicked$old_point[[plot_index]],point) ||
+           !identical(vector_field_space$globals[[plot_index]],checkpoint)) {
+            
+            flow_data <- as.data.table(t(point))
+            for(r in seq(num_of_flow_points)) {
+                input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
+                for(i in 1:length(variables)) {
+                    input_params <- paste0(input_params,variables[i],"=",flow_data[r,get(variables[[i]])],",")
+                }
+                substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
+                new_move <- sapply(1:length(variables), function(i) {
+                    if(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]])
+                        eval(funcs_abst[[i]])(eval(parse(text=input_params)))
+                    else
+                        eval(funcs[[i]])(eval(parse(text=input_params)))
+                })
+                flow_data <- rbind(flow_data,flow_data[r]+new_move)
+            }
+            vector_field_clicked$data[[plot_index]] <- flow_data
+        }
+        flow_data <- vector_field_clicked$data[[plot_index]]
+        xspline(flow_data[,get(name_x)], rep(0.5,num_of_flow_points+1), shape=1, col="blue", border="blue", lwd=size_of_flow_points)
+        # it has to be at the end
+        vector_field_clicked$old_point[[plot_index]] <- point
+    }
+    # it has to be at the end
+    vector_field_space$globals[[plot_index]] <- checkpoint
 }
 
-
+draw_state_space_crossroad <- function(name_x, name_y, plot_index, boundaries) {
+    if(name_x == name_y) return(draw_1D_state_space(name_x, plot_index, boundaries))
+    else                 return(draw_state_space_new_2(name_x, name_y, plot_index, boundaries))
+}
 draw_state_space_new_2 <- function(name_x, name_y, plot_index, boundaries) {
     variables <- loading_ss_file()$var_names
     index_x <- match(name_x,variables)
@@ -1476,13 +1528,11 @@ draw_state_space_new_2 <- function(name_x, name_y, plot_index, boundaries) {
                            counter=input$accept_model_changes,
                            sliders=list() )
         if(!is.null(loading_vf_file()$params)) {
-            for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- input[[paste0("param_slider_vf_",p)]]
+            for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- current_param_sliders()[[p]]
         }
-        if(length(variables) > 2) {
-            for(t in 1:length(variables)) {
-                if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
-                    checkpoint$sliders[[variables[[t]] ]] <- input[[paste0("scale_slider_ss_",plot_index,"_",t)]]
-                }
+        for(t in 1:length(variables)) {
+            if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
+                checkpoint$sliders[[variables[[t]] ]] <- input[[paste0("scale_slider_ss_",plot_index,"_",t)]]
             }
         }
         # check for any change in globals for particular plot
@@ -1790,10 +1840,10 @@ draw_state_space <- function(name_x, name_y, plot_index, boundaries) {
         param_sets <- vector(length=loading_ss_file()$params_num*2)
         if(loading_ss_file()$params_num != 0) {
             for(i in 0:(loading_ss_file()$params_num -1)) {
-                param_sets[2*i+1] <- as.numeric(ifelse(is.null(input[[paste0("param_slider_vf_",i+1)]]) | is.na(input[[paste0("param_slider_vf_",i+1)]]),
-                                                       no_param_const,input[[paste0("param_slider_vf_",i+1)]][1]))
-                param_sets[2*i+2] <- as.numeric(ifelse(is.null(input[[paste0("param_slider_vf_",i+1)]]) | is.na(input[[paste0("param_slider_vf_",i+1)]]),
-                                                       no_param_const,input[[paste0("param_slider_vf_",i+1)]][1]))
+                param_sets[2*i+1] <- as.numeric(ifelse(is.null(current_param_sliders()[[i+1]]) | is.na(current_param_sliders()[[i+1]]),
+                                                       no_param_const,current_param_sliders()[[i+1]][1]))
+                param_sets[2*i+2] <- as.numeric(ifelse(is.null(current_param_sliders()[[i+1]]) | is.na(current_param_sliders()[[i+1]]),
+                                                       no_param_const,current_param_sliders()[[i+1]][1]))
                 
             }
             coloring <- switch(as.character(length(param_sets)),
@@ -1860,24 +1910,174 @@ draw_state_space <- function(name_x, name_y, plot_index, boundaries) {
     }
 }
 draw_1D_state_space <- function(name_x, plot_index, boundaries) {
-    index_x <- match(name_x,loading_ss_file()$var_names)
-    ranges <- loading_vf_file()$ranges
-    thres <- loading_ss_file()$thr
-    names(thres) <- loading_ss_file()$var_names
+    variables <- loading_ss_file()$var_names
+    index_x <- match(name_x,variables)
+    range_x <- loading_ss_file()$ranges[[index_x]]
+    thres_x <- loading_ss_file()$thr[[index_x]]
     
-    plot(ranges[[index_x]], c(0,1), type="n", xlab=name_x, ylab="", yaxt="n", xlim=boundaries[[index_x]], xaxs="i", yaxs="i")
+    if(!is.null(loading_ss_file())) {
+        # create current set of globals
+        checkpoint <- list(selectors =list(x=input[[paste0("vf_selector_x_",plot_index)]], y=input[[paste0("vf_selector_y_",plot_index)]]),
+                           parameters=list(),
+                           counter=input$accept_model_changes,
+                           sliders=list() )
+        if(!is.null(loading_vf_file()$params)) {
+            for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- current_param_sliders()[[p]]
+        }
+        for(t in 1:length(variables)) {
+            if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
+                checkpoint$sliders[[variables[[t]] ]] <- input[[paste0("scale_slider_ss_",plot_index,"_",t)]]
+            }
+        }
+        # check for any change in globals for particular plot
+        if(is.na(transition_state_space$globals[[plot_index]]) || !identical(transition_state_space$globals[[plot_index]],checkpoint)) {
+            
+            timing <- system.time(withProgress({
+                dim_indices <- letters[-which(letters %in% c("x"))]
+                input_params <- paste0(set_abst_input_params(),paste0(name_x,"=dt$x"))
+                
+                dt <- data.table(x=thres_x) # x-coordinates of vertices
+                for(i in 1:length(variables)) {
+                    name <- variables[[i]]
+                    if(!name %in% c(name_x)) {
+                        data <- c(loading_ss_file()$thr[[name]][input[[paste0("scale_slider_ss_",plot_index,"_",i)]]  ],
+                                  loading_ss_file()$thr[[name]][input[[paste0("scale_slider_ss_",plot_index,"_",i)]]+1])
+                        dt <- as.data.table(merge.default(dt, data.table(V1=data) ))
+                        di <- dim_indices[i]
+                        setnames( dt, "V1", di)
+                        input_params <- paste(input_params,paste0(name,"=dt$",di),sep = ",")
+                    }
+                }
+                input_params <- paste0(input_params,")")
+                incProgress(1/5)
+                
+                inds_x <- 1:length(thres_x)
+                dt[,ix:=c(inds_x)]          # indices of thresholds in x-dimension
+                dt[,id:=1:nrow(dt)]         # id of the record inside DT
+                
+                dt[,fx:=eval(funcs_abst[[name_x]])(eval(parse(text=input_params))) ]
+                
+                incProgress(1/5)
+                
+                edge_x <- length(loading_ss_file()$thr[[index_x]])
+                out2 <- unique(rbind(dt[fx>0, .(x=c(ix-1,ix-1),   sx=c(ix,ix))],
+                                     dt[fx<0, .(x=c(ix,ix),       sx=c(ix-1,ix-1))]
+                ))
+                incProgress(1/5)
+                
+                out2 <- out2[!x %in% c(0,edge_x) & !sx %in% c(0,edge_x)]
+                tmp_out <-  out2[,.(sx=x,ssx=sx)]
+                
+                tmp_out <- merge(out2,tmp_out,by=c("sx"),all=T,allow.cartesian=T)[!sx %in% c(0,edge_x) ]
+                incProgress(1/5)
+                
+                out2 <- unique(rbind(
+                    out2[!x %in% c(0,edge_x) &
+                             !sx %in% c(0,edge_x)],
+                    tmp_out[,ifelse(nrow(.SD[(x-1==sx & sx-1==ssx) | 
+                                             (x+1==sx & sx+1==ssx)])==0,T,F),by=.(sx)][V1==T,.(x=sx,sx=sx)]
+                ))
+                incProgress(1/5)
+                
+                
+                transition_state_space$data[[plot_index]] <- out2[,id := 1:nrow(out2)]
+                out2 <- NULL
+                tmp_out <- NULL   
+                dt <- NULL
+            }, message="waiting for transition-state space"))
+            cat(paste0("computing state-space for ",plot_index,"\n"))
+            print(timing)
+        }
     
-    #TODO:
+        plot(range_x, c(0,1), type="n", xlab=name_x, ylab="", yaxt="n", xlim=boundaries[[index_x]], xaxs="i", yaxs="i")
+        abline(v=thres_x)
+        
+        tss <- transition_state_space$data[[plot_index]]
+        if(nrow(tss) > 0) {
+            suppressWarnings(arrows(
+                (thres_x[tss$x]+thres_x[tss$x+1])*0.5,
+                0.5,
+                ifelse(tss$x == tss$sx, (thres_x[tss$sx]+thres_x[tss$sx+1])*0.5, 
+                       ifelse(thres_x[tss$x] < thres_x[tss$sx], thres_x[tss$sx], thres_x[tss$sx+1])),
+                0.5,
+                angle=20,length=0.07,col=switch(input$colVariant,
+                                                "none"       = "black",
+                                                "horizontal" = ifelse(tss$x < tss$sx, positive_color, ifelse(tss$x > tss$sx,negative_color,neutral_color)),
+                                                "vertical"   = "black",  # temporary: better would be to edit 'input$colVariant' so for 1D plot it will offer just options for horizontal and none
+                                                "both"       = ifelse(tss$x < tss$sx, positive_color, ifelse(tss$x > tss$sx,negative_color,neutral_color)) # temporary: better would be to edit 'input$colVariant' so for 1D plot it will offer just options for horizontal and none
+                ),lwd=ifelse(tss$x == tss$sx, 3*input$transWidth, input$transWidth),lty=transitions_line_type
+            ))
+        }
+        #============== drawing reachable states =================================
+        if(length(state_space_clicked$point) >= plot_index && !(is.null(state_space_clicked$point[[plot_index]]) || is.na(state_space_clicked$point[[plot_index]])) &&
+           nrow(tss) > 0) {
+            
+            point <- state_space_clicked$point[[plot_index]]
+            if(is.na(state_space_clicked$old_point[[plot_index]]) || !identical(state_space_clicked$old_point[[plot_index]],point) || 
+               !identical(transition_state_space$globals[[plot_index]],checkpoint)) {
+                
+                cat(paste0("computing reachable states for ",plot_index,"\n"))
+                starting_state_x <- max(which(thres_x <= point[[name_x]]))
+                
+                start <- tss[starting_state_x == x,.(x)]
+                reachable <- unique(rbind(start,tss[starting_state_x == x,.(x=sx)]))
+                repeat {
+                    new_states <- tss[paste0(x) %in% paste0(reachable$x),.(x=sx)]
+                    if(nrow(unique(rbind(reachable,new_states))) != nrow(reachable))   reachable <- unique(rbind(reachable,new_states))
+                    else    break
+                }
+                state_space_clicked$data[[plot_index]] <- unique(reachable[,.(thres_x[x],       # V1: xleft points for reachable rectangles
+                                                                              0,                # V2: ybottom points for reachable rectangles (0 in 1D plot)
+                                                                              thres_x[x+1],     # V3: xright points for reachable rectangles
+                                                                              1)])              # V4: ytop points for reachable rectangles (1 in 1D plot)
+            }
+            reachable <- state_space_clicked$data[[plot_index]]
+            rect(reachable$V1,reachable$V2,reachable$V3,reachable$V4,border="blue",lwd=2)
+            # it has to be at the end
+            state_space_clicked$old_point[[plot_index]] <- point
+        }
+        # it has to be at the end
+        transition_state_space$globals[[plot_index]] <- checkpoint
+    }
 }
 
 ################################################################################################################################################################
 #=============== RESULT TAB ============================================
 #=======================================================================
 
-reset_globals_param <- function() {
-    for(i in param_chosen$data) {
-        param_chosen$data <- param_chosen$data[param_chosen$data != i]
+reset_globals_param <- function(i=NA) {
+    if(is.na(i)) {
+        for(i in param_update()) reset_particular_global_param(i)
+    } else {
+        reset_particular_global_param(i)
     }
+}
+reset_particular_global_param <- function(i) {
+    stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$data <- param_update()[param_update() != i]
+    # some kind of garbage collector would be very convenient in this phase
+    # either gc() or rm()
+    #rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("param_selector_y_",i)]]) #TODO: doplnit dalsie
+    param_space$data[[i]] <- NA
+    param_space$globals[[i]] <- NA
+    param_space_clicked$data[[i]] <- NA
+    param_space_clicked$click_counter[[i]] <- NA
+    param_space_clicked$apply_to_all_click_counter[[i]] <- NA
+    param_space_clicked$old_point[[i]] <- NA
+    param_space_clicked$point[[i]] <- NA
+    ps_brushed$data[[i]] <- NA
+    ps_brushed$click_counter[[i]] <- NA
+    
+    param_state_space$data[[i]] <- NA
+    param_state_space$globals[[i]] <- NA
+    param_ss_clicked$data[[i]] <- NA
+    param_ss_clicked$apply_to_all_click_counter[[i]] <- NA
+    param_ss_clicked$click_counter[[i]] <- NA
+    param_ss_clicked$point[[i]] <- NA
+    param_ss_clicked$old_point[[i]] <- NA
+    param_ss_brushed$data[[i]] <- NA
+    param_ss_brushed$click_counter[[i]] <- NA
+    
+    print(gc())
 }
 
 observeEvent(c(resultFile()),{
@@ -1888,127 +2088,163 @@ observeEvent(c(resultFile()),{
 })
 
 observeEvent(input$ps_file,{
+    #TODO: add JS script for cleaning fileInput after loading
     if(!is.null(input$ps_file) && !is.null(input$ps_file$datapath)) {
-        if(!is.null(loaded_ps_file$filename) && loaded_ps_file$filename != input$ps_file$datapath) {
-            #session$reload()
-            reset_globals_param()
-        }
-        loaded_ps_file$filename <- input$ps_file$datapath
-        loaded_ps_file$filedata <- readLines(loaded_ps_file$filename)
+        # if(!is.null(loaded_ps_file$filename) && loaded_ps_file$filename != input$ps_file$datapath) {
+        #     #session$reload()
+        #     reset_globals_param()
+        # }
+        loaded_ps_file$filename <- input$ps_file$name
+        loaded_ps_file$filedata <- readLines(input$ps_file$datapath)
     }
 })
 
 
 output$save_result_file <- downloadHandler(
-    filename = ifelse(!is.null(manage_result_experiments()$filepath), paste0(manage_result_experiments()$filepath), "results.json"),
+    filename = ifelse(!is.null(preloading_ps_file()), paste0(preloading_ps_file()$filepath), "results.json"),
     content = function(file) {
-        if(!is.null(manage_result_experiments()$filedata))
-            writeLines(manage_result_experiments()$filedata, file)
-        else writeLines("", file)
+        if(!is.null(preloading_ps_file())) writeLines(preloading_ps_file()$filedata, file)
+        else                               writeLines("", file)
     }
 )
 
-manage_result_experiments <- reactive({
+output$result_help_text <- renderUI({
+    if(stored_ps_files$current != 0) {
+        helpText(paste0("Experiment no. ",stored_ps_files$current," (",stored_ps_files$data[[stored_ps_files$current]]$timestamp,")"))
+    }
+})
+
+manage_result_experiments <- observeEvent(loaded_ps_file$filedata,{
     filedata <- loaded_ps_file$filedata
     if(!is.null(filedata)) {
         
-        # Here will be core of managing switching between experiments result
-        
-        return(list(filepath=NULL,filedata=filedata))
-    } else return(NULL)
+        if(stored_ps_files$max == 1 || !identical(filedata,stored_ps_files$data[[stored_ps_files$max-1]]$filedata)) {
+            stored_ps_files$data[[stored_ps_files$max]] <- list(filedata=filedata, filepath=loaded_ps_file$filename, timestamp=Sys.time(), 
+                                                                data=list(chosen_ps_formula=1, param_chosen=list(data=NULL), parsed_data=list()) )
+            # loaded_ps_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
+            if(stored_ps_files$max==1)  {
+                stored_ps_files$current <- stored_ps_files$max
+                updateButton(session,"result_del",style="default",disabled=F)
+                updateButton(session,"add_param_plot",style="default",disabled=F)
+            } else    
+                updateButton(session,"result_next",style="success",disabled=F)
+            stored_ps_files$max <- stored_ps_files$max + 1
+        }
+    }
+})
+manage_result_next <- observeEvent(input$result_next,{
+    # reset_globals_param()
+    stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
+    stored_ps_files$current <- stored_ps_files$current + 1
+    updateButton(session,"result_prev",style="default",disabled=F)
+    if(stored_ps_files$current+1 == stored_ps_files$max) {
+        updateButton(session,"result_next",style="default",disabled=T)
+    } else {
+        # updateButton(session,"result_next",style="default")
+    }
+})
+manage_result_prev <- observeEvent(input$result_prev,{
+    # reset_globals_param()
+    stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
+    stored_ps_files$current <- stored_ps_files$current - 1
+    updateButton(session,"result_next",style="default",disabled=F)
+    if(stored_ps_files$current == 1) {
+        updateButton(session,"result_prev",style="default",disabled=T)
+    } else {
+        # updateButton(session,"result_prev",style="default")
+    }
+})
+manage_result_del <- observeEvent(input$result_del,{
+    if(stored_ps_files$current > 0) {
+        # reset_globals_param()
+        stored_ps_files$max <- stored_ps_files$max - 1
+        stored_ps_files$data[[stored_ps_files$current]] <- NULL
+        if(stored_ps_files$current == stored_ps_files$max) {
+            stored_ps_files$current <- stored_ps_files$current - 1
+            if(stored_ps_files$current == 0) {
+                updateButton(session,"result_del",style="default",disabled=T)
+                updateButton(session,"add_param_plot",style="default",disabled=T)
+            }
+        }
+        if(stored_ps_files$current == 1) {
+            updateButton(session,"result_prev",style="default",disabled=T)
+        }
+        if(stored_ps_files$current+1 == stored_ps_files$max) {
+            updateButton(session,"result_next",style="default",disabled=T)
+        }
+    }
 })
 
+preloading_ps_file <- eventReactive(c(stored_ps_files$data,stored_ps_files$current),{
+    if(stored_ps_files$current != 0)
+        return(stored_ps_files$data[[stored_ps_files$current]])
+    else
+        return(NULL)
+})
 loading_ps_file <- reactive({
-    file <- manage_result_experiments()$filedata
-    if(!is.null(file)) {
-        file <- fromJSON(file)
-            
-        # musi byt kontrola ci result file vobec nieco obsahuje !!!!
-        
-        table <- rbindlist(lapply(file$results,function(x) if(length(x$data)!=0) as.data.table(x))) # temporary measure: empty results are omitted
-        setkeyv(table,"formula")
-        # table[,state:=sapply(data,function(x)unlist(x$state))]
-        # table[,param:=sapply(data,function(x)unlist(x$param))]
-        table[,state:=sapply(data,function(x)unlist(x[1]))]
-        table[,param:=sapply(data,function(x)unlist(x[2]))]
-        table[,cov:=nrow(.SD), by=list(formula,param)]
-        table[,data:=NULL]
-        
-        states <- as.data.table(t(sapply(lapply(1:length(file$states),function(x) file$states[[x]]$bounds), function(s) unlist(s))))
-        states[, id:=1:nrow(states)]
-        #states[, id:=sapply(1:length(file$states),function(x) file$states[[x]]$id+1)]
-        
-        if(file$type == "rectangular") {    
-            # file$parameter_values [[1]] [[1]] [[1]] [1:2]
-            #                        set  rect   dim  range
-            # params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
-            # not_empty_ids <- 1:length(file$parameter_values)
-            # times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
-            params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
-            not_empty_ids <- 1:length(file$parameter_values)
-            times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
-            params[, id:=unlist(sapply(1:length(not_empty_ids),function(x) rep.int(not_empty_ids[x],times[x])))]
-            params[, row_id:=1:nrow(params)]
+    if(!is.null(preloading_ps_file())) {
+        if(!isempty(preloading_ps_file()$data$parsed_data)) {
+            return(preloading_ps_file()$data$parsed_data)
         }
-        if(file$type == "smt") {
-            # TODO:
-            # params <- as.data.table(t(sapply(lapply(1:length(file$params$rectangles),function(x) file$params$rectangles[[x]]), function(p) unlist(p))))
-            # params[, id:=1:nrow(params)]
+        if(nchar(preloading_ps_file()$filedata) != 0) {
+            file <- fromJSON(preloading_ps_file()$filedata)
+                
+            # musi byt kontrola ci result file vobec nieco obsahuje !!!!
             
-            # params <- data.table(expr=sapply(1:length(file$parameter_values),function(x) file$parameter_values[[x]]$Rexpression))
-            params <- data.table(expr=paste0("function(ip)",gsub("||","|",gsub("&&","&", sapply(1:length(file$parameter_values),
-                                                                                    function(x) file$parameter_values[[x]]$Rexpression),fixed=T),fixed=T)))
-            # params <- data.table(expr=parse(text=paste0("function(ip)",gsub("([a-z][a-z0-9_]+)","ip$\\1",sapply(1:length(file$parameter_values),
-            #                                                                                          function(x) file$parameter_values[[x]]$Rexpression),perl=T))))
-            params[, id:=1:nrow(params)]
-            params[, row_id:=1:nrow(params)]
-            setkey(params,id)
-            # eval(parse(text=paste0("function(ip) ",gsub("([a-z][a-z0-9_]+)","ip$\\1",params$expr[1:5],perl=T))))(ip=list(deg_x=0.1,k1=1))
+            table <- rbindlist(lapply(file$results,function(x) {
+                if(length(x$data)==0) x$data <- NA 
+                as.data.table(x,fill=T)
+            }))
+            # table <- rbindlist(lapply(file$results,function(x) if(length(x$data)!=0) as.data.table(x))) # temporary measure: empty results are omitted
+            setkeyv(table,"formula")
+            table[,state:=sapply(data,function(x)unlist(x[1]))]
+            table[,param:=sapply(data,function(x)unlist(x[2]))]
+            table[,cov:=nrow(.SD), by=list(formula,param)]
+            table[,data:=NULL]
             
-            # num <- 50
-            # nesh <- meshgrid(seq(0,1,length.out = num),
-            #                  seq(0,2,length.out = num))
-            # dt <- data.table(x1=unlist(as.list(nesh$X[1:(num-1),1:(num-1)])),x2=unlist(as.list(nesh$X[2:num,2:num])),
-            #                  y1=unlist(as.list(nesh$Y[1:(num-1),1:(num-1)])),y2=unlist(as.list(nesh$Y[2:num,2:num])))
-            # dt[,x:=x1+(x2-x1)*0.5]
-            # dt[,y:=y1+(y2-y1)*0.5]
-            # dt[,cov:=0]
-            # 
-            # system.time(for(ex in params$id) dt[,cov:=cov+ifelse(eval(parse(text=params[ex,expr]))(list(deg_x=x,k1=y)),1,0)])
+            states <- as.data.table(t(sapply(lapply(1:length(file$states),function(x) file$states[[x]]$bounds), function(s) unlist(s))))
+            states[, id:=1:nrow(states)]
             
-            # tt <- as.data.table(merge.default(params,dt,all=T))
-            # setkey(tt,id)
-            # system.time(tt[,truth:=(eval(parse(text=expr))(list(deg_x=x,k1=y))),by=.(expr,x,y)])
-            # tt[,.(cov=nrow(.SD[truth==T]),x1,x2,y1,y2),by=.(x,y)]
+            if(file$type == "rectangular") {    
+                # file$parameter_values [[1]] [[1]] [[1]] [1:2]
+                #                        set  rect   dim  range
+                params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
+                not_empty_ids <- 1:length(file$parameter_values)
+                times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
+                params[, id:=unlist(sapply(1:length(not_empty_ids),function(x) rep.int(not_empty_ids[x],times[x])))]
+                params[, row_id:=1:nrow(params)]
+            }
+            if(file$type == "smt") {
+                # params <- data.table(expr=sapply(1:length(file$parameter_values),function(x) file$parameter_values[[x]]$Rexpression))
+                params <- data.table(expr=paste0("function(ip)",gsub("||","|",gsub("&&","&", sapply(1:length(file$parameter_values),
+                                                                                        function(x) file$parameter_values[[x]]$Rexpression),fixed=T),fixed=T)))
+                params[, id:=1:nrow(params)]
+                params[, row_id:=1:nrow(params)]
+                setkey(params,id)
+            }
             
-            # f <- function(e,l) eval(parse(text=e[1]))(list(deg_x=dtt$x,k1=dtt$y))
-            # tt[, truth:=f(.SD), by=.(expr,x,y) ]
-        }
-        
-        # time <- system.time({
-        #     for(i in seq(0,1,length.out = 50))
-        #         for(j in seq(0,2,length.out = 50))
-        #             neco <- params[,sapply(parse(text=expr),function(x) eval(x)(ip<-list(deg_x=i,k1=j)))]
-        # })
-        # print(time)
-        
-        thrs <- file$thresholds
-        names(thrs) <- file$variables
-        
-        param_bounds <- file$parameter_bounds
-        names(param_bounds) <- file$parameters
-        
-        return(list(param_space=table,  # DT( formula:string, data:list_of_state_and_param_indices, state:numeric_index_to_states, param:numeric_index_to_params, 
-                                        #     cov:numeric_with_states_count_for_this_param )
-                    states=states,      # DT( V1,V2,... ) - each pair of columns (e.g., V1,V2) contains boundary threshodls of state (each row), 3D SS has 6 columns
-                    formulae=unique(table$formula),     # vector of unique formulae from table 'table' or 'param_space'
-                    param_names=file$parameters,        # vector of param names in order of appearence in bio file
-                    params=params,                      # DT( V1,V2,... ) - each row is satisfied rectangle (of param set with same ID) in PS (each param has two columns: P1 has V1,V2 ...)
-                    var_names=file$variables,           # vector of unique variable names in order of appearence in bio file
-                    thresholds=thrs,                    # list of thresholds for each variable
-                    type=file$type,
-                    param_bounds=param_bounds
-        ))
+            thrs <- file$thresholds
+            names(thrs) <- file$variables
+            
+            param_bounds <- file$parameter_bounds
+            names(param_bounds) <- file$parameters
+            
+            # stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- 1
+            # stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen <- list(data=NULL)#,max=1)
+            stored_ps_files$data[[stored_ps_files$current]]$data$parsed_data <- list(
+                param_space=table,  # DT( formula:string, data:list_of_state_and_param_indices, state:numeric_index_to_states, param:numeric_index_to_params, 
+                                    #     cov:numeric_with_states_count_for_this_param )
+                states=states,      # DT( V1,V2,... ) - each pair of columns (e.g., V1,V2) contains boundary threshodls of state (each row), 3D SS has 6 columns
+                formulae=unique(table$formula),     # vector of unique formulae from table 'table' or 'param_space'
+                param_names=file$parameters,        # vector of param names in order of appearence in bio file
+                params=params,                      # DT( V1,V2,... ) - each row is satisfied rectangle (of param set with same ID) in PS (each param has two columns: P1 has V1,V2 ...)
+                var_names=file$variables,           # vector of unique variable names in order of appearence in bio file
+                thresholds=thrs,                    # list of thresholds for each variable
+                type=file$type,
+                param_bounds=param_bounds
+            )
+            return(preloading_ps_file()$data$parsed_data)
+        } else return(NULL)
     } else return(NULL)
 })
 
@@ -2019,13 +2255,13 @@ output$param_selector <- renderUI({
         #list_of_param_names <- as.list(c(loading_ps_file()$param_names, "Choose"=empty_sign))
         lapply(param_update(), function(i) {
             idx <- paste0("param_selector_x_",i)
-            labelx <- paste0("horizontal axis in plot ",i)
+            labelx <- paste0("horizontal")# axis in plot ",i)
             choicesx <- list_of_param_names
             selectedx <- ifelse(!is.null(input[[paste0("param_selector_x_",i)]]), input[[paste0("param_selector_x_",i)]], #empty_sign)
                                 list_of_param_names[1])
             
             idy <- paste0("param_selector_y_",i)
-            labely <- paste0("vertical axis in plot ",i)
+            labely <- paste0("vertical")# axis in plot ",i)
             choicesy <- list_of_param_names
             selectedy <- ifelse(!is.null(input[[paste0("param_selector_y_",i)]]), input[[paste0("param_selector_y_",i)]], #empty_sign)
                                 ifelse(length(list_of_param_names) > 1, list_of_param_names[2], list_of_param_names[1]))
@@ -2075,33 +2311,9 @@ observe({
 # observer caring for canceling a plot
 observe({
     if(!is.null(loading_ps_file())) {
-        for(i in param_chosen$data) {
+        for(i in param_update()) {
             if(!is.null(input[[paste0("cancel_ps_",i)]]) && input[[paste0("cancel_ps_",i)]] > 0) {
-                param_chosen$data <- param_chosen$data[param_chosen$data != i]
-                # some kind of garbage collector would be very convenient in this phase
-                # either gc() or rm()
-                #rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("vf_selector_y_",i)]]) #TODO: doplnit dalsie
-                param_space$data[[i]] <- NA
-                param_space$globals[[i]] <- NA
-                param_space_clicked$data[[i]] <- NA
-                param_space_clicked$click_counter[[i]] <- NA
-                param_space_clicked$apply_to_all_click_counter[[i]] <- NA
-                param_space_clicked$old_point[[i]] <- NA
-                param_space_clicked$point[[i]] <- NA
-                ps_brushed$data[[i]] <- NA
-                ps_brushed$click_counter[[i]] <- NA
-                
-                param_state_space$data[[i]] <- NA
-                param_state_space$globals[[i]] <- NA
-                param_ss_clicked$data[[i]] <- NA
-                param_ss_clicked$apply_to_all_click_counter[[i]] <- NA
-                param_ss_clicked$click_counter[[i]] <- NA
-                param_ss_clicked$point[[i]] <- NA
-                param_ss_clicked$old_point[[i]] <- NA
-                param_ss_brushed$data[[i]] <- NA
-                param_ss_brushed$click_counter[[i]] <- NA
-                
-                print(gc())
+                reset_globals_param(i)
             }
         }
     }
@@ -2126,17 +2338,17 @@ observeEvent(input$add_param_plot,{
         param_state_space$globals[[param_chosen$max]] <- NA
         #satisfiable_ps$data[[param_chosen$max]] <- NA
         
-        param_chosen$data <- c(param_chosen$data,param_chosen$max)
-        param_chosen$max <<- param_chosen$max + 1
+        stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$data <- c(param_update(),param_chosen$max)
+        param_chosen$max  <- param_chosen$max + 1
     }
 })
 param_update <- reactive({
-    return(param_chosen$data)
+    return(preloading_ps_file()$data$param_chosen$data)
 })
 visible_ps_plots <- reactive({
     if(!is.null(loading_ps_file())) {
         local_result <- c()
-        for(i in param_chosen$data) {
+        for(i in param_update()) {
             if(!is.null(input[[paste0("param_selector_x_",i)]]) && input[[paste0("param_selector_x_",i)]] != empty_sign && !input[[paste0("hide_ps_",i)]] &&
                    !is.null(input[[paste0("param_selector_y_",i)]]) && input[[paste0("param_selector_y_",i)]] != empty_sign)
                 local_result <- c(local_result,i)
@@ -2300,7 +2512,7 @@ output$param_space_plots <- renderUI({
                            helpText("parameter space of the model"),
                        div(id = "plot-container",
                            tags$img(
-                               #src="circle.png",
+                               # src = "circle.png",
                                src = "spinner.gif",
                                id = "loading-spinner"),
                            imageOutput(paste0("param_space_plot_",i),"auto","auto", click=paste0("ps_",i,"_click"), dblclick=paste0("ps_",i,"_dblclick"),
@@ -2387,7 +2599,8 @@ hover_over_param_ss_plots <- observe({
                     sapply(1:length(list_of_all_names), function(x) {
                         name <- list_of_all_names[[x]]
                         if(!name %in% c(input[[paste0("param_ss_selector_x_",my_i)]],input[[paste0("param_ss_selector_y_",my_i)]])) {
-                            paste0(name,": ",round(input[[paste0("scale_slider_param_ss_",my_i,"_",x)]],rounding_in_hover))
+                            ifelse(is.null(input[[paste0("scale_slider_param_ss_",my_i,"_",x)]]), paste0(name,": "),
+                                   paste0(name,": ",round(input[[paste0("scale_slider_param_ss_",my_i,"_",x)]],rounding_in_hover)) )
                         } else {
                             ifelse(is.null(hover), paste0(name,": "),
                                    ifelse(name %in% input[[paste0("param_ss_selector_x_",my_i)]], paste0(name,": ",round(hover$x,rounding_in_hover)),
@@ -2428,13 +2641,15 @@ hover_over_ps_plots <- observe({
                             # TODO: reformat
                             if(name %in% loading_ps_file()$var_names) {
                                 if(!is.null(input[[paste0("scale_switch_ps_",my_i,"_",x)]]) && input[[paste0("scale_switch_ps_",my_i,"_",x)]] )
-                                    paste0(name,": ",round(input[[paste0("scale_slider_ps_",my_i,"_",x)]],rounding_in_hover))
+                                    ifelse(is.null(input[[paste0("scale_slider_ps_",my_i,"_",x)]]), paste0(name,": "),
+                                           paste0(name,": ",round(input[[paste0("scale_slider_ps_",my_i,"_",x)]],rounding_in_hover)) )
                                 else
                                     paste0(name,": ",round(range(loading_ps_file()$thresholds[[name]])[1],rounding_in_hover)," - ",
                                            round(range(loading_ps_file()$thresholds[[name]])[2],rounding_in_hover) )
                             } else {
                                 if(!is.null(input[[paste0("scale_switch_ps_",my_i,"_",x)]]) && input[[paste0("scale_switch_ps_",my_i,"_",x)]] )
-                                    paste0(name,": ",round(input[[paste0("scale_slider_ps_",my_i,"_",x)]],rounding_in_hover))
+                                    ifelse(is.null(input[[paste0("scale_slider_ps_",my_i,"_",x)]]), paste0(name,": "),
+                                           paste0(name,": ",round(input[[paste0("scale_slider_ps_",my_i,"_",x)]],rounding_in_hover)) )
                                 else
                                     paste0(name,": ",round(param_ranges()[[name]][1],rounding_in_hover)," - ",
                                            round(param_ranges()[[name]][2],rounding_in_hover) )
@@ -2487,6 +2702,7 @@ reset_advanced_settings <- observeEvent(input$advanced,{
 
 draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
     variables <- loading_ps_file()$var_names
+    params <- loading_ps_file()$param_names
     index_x <- match(name_x,variables)
     index_y <- match(name_y,variables)
     thres <- loading_ps_file()$thresholds
@@ -2495,7 +2711,7 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
         # create current set of globals
         checkpoint <- list(selectors=list(x=input[[paste0("param_ss_selector_x_",plot_index)]], y=input[[paste0("param_ss_selector_y_",plot_index)]]),
                            formula=chosen_ps_formulae_clean(),
-                           counter=input$process_run,
+                           # counter=input$process_run,
                            sliders=list() )
         for(t in 1:length(variables)) {
             if(!variables[[t]] %in% c(input[[paste0("param_ss_selector_x_",plot_index)]],input[[paste0("param_ss_selector_y_",plot_index)]] )) {
@@ -2511,7 +2727,7 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
             for(x in 1:length(variables)) {
                 if(!x %in% c(index_x,index_y)) {
                     sid <- input[[paste0("scale_slider_param_ss_",plot_index,"_",x)]] # right state value in dimension x
-                    ids <- intersect(ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, id])
+                    ids <- intersect(ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, id])
                 }
             }        # incremental intersection of ids in order to get right ids
             states <- states[id %in% ids]
@@ -2531,27 +2747,67 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
             
             point <- param_space_clicked$point[[plot_index]]
             ps <- copy(satisfiable_param_space_for_formula())
-            ids <- ps$row_id    # all ids at first
-            for(x in 1:length(loading_ps_file()$param_names)) {
-                name <- loading_ps_file()$param_names[x]
-                if(!name %in% c(input[[paste0("param_selector_x_",plot_index)]],input[[paste0("param_selector_y_",plot_index)]]) ) {
-                    if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
-                        sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
-                        ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, row_id])
+            
+            if(loading_ps_file()$type == "smt") {
+                # for symbolic parameters
+                ps <- unique(ps)
+                setkey(ps,id)
+                num <- input$density_coeficient
+                dim_indices <- letters[-which(letters %in% c("a"))]
+                
+                dt <- data.table(a=point[[1]])
+                input_params <- paste0("list(",names(point)[1],"=dt$a")
+                for(x in 1:length(params)) {
+                    name <- params[x]
+                    di <- dim_indices[x]
+                    if(name != names(point)[1]) {
+                        if(!name %in% names(point)) {
+                            if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
+                                dt[ ,V1:=input[[paste0("scale_slider_ps_",plot_index,"_",x)]] ]
+                            } else {
+                                data <- seq(param_ranges()[[name]][1],param_ranges()[[name]][2],length.out = num)
+                                data <- sapply(2:length(data), function(i) (data[i-1]+data[i])*0.5 )
+                                dt <- as.data.table(merge.default(dt, data.table(V1=data) ))
+                            }
+                        } else {
+                            # only possible case is that 'name' equals point[[2]] 
+                            dt[ ,V1:=point[[name]] ]
+                        }
+                        setnames( dt, "V1", di)
+                        input_params <- paste(input_params,paste0(name,"=dt$",di),sep = ",")
                     }
-                } else {
-                    ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= point[[name]] & get(paste0("V",x*2)) > point[[name]], row_id])
                 }
-            }        # incremental intersection of ids in order to get right ids
-            ids <- unique(ps[row_id %in% ids, id])
+                dt[,id:=1:nrow(dt)]
+                input_params <- paste0(input_params,")")
+                
+                for(ex in ps$id) ps[id==ex,blue:=(T %in% eval(parse(text=expr))(eval(parse(text=input_params)))) ]
+                ids <- unique(ps[blue==T,id])
+                
+            } else {
+                # for rectangular parameters
+                ids <- ps$row_id    # all ids at first
+                for(x in 1:length(params)) {
+                    name <- params[x]
+                    if(!name %in% c(input[[paste0("param_selector_x_",plot_index)]],input[[paste0("param_selector_y_",plot_index)]]) ) {
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
+                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                            ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, row_id])
+                        }
+                    } else {
+                        ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= point[[name]] & get(paste0("V",x*2)) > point[[name]], row_id])
+                    }
+                }        # incremental intersection of ids in order to get right ids
+                ids <- unique(ps[row_id %in% ids, id])
+            }
+            
             blue_ids <- loading_ps_file()$param_space[(param+1) %in% ids & formula==chosen_ps_formulae_clean(),state+1]
             if(input[[paste0("param_selector_x_",plot_index)]] %in% variables || input[[paste0("param_selector_y_",plot_index)]] %in% variables) {
-                for(x in 1:length(loading_ps_file()$var_names)) {
-                    name <- loading_ps_file()$var_names[x]
+                for(x in 1:length(variables)) {
+                    name <- variables[x]
                     if(!name %in% c(input[[paste0("param_selector_x_",plot_index)]],input[[paste0("param_selector_y_",plot_index)]]) ) {
-                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x+length(loading_ps_file()$param_names))]]) && 
-                           input[[paste0("scale_switch_ps_",plot_index,"_",x+length(loading_ps_file()$param_names))]]) {
-                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(loading_ps_file()$param_names))]] # right state value in dimension x
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x+length(params))]]) && 
+                           input[[paste0("scale_switch_ps_",plot_index,"_",x+length(params))]]) {
+                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
                             blue_ids <- intersect(blue_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, id])
                         }
                     # } else {
@@ -2565,8 +2821,8 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
             #        !identical(param_state_space$globals[[plot_index]],checkpoint) || !identical(param_ss_clicked$point[[plot_index]],param_ss_clicked$old_point[[plot_index]])) {
             # 
             #     ids <- loading_ps_file()$params$row_id    # all ids at first
-            #     for(x in 1:length(loading_ps_file()$param_names)) {
-            #         name <- loading_ps_file()$param_names[x]
+            #     for(x in 1:length(params)) {
+            #         name <- params[x]
             #         ids <- intersect(ids, loading_ps_file()$params[get(paste0("V",x*2-1)) < point[[name]][2] & get(paste0("V",x*2)) >= point[[name]][2] |
             #                                                        get(paste0("V",x*2-1)) <= point[[name]][1] & get(paste0("V",x*2)) > point[[name]][1] |
             #                                                        get(paste0("V",x*2-1)) >= point[[name]][1] & get(paste0("V",x*2)) <= point[[name]][2], row_id])
@@ -2579,8 +2835,10 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
             # # this has to be at the end
             # param_space_clicked$old_point[[plot_index]] <- point
             
-            rect(states[[paste0("V",index_x*2-1)]], states[[paste0("V",index_y*2-1)]], states[[paste0("V",index_x*2)]], states[[paste0("V",index_y*2)]],
-                 border="blue", col=NA, lwd=2)
+            if(nrow(states) > 0) {
+                rect(states[[paste0("V",index_x*2-1)]], states[[paste0("V",index_y*2-1)]], states[[paste0("V",index_x*2)]], states[[paste0("V",index_y*2)]],
+                     border="blue", col=NA, lwd=2)
+            }
         }
         # this has to be at the end
         param_state_space$globals[[plot_index]] <- checkpoint
@@ -2589,40 +2847,128 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
 }
 # TODO:
 draw_1D_param_ss <- function(name_x, plot_index, boundaries) {
-    index_x <- match(name_x,loading_ps_file()$var_names)
-    plot(range(loading_ps_file()$thresholds[[index_x]]), c(0,1), type="n", xlab=name_x, ylab="", yaxt="n", xlim=boundaries[[index_x]], xaxs="i", yaxs="i")
-    abline(v=loading_ps_file()$thresholds[[index_x]])
+    variables <- loading_ps_file()$var_names
+    params <- loading_ps_file()$param_names
+    index_x <- match(name_x, variables)
     
-    states <- copy(satisfiable_states())
-    states[, border:="green"]
-    states[, color:=ifelse(id %in% param_ss_clicked$point[[plot_index]],"darkgreen",NA)]
-    
-    rect(states[[paste0("V",index_x*2-1)]], 0, states[[paste0("V",index_x*2)]], 1,
-         border=states$border, col=states$color, lwd=1.5)
-    
-    ##======= reaction on click inside a PS plot =========================
-    if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]])) &&
-           !F %in% (names(param_space_clicked$point[[plot_index]]) %in% c(input[[paste0("param_selector_x_",plot_index)]],input[[paste0("param_selector_y_",plot_index)]])) &&
-           !is.null(param_space_clicked$data[[plot_index]]) && nrow(param_space_clicked$data[[plot_index]]) != 0) {
-        
-        point <- param_space_clicked$point[[plot_index]]
-        
-        if(input[[paste0("param_selector_x_",plot_index)]] %in% variables)
-            ids <- param_space_clicked$data[[plot_index]][y1 <= point[1] & y2 > point[1], row_id]
-        else
-            ids <- param_space_clicked$data[[plot_index]][x1 <= point[1] & x2 > point[1], row_id]
-        
-        if(!input[[paste0("param_selector_x_",plot_index)]] %in% variables && !input[[paste0("param_selector_y_",plot_index)]] %in% variables &&
-               input[[paste0("param_selector_x_",plot_index)]] != input[[paste0("param_selector_y_",plot_index)]]) {
-            
-            ids <- intersect(ids, param_space_clicked$data[[plot_index]][y1 <= point[2] & y2 > point[2], row_id])
+    if(!is.null(loading_ps_file())) {
+        # create current set of globals
+        checkpoint <- list(selectors=list(x=input[[paste0("param_ss_selector_x_",plot_index)]], y=input[[paste0("param_ss_selector_y_",plot_index)]]),
+                           formula=chosen_ps_formulae_clean(),
+                           # counter=input$process_run,
+                           sliders=list() )
+        for(t in 1:length(variables)) {
+            if(!variables[[t]] %in% c(input[[paste0("param_ss_selector_x_",plot_index)]],input[[paste0("param_ss_selector_y_",plot_index)]] )) {
+                checkpoint$sliders[[variables[[t]] ]] <- input[[paste0("scale_slider_param_ss_",plot_index,"_",t)]]
+            }
         }
-        ids <- unique(loading_ps_file()$params[row_id %in% ids,id])
-        blue_ids <- loading_ps_file()$param_space[(param+1) %in% ids & formula==chosen_ps_formulae_clean(),state+1]
-        states <- states[id %in% blue_ids]
-        
-        rect(states[[paste0("V",index_x*2-1)]], 0, states[[paste0("V",index_x*2)]], 1,
-             border="blue", col=NA, lwd=1.5)
+        # check for any change in globals for particular plot
+        if(is.na(param_state_space$globals[[plot_index]]) || !identical(param_state_space$globals[[plot_index]],checkpoint) ||
+           !identical(param_ss_clicked$point[[plot_index]],param_ss_clicked$old_point[[plot_index]])) {
+            
+            states <- copy(satisfiable_states())
+            ids <- states$id    # all ids at first
+            for(x in 1:length(variables)) {
+                if(!x %in% c(index_x)) {
+                    sid <- input[[paste0("scale_slider_param_ss_",plot_index,"_",x)]] # right state value in dimension x
+                    ids <- intersect(ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, id])
+                }
+            }        # incremental intersection of ids in order to get right ids
+            states <- states[id %in% ids]
+            states[, border:="green"]   # corresponding rectangles based on selected parameter point could have blue border
+            states[, color:=ifelse(id %in% param_ss_clicked$point[[plot_index]],"darkgreen",NA)]         # selected rectangles could be in darkgreen
+            param_state_space$data[[plot_index]] <- states
+        }
+        states <- param_state_space$data[[plot_index]]
+        plot(range(loading_ps_file()$thresholds[[index_x]]), c(0,1), type="n", xlab=name_x, ylab="", yaxt="n", xlim=boundaries[[index_x]], xaxs="i", yaxs="i")
+        abline(v=loading_ps_file()$thresholds[[index_x]])
+        if(nrow(states) > 0) {
+            rect(states[[paste0("V",index_x*2-1)]], 0, states[[paste0("V",index_x*2)]], 1,
+                 border=states$border, col=states$color, lwd=1.5)
+        }
+        ##======= reaction on click inside a PS plot =========================
+        if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]])) ) {
+            
+            point <- param_space_clicked$point[[plot_index]]
+            ps <- copy(satisfiable_param_space_for_formula())
+            
+            if(loading_ps_file()$type == "smt") {
+                # for symbolic parameters
+                ps <- unique(ps)
+                setkey(ps,id)
+                num <- input$density_coeficient
+                dim_indices <- letters[-which(letters %in% c("a"))]
+                
+                dt <- data.table(a=point[[1]])
+                input_params <- paste0("list(",names(point)[1],"=dt$a")
+                for(x in 1:length(params)) {
+                    name <- params[[x]]
+                    di <- dim_indices[x]
+                    if(name != names(point)[1]) {
+                        if(!name %in% names(point)) {
+                            if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]] ) {
+                                dt[ ,V1:=input[[paste0("scale_slider_ps_",plot_index,"_",x)]] ]
+                            } else {
+                                data <- seq(param_ranges()[[name]][1],param_ranges()[[name]][2],length.out = num)
+                                data <- sapply(2:length(data), function(i) (data[i-1]+data[i])*0.5 )
+                                dt <- as.data.table(merge.default(dt, data.table(V1=data) ))
+                            }
+                        } else {
+                            # only possible case is that 'name' equals point[[2]] 
+                            dt[ ,V1:=point[[name]] ]
+                        }
+                        setnames( dt, "V1", di)
+                        input_params <- paste(input_params,paste0(name,"=dt$",di),sep = ",")
+                    }
+                }
+                dt[,id:=1:nrow(dt)]
+                input_params <- paste0(input_params,")")
+                
+                for(ex in ps$id) ps[id==ex,blue:=(T %in% eval(parse(text=expr))(eval(parse(text=input_params)))) ]
+                ids <- unique(ps[blue==T,id])
+                
+            } else {
+                # for rectangular parameters
+                ids <- ps$row_id    # all ids at first
+                for(x in 1:length(params)) {
+                    name <- params[[x]]
+                    if(!name %in% c(input[[paste0("param_selector_x_",plot_index)]],input[[paste0("param_selector_y_",plot_index)]]) ) {
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
+                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
+                            ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, row_id])
+                        }
+                    } else {
+                        ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= point[[name]] & get(paste0("V",x*2)) > point[[name]], row_id])
+                    }
+                }        # incremental intersection of ids in order to get right ids
+                ids <- unique(ps[row_id %in% ids, id])
+            }
+            
+            blue_ids <- loading_ps_file()$param_space[(param+1) %in% ids & formula==chosen_ps_formulae_clean(),state+1]
+            if(input[[paste0("param_selector_x_",plot_index)]] %in% variables || input[[paste0("param_selector_y_",plot_index)]] %in% variables) {
+                for(x in 1:length(variables)) {
+                    name <- variables[[x]]
+                    if(!name %in% c(input[[paste0("param_selector_x_",plot_index)]],input[[paste0("param_selector_y_",plot_index)]]) ) {
+                        if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x+length(params))]]) && 
+                           input[[paste0("scale_switch_ps_",plot_index,"_",x+length(params))]]) {
+                            sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x+length(params))]] # right state value in dimension x
+                            blue_ids <- intersect(blue_ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid, id])
+                        }
+                        # } else {
+                        #     blue_ids <- intersect(blue_ids, states[get(paste0("V",x*2-1)) <= point[[name]] & get(paste0("V",x*2)) > point[[name]], id])
+                    }
+                }        # incremental intersection of ids in order to get right ids
+            }
+            states <- states[id %in% blue_ids]
+            
+            if(nrow(states) > 0) {
+                rect(states[[paste0("V",index_x*2-1)]], 0, states[[paste0("V",index_x*2)]], 1,
+                     border="blue", col=NA, lwd=2)
+            }
+        }
+        # this has to be at the end
+        param_state_space$globals[[plot_index]] <- checkpoint
+        param_ss_clicked$old_point[[plot_index]] <- param_ss_clicked$point[[plot_index]]
     }
 }
 
@@ -2671,7 +3017,7 @@ draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
                            coverage=input$coverage_check,
                            formula=chosen_ps_formulae_clean(),
                            param_ss_clicked_point=param_ss_clicked$point[[plot_index]],
-                           counter=input$process_run,
+                           # counter=input$process_run,
                            sliders_checkbox=list(),
                            sliders=list() )
         for(x in 1:length(list_of_all_names)) {
@@ -2757,7 +3103,7 @@ draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
                             } else {
                                 sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
                                 di <- dim_indices[x]
-                                ids <- intersect(ids, dt[get(paste0(di,1)) <= sid & get(paste0(di,2)) >= sid, id])
+                                ids    <- intersect(ids, dt[get(paste0(di,1)) <= sid & get(paste0(di,2)) >= sid, id])
                             }
                         }
                     }
@@ -2944,7 +3290,7 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
                            coverage=input$coverage_check,
                            param_ss_clicked_point=param_ss_clicked$point[[plot_index]],
                            formula=chosen_ps_formulae_clean(),
-                           counter=input$process_run,
+                           # counter=input$process_run,
                            sliders_checkbox=list(),
                            sliders=list() )
         for(x in 1:length(list_of_all_names)) {
@@ -3059,14 +3405,6 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
                                 ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, row_id])
                             }
                         }
-                        # if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]]))) {
-                        #     if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
-                        #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(input[[paste0("scale_slider_ps_",plot_index,"_",x)]],
-                        #                                                                      input[[paste0("scale_slider_ps_",plot_index,"_",x)]])
-                        #     } else {
-                        #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(param_ranges()[[params[[x]] ]])
-                        #     }
-                        # }
                     } else {
                         if(name == name_x) {
                             ids <- intersect(ids, ps[x1 < range_x[2] & x2 >= range_x[2] |
@@ -3080,7 +3418,6 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
                     }
                 }        # incremental intersection of ids in order to get right ids
                 ps <- ps[row_id %in% ids & id %in% loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1 ] ]
-                # param_space_clicked$data[[plot_index]] <- copy(ps)
                 
                 if(input$coverage_check && nrow(ps) != 0) {
                     num <- input$density_coeficient
@@ -3094,21 +3431,6 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
                     if(nrow(dt) != 0) {
                         uniq_x <- unique(ps[,.(x1,x2)])
                         uniq_y <- unique(ps[,.(y1,y2)])
-                        # timing <- system.time({
-                        #     rang_x <- range(uniq_x)
-                        #     rang_y <- range(uniq_y)
-                        #     dt <- dt[x <= rang_x[2] & x >= rang_x[1] & y <= rang_y[2] & y >= rang_y[1] ]
-                        #     if(nrow(uniq_x) < nrow(uniq_y)) {    # merge over the axis which has less unique intervals: (x1,x2) or (y1,y2)
-                        #         setkey(ps,x1,x2)
-                        #         one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps,by.x = c("x","xe"),type="within")[y1<=y & y2>=y,.(cov=length(unique(id))),by=.(x,y)]
-                        #     } else {
-                        #         setkey(ps,y1,y2)
-                        #         one <- foverlaps(dt[,.(x=x,y=y,xe=x,ye=y)],ps,by.x = c("y","ye"),type="within")[x1<=x & x2>=x,.(cov=length(unique(id))),by=.(x,y)]
-                        #     }
-                        #     dt <- merge(dt,one,by.x=c("x","y"),by.y=c("x","y"))
-                        #     rm(one)
-                        # })
-                        # print(timing)
                         timing <- system.time({
                             rang_x <- range(uniq_x)
                             rang_y <- range(uniq_y)
@@ -3139,9 +3461,11 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
         ##======= draw point due to click inside a plot =========================
         if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]])) ) {
             point <- param_space_clicked$point[[plot_index]]
-            points(point[[index_x]], point[[index_y]],
-                   col=param_space_clicked_point$color, pch=param_space_clicked_point$type, ps=param_space_clicked_point$size, lwd=param_space_clicked_point$width)
+            if(!F %in% (c(name_x,name_y) %in% names(point))) {
+                points(point[[index_x]], point[[index_y]],
+                       col=param_space_clicked_point$color, pch=param_space_clicked_point$type, ps=param_space_clicked_point$size, lwd=param_space_clicked_point$width)
             # rect(point[[name_x]][1], point[[name_y]][1], point[[name_x]][2], point[[name_y]][2], col=param_space_clicked_point$color, lwd=param_space_clicked_point$width)
+            }
         }
         # this must be at the end
         param_space$globals[[plot_index]] <- checkpoint
@@ -3166,7 +3490,7 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
                            param_ss_clicked_point=param_ss_clicked$point[[plot_index]],
                            formula=chosen_ps_formulae_clean(),
                            coverage=input$coverage_check,
-                           counter=input$process_run,
+                           # counter=input$process_run,
                            density=input$density_coeficient,
                            sliders_checkbox=list(),
                            sliders=list() )
@@ -3278,21 +3602,6 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
                                 ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid, row_id])
                             }
                         }
-                        # else {
-                        #     sid <- input[[paste0("scale_slider_ps_",plot_index,"_",x)]] # right param value in dimension x
-                        #     ids <- intersect(ids, ps[get(paste0("V",x*2-1)) <= sid[1] & get(paste0("V",x*2)) > sid[1] |
-                        #                              get(paste0("V",x*2-1)) >= sid[1] & get(paste0("V",x*2)) <= sid[2] |
-                        #                              get(paste0("V",x*2-1)) < sid[2] & get(paste0("V",x*2)) >= sid[2], row_id])
-                        # }
-                        
-                        # if(length(param_space_clicked$point) >= plot_index && !(is.null(param_space_clicked$point[[plot_index]]) || is.na(param_space_clicked$point[[plot_index]]))) {
-                        #     if(!is.null(input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) && input[[paste0("scale_switch_ps_",plot_index,"_",x)]]) {
-                        #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(input[[paste0("scale_slider_ps_",plot_index,"_",x)]],
-                        #                                                                      input[[paste0("scale_slider_ps_",plot_index,"_",x)]])
-                        #     } else {
-                        #         param_space_clicked$point[[plot_index]][[params[[x]] ]] <- c(param_ranges()[[params[[x]] ]])
-                        #     }
-                        # }
                     } else {
                         ids <- intersect(ids, ps[x1 < range_x[2] & x2 >= range_x[2] |
                                                  x1 <= range_x[1] & x2 > range_x[1] |
@@ -3300,7 +3609,6 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
                     }
                 }        # incremental intersection of ids in order to get right ids
                 ps <- ps[row_id %in% ids & id %in% loading_ps_file()$param_space[formula==chosen_ps_formulae_clean() & (state+1) %in% st_ids, param+1 ] ]
-                # param_space_clicked$data[[plot_index]] <- copy(ps)
                 
                 if(input$coverage_check && nrow(ps) != 0) {
                     num <- input$density_coeficient
@@ -3357,12 +3665,11 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
 
 output$chosen_ps_states_ui <- renderUI({
     if(!is.null(loading_ps_file()) && nrow(loading_ps_file()$param_space) != 0) {
+        id <- paste0("chosen_ps_formula_",stored_ps_files$current)
         formulae_list <- loading_ps_file()$formulae
-        selected_formula <- 1 #formulae_list[which(max(nchar(formulae_list)) == nchar(formulae_list))]     # initially selecting the longest formulae
-        
-        widgets <- list()
-        widgets[[1]] <- selectInput("chosen_ps_formula","choose formula of interest:",formulae_list,selected_formula,selectize=F,size=1,width="100%")
-        do.call(tagList,widgets)
+        names(formulae_list) <- loading_ps_file()$formulae
+        selected_formula <- ifelse(!is.null(input[[id]]), input[[id]], preloading_ps_file()$data$chosen_ps_formula)
+        list(selectInput(id,"choose formula of interest:",formulae_list,selected_formula,selectize=F,size=1,width="100%"))
     } else
         h3("Parameter synthesis has to be run or result file loaded before showing some results")
 })
@@ -3599,7 +3906,7 @@ click_in_param_ss <- observe({
                 for(x in 1:length(loading_ps_file()$var_names)) {
                     if(!x %in% c(index_x,index_y)) {
                         sid <- input[[paste0("scale_slider_param_ss_",i,"_",x)]] # right state value in dimension x
-                        ids <- intersect(ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) > sid,id])
+                        ids <- intersect(ids, states[get(paste0("V",x*2-1)) <= sid & get(paste0("V",x*2)) >= sid,id])
                     }
                 }        # incremental intersection of ids in order to get right ids
                 states <- states[id %in% ids]
@@ -3607,8 +3914,11 @@ click_in_param_ss <- observe({
                 point <- input[[paste0("param_ss_",i,"_dblclick")]]
                 if(!is.null(point) ) isolate({
                     cat("param_ss_plot ",i,":",point$x,",",point$y,"\n")
-                    picked_state <- states[get(paste0("V",index_x*2-1)) <= point$x & get(paste0("V",index_x*2)) >= point$x &
-                           get(paste0("V",index_y*2-1)) <= point$y & get(paste0("V",index_y*2)) >= point$y,id]  # it obtains right state_id where user clicked
+                    if(input[[paste0("param_ss_selector_x_",ii)]] == input[[paste0("param_ss_selector_y_",ii)]])
+                        picked_state <- states[get(paste0("V",index_x*2-1)) <= point$x & get(paste0("V",index_x*2)) >= point$x,id]
+                    else
+                        picked_state <- states[get(paste0("V",index_x*2-1)) <= point$x & get(paste0("V",index_x*2)) >= point$x &
+                                               get(paste0("V",index_y*2-1)) <= point$y & get(paste0("V",index_y*2)) >= point$y,id]  # it obtains right state_id where user clicked
                     if(length(picked_state) != 0) {     # in case some unsatisfied state is double-clicked
                         if(picked_state %in% param_ss_clicked$point[[i]])
                             param_ss_clicked$point[[i]] <- setdiff(param_ss_clicked$point[[i]],picked_state)
@@ -3647,8 +3957,9 @@ apply_to_all_in_param_ss <- observe({
 })
 
 
-chosen_ps_formulae_clean <- reactive({
-    return(input$chosen_ps_formula)
+chosen_ps_formulae_clean <- eventReactive(input[[paste0("chosen_ps_formula_",stored_ps_files$current)]],{
+    # stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
+    return(input[[paste0("chosen_ps_formula_",stored_ps_files$current)]])
 })
 
 grey_shade <- reactive({

@@ -28,10 +28,19 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 );
 "
 
+# message handler for giving an information about finished prameter synthesis
+JS.parameterSynthesisFinished <- "
+Shiny.addCustomMessageHandler('jsCode',
+    function(message) {
+        eval(message.value);
+});
+"
+
 source("global.R")
 
 shinyUI(
     fluidPage(
+        tags$head(tags$script(HTML(JS.parameterSynthesisFinished))),
     # titlePanel("PITHYA - Parameter Investigation Tool with HYbrid Approach"),
     titlePanel("PITHYA - Parameter Investigation Tool for HYbrid Analysis"),
     tags$hr(),
@@ -116,6 +125,7 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
         column(6,
                helpText("Model editor:"),
                tags$textarea(id="model_input_area", rows=200, cols=300)
+               # textAreaInput("model_input_area",NULL,width=NULL,height=NULL,rows=200,cols=100,resize="both")
         ),
         column(6,
                helpText("Properties editor:"),
@@ -167,13 +177,22 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
     fluidPage(
         theme = "simplex.css",
         fluidRow(
-            column(2
-                   # ,tags$div(title="",
-                   #          bsButton("model_prev","previous",disabled=T)
-                   # ),
-                   # tags$div(title="",
-                   #          bsButton("model_next","next",disabled=T)
-                   # )
+            column(2,
+                   uiOutput("model_help_text"),
+                   fluidRow(
+                       column(4,
+                              tags$div(title="",
+                                       bsButton("model_prev","previous",disabled=T,block=T)
+                              )),
+                       column(4,
+                              tags$div(title="",
+                                       bsButton("model_next","next",disabled=T,block=T)
+                              )),
+                       column(4,
+                              tags$div(title="",
+                                       bsButton("model_del","delete",disabled=T,block=T)
+                              ))
+                   )
             ),
             column(4,
                    fluidRow(
@@ -220,13 +239,21 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
 tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
     fluidPage(
         column(2,
-               
-               # tags$div(title="",
-               #          bsButton("result_prev","previous",disabled=T)
-               # ),
-               # tags$div(title="",
-               #          bsButton("result_next","next",disabled=T)
-               # ),
+               uiOutput("result_help_text"),
+               fluidRow(
+                   column(4,
+                          tags$div(title="",
+                                   bsButton("result_prev","previous",disabled=T,block=T)
+                   )),
+                   column(4,
+                          tags$div(title="",
+                                   bsButton("result_next","next",disabled=T,block=T)
+                   )),
+                   column(4,
+                          tags$div(title="",
+                                   bsButton("result_del","delete",disabled=T,block=T)
+                   ))
+               ),
             tags$div(title="Select input parameter space (with '.ps.json' extension) for further analysis.",
                 fileInput("ps_file","choose result '.json' file"),accept=".json"),
             tags$div(title="This button saves model checking results.",
@@ -251,7 +278,7 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
                uiOutput("param_selector"),
                tags$div(title="Button will add new layer of plots for parameter space and corresponding transition-state space as soon as some file is loaded. 
                                     Then you will be able to play with it.",
-                    bsButton("add_param_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=F))
+                    bsButton("add_param_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=T))
         )
     ),
     tags$hr(),
