@@ -226,13 +226,13 @@ output$save_prop_file <- downloadHandler(
 
 reset_globals <- function(i=NA) {
     if(is.na(i)) {
-        for(i in vf_chosen$data) reset_particular_global(i)
+        for(i in vf_update()) reset_particular_global(i)
     } else {
         reset_particular_global(i)
     }
 }
 reset_particular_global <- function(i) {
-    stored_vf_files$data[[stored_vf_files$max]]$data$vf_chosen$data <- vf_update()[vf_update() != i]
+    stored_vf_files$data[[stored_vf_files$current]]$data$vf_chosen$data <- vf_update()[vf_update() != i]
     # vf_chosen$data <- vf_chosen$data[vf_chosen$data != i]
     # some kind of garbage collector would be very convenient in this phase
     # either gc() or rm()
@@ -413,7 +413,7 @@ observeEvent(input$generate_abstraction,{
                 file.remove(abstracted_model_temp_name)
                 cat("abstracted file is loaded\n")
                 cat("Approxition is finished\n",file=progressFileName,append=T)
-                updateButton(session,"generate_abstraction",style="default",disabled=T)
+                updateButton(session,"generate_abstraction",style="default",disabled=F)
                 updateButton(session,"process_run",style="success",disabled=F)
             } else {
                 cat("\nError: some error occured during the approximation process!\n")
