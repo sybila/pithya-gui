@@ -125,6 +125,7 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
         column(6,
                helpText("Model editor:"),
                tags$textarea(id="model_input_area", rows=200, cols=300)
+               # textAreaInput("model_input_area",NULL,width=NULL,height=NULL,rows=200,cols=100,resize="both")
         ),
         column(6,
                helpText("Properties editor:"),

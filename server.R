@@ -206,7 +206,7 @@ observeEvent(c(input$prop_file,input$reset_prop),{
         loaded_prop_file$filename <- paste0(examples_dir,"//repressilator_2D//bistability.ctl")
         loaded_prop_file$data <- readLines(loaded_prop_file$filename)
     }
-    updateTextInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
+    updateTextAreaInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
 })
 
 output$save_prop_file <- downloadHandler(
@@ -232,7 +232,8 @@ reset_globals <- function(i=NA) {
     }
 }
 reset_particular_global <- function(i) {
-    vf_chosen$data <- vf_chosen$data[vf_chosen$data != i]
+    stored_vf_files$data[[stored_vf_files$max]]$data$vf_chosen$data <- vf_update()[vf_update() != i]
+    # vf_chosen$data <- vf_chosen$data[vf_chosen$data != i]
     # some kind of garbage collector would be very convenient in this phase
     # either gc() or rm()
     #                rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("vf_selector_y_",i)]]) #TODO: doplnit dalsie
@@ -371,7 +372,7 @@ observeEvent(c(input$vf_file,input$reset_model),{
         loaded_vf_file$filename <- paste0(examples_dir,"//repressilator_2D//model_2D_1P_100R.bio")
         loaded_vf_file$filedata <- readLines(loaded_vf_file$filename)
     }
-    updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
+    updateTextAreaInput(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
 })
 
 output$save_model_file <- downloadHandler(
@@ -451,8 +452,10 @@ manage_model_experiments <- observe({
         
         # Here will be core of managing switching between experiments models
         if(stored_ss_files$max == 1 || !identical(filedata,stored_ss_files$data[[stored_ss_files$max-1]]$filedata)) {
-            stored_ss_files$data[[stored_ss_files$max]] <- list(filedata=filedata, filepath=loaded_ss_file$filename, timestamp=Sys.time())
-            stored_vf_files$data[[stored_vf_files$max]] <- list(filedata=loaded_vf_file$filedata, filepath=loaded_vf_file$filename, timestamp=Sys.time())
+            stored_ss_files$data[[stored_ss_files$max]] <- list(filedata=filedata, filepath=loaded_ss_file$filename, timestamp=Sys.time(), 
+                                                                data=list( parsed_data=list()) )
+            stored_vf_files$data[[stored_vf_files$max]] <- list(filedata=loaded_vf_file$filedata, filepath=loaded_vf_file$filename, timestamp=Sys.time(), 
+                                                                data=list(current_param_sliders=list(), vf_chosen=list(data=NULL), parsed_data=list()) )
             # loaded_ss_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
             if(stored_ss_files$max==1)  {
                 stored_ss_files$current <- stored_ss_files$max
@@ -467,7 +470,8 @@ manage_model_experiments <- observe({
     }
 })
 manage_model_next <- observeEvent(input$model_next,{
-    reset_globals()
+    # reset_globals()
+    stored_vf_files$data[[stored_vf_files$current]]$data$current_param_sliders <- current_param_sliders()
     stored_ss_files$current <- stored_ss_files$current + 1
     stored_vf_files$current <- stored_vf_files$current + 1
     updateButton(session,"model_prev",style="default",disabled=F)
@@ -478,7 +482,8 @@ manage_model_next <- observeEvent(input$model_next,{
     }
 })
 manage_model_prev <- observeEvent(input$model_prev,{
-    reset_globals()
+    # reset_globals()
+    stored_vf_files$data[[stored_vf_files$current]]$data$current_param_sliders <- current_param_sliders()
     stored_ss_files$current <- stored_ss_files$current - 1
     stored_vf_files$current <- stored_vf_files$current - 1
     updateButton(session,"model_next",style="default",disabled=F)
@@ -529,95 +534,111 @@ preloading_ss_file <- eventReactive(c(stored_ss_files$data,stored_ss_files$curre
     
 loading_vf_file <- reactive({
     if(!is.null(preloading_vf_file())) {
-        biofile <- preloading_vf_file()$filedata
-        
-        # VARIABLES
-        # result is vector of VAR NAMES
-        var_line <- biofile[which(str_detect(biofile,"^VARS:"))]
-        if(length(var_line) > 0) {
-            var_names <- as.list(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",var_line)),",")[[1]] ) )
-            names(var_names) <- var_names
-        } else return(NULL)
-        
-        # CONSTANTS
-        # result is named list of CONST VALUEs
-        const_line <- biofile[which(str_detect(biofile,"^CONSTS:"))]
-        if(length(const_line) > 0) {
-            #consts <- str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),",") 
-            consts <- lapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),","),function(x) x[2] )
-            names(consts) <- sapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),","),function(x) x[1] )
-        } else consts <- NULL
-        
-        # PARAMETERS
-        # result is names list of pairs PARAM FIRST VALUE and PARAM SECOND VALUE
-        param_line <- biofile[which(str_detect(biofile,"^PARAMS:"))]
-        if(length(param_line) > 0) {
-            #params <- str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),",") 
-            params <- lapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) c(x[2],x[3]) )
-            names(params) <- sapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) x[1] )
-        } else params <- NULL
-        
-        # THRESHOLDS
-        # result is names list of THRES VALUEs
-        thr_lines <- gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^THRES:"))]))
-        if(length(thr_lines) > 0 && length(thr_lines) == length(var_names)) {
-            thres <- sapply(str_split(thr_lines,":"),function(x) str_split(x[3],",") )
-            names(thres) <- sapply(str_split(thr_lines,":"),function(x) x[2] )
-        } else return(NULL)
-        
-        # EQUATIONS
-        # result is named list of EQUATIONs
-        eq_lines <- gsub("^.*:","",gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^EQ:"))])))
-        if(length(eq_lines) > 0 && length(eq_lines) == length(var_names)) {
-            eqs <- lapply(str_split(eq_lines,"="),function(x) x[2] )
-            names(eqs) <- sapply(str_split(eq_lines,"="),function(x) x[1] )
-            
-            for(e in 1:length(eqs)) {
-                eq <- eqs[[e]]
-                names <- strsplit(eq,"[-+*,() \t]+")[[1]]
-                signs <- strsplit(eq,"[^-+*,() \t]+")[[1]]
-                
-                names <- sapply(names,function(x) ifelse(!is.null(var_names[[x]]) || !is.null(consts[[x]]) || !is.null(params[[x]]), paste0("ip$",x), x))
-                
-                new_eq <- ""
-                if(names[1] == "") {
-                    if(length(names) == length(signs)) {
-                        for(i in 1:length(names)) new_eq <- paste0(new_eq,names[i],signs[i])
-                    } else {
-                        new_eq <- names[1]
-                        for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,signs[i],names[i+1])
-                    }
-                } else {
-                    if(length(names) == length(signs)) {
-                        for(i in 1:length(names)) new_eq <- paste0(new_eq,signs[i],names[i])
-                    } else {
-                        new_eq <- signs[1]
-                        for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,names[i],signs[i+1])
-                    }
-                }
-                eqs[[e]] <- paste0("function(ip) ",new_eq)
-            }
-        } else return(NULL)
-        
-        ranges <- lapply(thres, function(x) range(as.numeric(x)))
-        names(ranges) <- var_names
-        
-        # setting of GLOBALS
-        list_of_names <<- as.list(c(var_names, "Choose"=empty_sign))
-        funcs <<- list()
-        for(x in unlist(var_names)) {
-            funcs[[x]] <<- parse(text=eqs[[x]])
+        if(!isempty(preloading_vf_file()$data$parsed_data)) {
+            return(preloading_vf_file()$data$parsed_data)
         }
-        
-        return(list(vars=var_names, consts=consts, params=params, thres=thres, eqs=eqs, ranges=ranges))
+        if(length(preloading_vf_file()$filedata) != 0) {
+            biofile <- preloading_vf_file()$filedata
+    
+            # VARIABLES
+            # result is vector of VAR NAMES
+            var_line <- biofile[which(str_detect(biofile,"^VARS:"))]
+            if(length(var_line) > 0) {
+                var_names <- as.list(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",var_line)),",")[[1]] ) )
+                names(var_names) <- var_names
+            } else return(NULL)
+            
+            # CONSTANTS
+            # result is named list of CONST VALUEs
+            const_line <- biofile[which(str_detect(biofile,"^CONSTS:"))]
+            if(length(const_line) > 0) {
+                #consts <- str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),",") 
+                consts <- lapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),","),function(x) x[2] )
+                names(consts) <- sapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),","),function(x) x[1] )
+            } else consts <- NULL
+            
+            # PARAMETERS
+            # result is names list of pairs PARAM FIRST VALUE and PARAM SECOND VALUE
+            param_line <- biofile[which(str_detect(biofile,"^PARAMS:"))]
+            if(length(param_line) > 0) {
+                #params <- str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),",") 
+                params <- lapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) c(x[2],x[3]) )
+                names(params) <- sapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) x[1] )
+            } else params <- NULL
+            
+            # THRESHOLDS
+            # result is names list of THRES VALUEs
+            thr_lines <- gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^THRES:"))]))
+            if(length(thr_lines) > 0 && length(thr_lines) == length(var_names)) {
+                thres <- sapply(str_split(thr_lines,":"),function(x) str_split(x[3],",") )
+                names(thres) <- sapply(str_split(thr_lines,":"),function(x) x[2] )
+            } else return(NULL)
+            
+            # EQUATIONS
+            # result is named list of EQUATIONs
+            eq_lines <- gsub("^.*:","",gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^EQ:"))])))
+            if(length(eq_lines) > 0 && length(eq_lines) == length(var_names)) {
+                eqs <- lapply(str_split(eq_lines,"="),function(x) x[2] )
+                names(eqs) <- sapply(str_split(eq_lines,"="),function(x) x[1] )
+                
+                for(e in 1:length(eqs)) {
+                    eq <- eqs[[e]]
+                    names <- strsplit(eq,"[-+*,() \t]+")[[1]]
+                    signs <- strsplit(eq,"[^-+*,() \t]+")[[1]]
+                    
+                    names <- sapply(names,function(x) ifelse(!is.null(var_names[[x]]) || !is.null(consts[[x]]) || !is.null(params[[x]]), paste0("ip$",x), x))
+                    
+                    new_eq <- ""
+                    if(names[1] == "") {
+                        if(length(names) == length(signs)) {
+                            for(i in 1:length(names)) new_eq <- paste0(new_eq,names[i],signs[i])
+                        } else {
+                            new_eq <- names[1]
+                            for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,signs[i],names[i+1])
+                        }
+                    } else {
+                        if(length(names) == length(signs)) {
+                            for(i in 1:length(names)) new_eq <- paste0(new_eq,signs[i],names[i])
+                        } else {
+                            new_eq <- signs[1]
+                            for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,names[i],signs[i+1])
+                        }
+                    }
+                    eqs[[e]] <- paste0("function(ip) ",new_eq)
+                }
+            } else return(NULL)
+            
+            ranges <- lapply(thres, function(x) range(as.numeric(x)))
+            names(ranges) <- var_names
+            
+            # setting of GLOBALS
+            list_of_names <<- as.list(c(var_names, "Choose"=empty_sign))
+            funcs <<- list()
+            for(x in unlist(var_names)) {
+                funcs[[x]] <<- parse(text=eqs[[x]])
+            }
+            
+            stored_vf_files$data[[stored_vf_files$current]]$data$parsed_data <- list(
+                vars=var_names, 
+                consts=consts, 
+                params=params, 
+                thres=thres, 
+                eqs=eqs, 
+                ranges=ranges
+            )
+            return(preloading_vf_file()$data$parsed_data)
+        } else return(NULL)
     } else return(NULL)
 })
 
 
 loading_ss_file <- reactive({
     if(!is.null(preloading_ss_file())) {
-        biofile <- preloading_ss_file()$filedata
-        if(class(biofile) == "character") {
+        if(!isempty(preloading_ss_file()$data$parsed_data)) {
+            return(preloading_ss_file()$data$parsed_data)
+        }
+        if(length(preloading_ss_file()$filedata) != 0) {
+            biofile <- preloading_ss_file()$filedata
             
             # VARIABLES
             # result is vector of VAR NAMES
@@ -690,8 +711,17 @@ loading_ss_file <- reactive({
                 funcs_abst[[x]] <<- parse(text=eqs[[x]])
             }
             
-            return(list(var_names=var_names, params_num=length(params), param_names=names(params), params=params, thr=thres, eqs=eqs, ranges=ranges))
-        }
+            stored_ss_files$data[[stored_ss_files$current]]$data$parsed_data <- list(
+                var_names=var_names, 
+                params_num=length(params), 
+                param_names=names(params), 
+                params=params, 
+                thr=thres, 
+                eqs=eqs, 
+                ranges=ranges
+            )
+            return(preloading_ss_file()$data$parsed_data)
+        } else return(NULL)
     } else return(NULL)
 })
 
@@ -702,16 +732,24 @@ output$param_sliders_bio <- renderUI({
     if(!is.null(loading_vf_file()) && !is.null(loading_vf_file()$params)) {
         lapply(1:length(loading_vf_file()$params), function(i) {
             label <- paste0("parameter ",names(loading_vf_file()$params)[i])
-            name <- paste0("param_slider_vf_",i)
+            name <- paste0("param_slider_vf_",stored_vf_files$current,"_",i)
+            # name <- paste0("param_slider_vf_",i)
             values <- c(min(as.numeric(loading_vf_file()$params[[i]])),max(as.numeric(loading_vf_file()$params[[i]])))
+            selected_value <- ifelse(!is.null(input[[name]]), input[[name]], 
+                                     ifelse(isempty(preloading_vf_file()$data$current_param_sliders), ((values[2]-values[1])*0.1),
+                                            preloading_vf_file()$data$current_param_sliders[[i]])) # used to be: ((values[2]-values[1])*0.1)
             fluidRow(
                 column(12,
-            numericInput(name,label=label,min=values[1],max=values[2],value=((values[2]-values[1])*0.1),step=((values[2]-values[1])/1000))
+            numericInput(name,label=label,min=values[1],max=values[2],value=selected_value,step=((values[2]-values[1])/1000))
             #,sliderInput(paste0("num_",name),NULL,min=values[1],max=values[2],value=((values[2]-values[1])*0.1),step=((values[2]-values[1])/1000))
                 )
             )
         })
     }
+})
+current_param_sliders <- reactive({
+    # return(lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",i)]]))
+    return(lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",stored_vf_files$current,"_",i)]]))
 })
 # update_param_sliders <- observe({
 #     if(!is.null(loading_vf_file())) {
@@ -747,7 +785,7 @@ output$param_sliders_bio <- renderUI({
 output$selector <- renderUI({
     if(!is.null(loading_vf_file())) {
         variables <- loading_vf_file()$vars
-        lapply(vf_update(),function(i) {
+        lapply(vf_update(), function(i) {
             idx <- paste0("vf_selector_x_",i)
             labelx <- paste0("horizontal")
             choicesx <- list_of_names
@@ -818,7 +856,7 @@ observe({
 # observer caring for canceling a plot
 observe({
     if(!is.null(loading_vf_file())) {
-        for(i in vf_chosen$data) {
+        for(i in vf_update()) {
             if(!is.null(input[[paste0("cancel_vf_",i)]]) && input[[paste0("cancel_vf_",i)]] > 0) {
                 reset_globals(i)
             }
@@ -841,12 +879,14 @@ observeEvent(input$add_vf_plot,{
         vector_field_space$globals[[vf_chosen$max]] <- NA
         transition_state_space$globals[[vf_chosen$max]] <- NA
         
-        vf_chosen$data <- c(vf_chosen$data,vf_chosen$max)
+        stored_vf_files$data[[stored_vf_files$current]]$data$vf_chosen$data <- c(vf_update(),vf_chosen$max)
+        # vf_chosen$data <- c(vf_chosen$data,vf_chosen$max)
         vf_chosen$max  <- vf_chosen$max + 1
     }
 })
 vf_update <- reactive({
-    return(vf_chosen$data)
+    return(preloading_vf_file()$data$vf_chosen$data)
+    # return(vf_chosen$data)
 })
 visible_vf_plots <- reactive({
     if(!is.null(loading_vf_file())) {
@@ -1028,9 +1068,9 @@ set_input_params <- reactive({
             }
         if(!is.null(loading_vf_file()$params))
             for(i in 1:length(loading_vf_file()$params)) {
-                inpar <- paste0(inpar,names(loading_vf_file()$params)[i],"=",ifelse(is.null(input[[paste0("param_slider_vf_",i)]]) | 
-                                                                                     is.na(input[[paste0("param_slider_vf_",i)]]),
-                                                                                     no_param_const, input[[paste0("param_slider_vf_",i)]]),",")
+                inpar <- paste0(inpar,names(loading_vf_file()$params)[i],"=",ifelse(is.null(current_param_sliders()[[i]]) | 
+                                                                                     is.na(current_param_sliders()[[i]]),
+                                                                                     no_param_const, current_param_sliders()[[i]]),",")
             }
         return(inpar)
     } else return(NULL)
@@ -1040,9 +1080,9 @@ set_abst_input_params <- reactive({
         inpar <- "list("
         if(!is.null(loading_ss_file()$params))
             for(i in 1:length(loading_ss_file()$params)) {
-                inpar <- paste0(inpar,names(loading_ss_file()$params)[i],"=",ifelse(is.null(input[[paste0("param_slider_vf_",i)]]) | 
-                                                                                        is.na(input[[paste0("param_slider_vf_",i)]]),
-                                                                                    no_param_const, input[[paste0("param_slider_vf_",i)]]),",")
+                inpar <- paste0(inpar,names(loading_ss_file()$params)[i],"=",ifelse(is.null(current_param_sliders()[[i]]) | 
+                                                                                        is.na(current_param_sliders()[[i]]),
+                                                                                    no_param_const, current_param_sliders()[[i]]),",")
             }
         return(inpar)
     } else return(NULL)
@@ -1270,7 +1310,7 @@ draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
                        parameters=list(),
                        sliders=list() )
     if(!is.null(loading_vf_file()$params)) {
-        for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- input[[paste0("param_slider_vf_",p)]]
+        for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- current_param_sliders()[[p]]
     }
     for(t in 1:length(variables)) {
         if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
@@ -1387,7 +1427,7 @@ draw_1D_vector_field <- function(name_x, plot_index, boundaries) {
                        parameters=list(),
                        sliders=list() )
     if(!is.null(loading_vf_file()$params)) {
-        for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- input[[paste0("param_slider_vf_",p)]]
+        for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- current_param_sliders()[[p]]
     }
     for(t in 1:length(variables)) {
         if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
@@ -1488,7 +1528,7 @@ draw_state_space_new_2 <- function(name_x, name_y, plot_index, boundaries) {
                            counter=input$accept_model_changes,
                            sliders=list() )
         if(!is.null(loading_vf_file()$params)) {
-            for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- input[[paste0("param_slider_vf_",p)]]
+            for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- current_param_sliders()[[p]]
         }
         for(t in 1:length(variables)) {
             if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
@@ -1800,10 +1840,10 @@ draw_state_space <- function(name_x, name_y, plot_index, boundaries) {
         param_sets <- vector(length=loading_ss_file()$params_num*2)
         if(loading_ss_file()$params_num != 0) {
             for(i in 0:(loading_ss_file()$params_num -1)) {
-                param_sets[2*i+1] <- as.numeric(ifelse(is.null(input[[paste0("param_slider_vf_",i+1)]]) | is.na(input[[paste0("param_slider_vf_",i+1)]]),
-                                                       no_param_const,input[[paste0("param_slider_vf_",i+1)]][1]))
-                param_sets[2*i+2] <- as.numeric(ifelse(is.null(input[[paste0("param_slider_vf_",i+1)]]) | is.na(input[[paste0("param_slider_vf_",i+1)]]),
-                                                       no_param_const,input[[paste0("param_slider_vf_",i+1)]][1]))
+                param_sets[2*i+1] <- as.numeric(ifelse(is.null(current_param_sliders()[[i+1]]) | is.na(current_param_sliders()[[i+1]]),
+                                                       no_param_const,current_param_sliders()[[i+1]][1]))
+                param_sets[2*i+2] <- as.numeric(ifelse(is.null(current_param_sliders()[[i+1]]) | is.na(current_param_sliders()[[i+1]]),
+                                                       no_param_const,current_param_sliders()[[i+1]][1]))
                 
             }
             coloring <- switch(as.character(length(param_sets)),
@@ -1882,7 +1922,7 @@ draw_1D_state_space <- function(name_x, plot_index, boundaries) {
                            counter=input$accept_model_changes,
                            sliders=list() )
         if(!is.null(loading_vf_file()$params)) {
-            for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- input[[paste0("param_slider_vf_",p)]]
+            for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- current_param_sliders()[[p]]
         }
         for(t in 1:length(variables)) {
             if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
