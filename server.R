@@ -2731,8 +2731,8 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
                 }
             }        # incremental intersection of ids in order to get right ids
             states <- states[id %in% ids]
-            states[, border:="green"]   # corresponding rectangles based on selected parameter point could have blue border
-            states[, color:=ifelse(id %in% param_ss_clicked$point[[plot_index]],"darkgreen",NA)]         # selected rectangles could be in darkgreen
+            # states[, color:=first_formula_color]   # corresponding rectangles based on selected parameter point could have blue border
+            states[, color:=ifelse(id %in% param_ss_clicked$point[[plot_index]],first_formula_color_clicked, first_formula_color)]         # selected rectangles could be in darkgreen
             param_state_space$data[[plot_index]] <- states
         }
         plot(range(thres[[index_x]]), range(thres[[index_y]]),
@@ -2845,7 +2845,6 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
         param_ss_clicked$old_point[[plot_index]] <- param_ss_clicked$point[[plot_index]]
     }
 }
-# TODO:
 draw_1D_param_ss <- function(name_x, plot_index, boundaries) {
     variables <- loading_ps_file()$var_names
     params <- loading_ps_file()$param_names
@@ -2875,8 +2874,8 @@ draw_1D_param_ss <- function(name_x, plot_index, boundaries) {
                 }
             }        # incremental intersection of ids in order to get right ids
             states <- states[id %in% ids]
-            states[, border:="green"]   # corresponding rectangles based on selected parameter point could have blue border
-            states[, color:=ifelse(id %in% param_ss_clicked$point[[plot_index]],"darkgreen",NA)]         # selected rectangles could be in darkgreen
+            # states[, color:=first_formula_color]   # corresponding rectangles based on selected parameter point could have blue border
+            states[, color:=ifelse(id %in% param_ss_clicked$point[[plot_index]],first_formula_color_clicked, first_formula_color)]         # selected rectangles could be in darkgreen
             param_state_space$data[[plot_index]] <- states
         }
         states <- param_state_space$data[[plot_index]]

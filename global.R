@@ -20,8 +20,13 @@ positive_color <- "green"
 #positive_color <- "darkgreen"
 negative_color <- "red"
 neutral_color <- "black"
-#positive_color <- "black"
-#negative_color <- "black"
+
+first_formula_color <- "lightgreen"
+first_formula_color_clicked <- "forestgreen"
+second_formula_color <- "plum"
+second_formula_color_clicked <- "purple"
+both_formula_color <- "gold"
+both_formula_color_clicked <- "goldenrod3"
 
 examples_dir <- "example"
 
