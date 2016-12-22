@@ -2,6 +2,7 @@
 
 if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
 if(!require(shinyBS,quietly = T)) {install.packages("shinyBS", dependencies=T,quiet = T); library(shinyBS,quietly = T)}
+if(!require(shinyjs,quietly = T)) {install.packages("shinyjs", dependencies=T,quiet = T); library(shinyjs,quietly = T)}
 if(!require(pracma,quietly = T)) {install.packages("pracma", dependencies=T,quiet = T); require(pracma,quietly = T)}
 if(!require(stringr,quietly = T)) {install.packages("stringr", dependencies=T,quiet = T); library(stringr,quietly = T)}
 if(!require(data.table,quietly = T)) {install.packages("data.table", dependencies=T,quiet = T); library(data.table,quietly = T)}
@@ -15,6 +16,39 @@ if(!require(rjson,quietly = T)) {install.packages("rjson", dependencies=T,quiet 
 source("global.R")
 #source("generator.R")
 
+
+# debounce <- function(expr, millis, env = parent.frame(), quoted = FALSE,
+#                      domain = getDefaultReactiveDomain()) {
+#     force(millis)
+#     f <- exprToFunction(expr, env, quoted)
+#     label <- sprintf("debounce(%s)", paste(deparse(body(f)), collapse = "\n"))
+#     v <- reactiveValues(
+#         trigger = NULL,
+#         when = NULL # the deadline for the timer to fire; NULL if not scheduled
+#     )
+#     # Responsible for tracking when f() changes.
+#     observeEvent(f(), {
+#         # The value changed. Start or reset the timer.
+#         v$when <- Sys.time() + millis/1000
+#     }, ignoreNULL = FALSE)
+#     # This observer is the timer. It rests until v$when elapses, then touches
+#     # v$trigger.
+#     observe({
+#         if (is.null(v$when))
+#             return()
+#         now <- Sys.time()
+#         if (now >= v$when) {
+#             v$trigger <- runif(1)
+#             v$when <- NULL
+#         } else invalidateLater((v$when - now) * 1000, domain)
+#     })
+#     # This is the actual reactive that is returned to the user. It returns the
+#     # value of f(), but only invalidates/updates when v$trigger is touched.
+#     eventReactive(v$trigger, {
+#         f()
+#     }, ignoreNULL = FALSE)
+# }
+
 options(scipen=999)
 options(shiny.maxRequestSize=1000*1024^2)
 #gcinfo(TRUE)   # for periodically showing garbage collection stats
@@ -27,9 +61,11 @@ shinyServer(function(input,output,session) {
 session_random <- sample(1000^2,1)
     
 # .Platform$OS.type=="windows"  or Sys.info()["sysname"]=="Windows"
-files_path <- ifelse(.Platform$OS.type=="windows", paste0("..//Temp//"), ifelse(Sys.info()["nodename"]=="psyche05",paste0("..//Temp//"),paste0("~//skola//newbiodivine//") ))
-new_programs_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"), 
-                            ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//","~//skola//newbiodivine//"))
+files_path <- paste0("..//Temp//")
+# files_path <- ifelse(.Platform$OS.type=="windows", paste0("..//Temp//"), ifelse(Sys.info()["nodename"]=="psyche05",paste0("..//Temp//"),paste0("~//skola//newbiodivine//") ))
+new_programs_path <- paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//")
+# new_programs_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"), 
+#                             ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//","~//skola//newbiodivine//"))
 
 progressFileName <- paste0(files_path,"progress.",session_random,".txt")
 file.create(progressFileName)
@@ -53,8 +89,15 @@ loaded_ss_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_ps_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 
 stored_vf_files     <- reactiveValues(data=list(),current=0,max=1)
+stored_vf_current_params    <- reactiveValues(data=list())
+stored_vf_chosen    <- reactiveValues(data=list())
+stored_vf_parsed_data   <- reactiveValues(data=list())
 stored_ss_files     <- reactiveValues(data=list(),current=0,max=1)
+stored_ss_parsed_data   <- reactiveValues(data=list())
 stored_ps_files     <- reactiveValues(data=list(),current=0,max=1)
+stored_ps_current_formula    <- reactiveValues(data=list())
+stored_ps_parsed_data   <- reactiveValues(data=list())
+stored_ps_chosen    <- reactiveValues(data=list())
 
 vf_brushed          <- reactiveValues(data=list(),click_counter=list())
 ss_brushed          <- reactiveValues(data=list(),click_counter=list())
@@ -232,7 +275,7 @@ reset_globals <- function(i=NA) {
     }
 }
 reset_particular_global <- function(i) {
-    stored_vf_files$data[[stored_vf_files$current]]$data$vf_chosen$data <- vf_update()[vf_update() != i]
+    stored_vf_chosen$data[[stored_vf_files$current]] <- vf_update()[vf_update() != i]
     # vf_chosen$data <- vf_chosen$data[vf_chosen$data != i]
     # some kind of garbage collector would be very convenient in this phase
     # either gc() or rm()
@@ -452,11 +495,9 @@ manage_model_experiments <- observe({
         
         # Here will be core of managing switching between experiments models
         if(stored_ss_files$max == 1 || !identical(filedata,stored_ss_files$data[[stored_ss_files$max-1]]$filedata)) {
-            stored_ss_files$data[[stored_ss_files$max]] <- list(filedata=filedata, filepath=loaded_ss_file$filename, timestamp=Sys.time(), 
-                                                                data=list( parsed_data=list()) )
-            stored_vf_files$data[[stored_vf_files$max]] <- list(filedata=loaded_vf_file$filedata, filepath=loaded_vf_file$filename, timestamp=Sys.time(), 
-                                                                data=list(current_param_sliders=list(), vf_chosen=list(data=NULL), parsed_data=list()) )
-            # loaded_ss_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
+            stored_ss_files$data[[stored_ss_files$max]] <- list(filedata=filedata, filepath=loaded_ss_file$filename, timestamp=Sys.time())
+            stored_vf_files$data[[stored_vf_files$max]] <- list(filedata=loaded_vf_file$filedata, filepath=loaded_vf_file$filename, timestamp=Sys.time())
+            loaded_ss_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
             if(stored_ss_files$max==1)  {
                 stored_ss_files$current <- stored_ss_files$max
                 stored_vf_files$current <- stored_vf_files$max
@@ -471,7 +512,7 @@ manage_model_experiments <- observe({
 })
 manage_model_next <- observeEvent(input$model_next,{
     # reset_globals()
-    stored_vf_files$data[[stored_vf_files$current]]$data$current_param_sliders <- current_param_sliders()
+    stored_vf_current_params$data[[stored_vf_files$current]] <- current_param_sliders()
     stored_ss_files$current <- stored_ss_files$current + 1
     stored_vf_files$current <- stored_vf_files$current + 1
     updateButton(session,"model_prev",style="default",disabled=F)
@@ -483,7 +524,7 @@ manage_model_next <- observeEvent(input$model_next,{
 })
 manage_model_prev <- observeEvent(input$model_prev,{
     # reset_globals()
-    stored_vf_files$data[[stored_vf_files$current]]$data$current_param_sliders <- current_param_sliders()
+    stored_vf_current_params$data[[stored_vf_files$current]] <- current_param_sliders()
     stored_ss_files$current <- stored_ss_files$current - 1
     stored_vf_files$current <- stored_vf_files$current - 1
     updateButton(session,"model_next",style="default",disabled=F)
@@ -498,8 +539,12 @@ manage_model_del <- observeEvent(input$model_del,{
         reset_globals()
         stored_ss_files$max <- stored_ss_files$max - 1
         stored_ss_files$data[[stored_ss_files$current]] <- NULL
+        stored_ss_parsed_data$data[[stored_ss_files$current]] <- NULL
         stored_vf_files$max <- stored_vf_files$max - 1
         stored_vf_files$data[[stored_vf_files$current]] <- NULL
+        stored_vf_current_params$data[[stored_vf_files$current]] <- NULL
+        stored_vf_parsed_data$data[[stored_vf_files$current]] <- NULL
+        stored_vf_chosen$data[[stored_vf_files$current]] <- NULL
         if(stored_ss_files$current == stored_ss_files$max) {
             stored_ss_files$current <- stored_ss_files$current - 1
             stored_vf_files$current <- stored_vf_files$current - 1
@@ -518,14 +563,14 @@ manage_model_del <- observeEvent(input$model_del,{
 })
 
 
-preloading_vf_file <- eventReactive(c(stored_vf_files$data,stored_vf_files$current),{
+preloading_vf_file <- eventReactive(c(stored_vf_files$current),{
     if(stored_vf_files$current != 0)
         return(stored_vf_files$data[[stored_vf_files$current]])
     else
         return(NULL)
 })
 
-preloading_ss_file <- eventReactive(c(stored_ss_files$data,stored_ss_files$current),{
+preloading_ss_file <- eventReactive(c(stored_ss_files$current),{
     if(stored_ss_files$current != 0)
         return(stored_ss_files$data[[stored_ss_files$current]])
     else
@@ -534,8 +579,8 @@ preloading_ss_file <- eventReactive(c(stored_ss_files$data,stored_ss_files$curre
     
 loading_vf_file <- reactive({
     if(!is.null(preloading_vf_file())) {
-        if(!isempty(preloading_vf_file()$data$parsed_data)) {
-            return(preloading_vf_file()$data$parsed_data)
+        if(length(stored_vf_parsed_data$data) >= stored_vf_files$current && !is.null(stored_vf_parsed_data$data[[stored_vf_files$current]])) {
+            return(stored_vf_parsed_data$data[[stored_vf_files$current]])
         }
         if(length(preloading_vf_file()$filedata) != 0) {
             biofile <- preloading_vf_file()$filedata
@@ -618,7 +663,8 @@ loading_vf_file <- reactive({
                 funcs[[x]] <<- parse(text=eqs[[x]])
             }
             
-            stored_vf_files$data[[stored_vf_files$current]]$data$parsed_data <- list(
+            # list(
+            stored_vf_parsed_data$data[[stored_vf_files$current]] <- list(
                 vars=var_names, 
                 consts=consts, 
                 params=params, 
@@ -626,7 +672,7 @@ loading_vf_file <- reactive({
                 eqs=eqs, 
                 ranges=ranges
             )
-            return(preloading_vf_file()$data$parsed_data)
+            return(stored_vf_parsed_data$data[[stored_vf_files$current]])
         } else return(NULL)
     } else return(NULL)
 })
@@ -634,8 +680,8 @@ loading_vf_file <- reactive({
 
 loading_ss_file <- reactive({
     if(!is.null(preloading_ss_file())) {
-        if(!isempty(preloading_ss_file()$data$parsed_data)) {
-            return(preloading_ss_file()$data$parsed_data)
+        if(length(stored_ss_parsed_data$data) >= stored_ss_files$current && !is.null(stored_ss_parsed_data$data[[stored_ss_files$current]])) {
+            return(stored_ss_parsed_data$data[[stored_ss_files$current]])
         }
         if(length(preloading_ss_file()$filedata) != 0) {
             biofile <- preloading_ss_file()$filedata
@@ -711,7 +757,7 @@ loading_ss_file <- reactive({
                 funcs_abst[[x]] <<- parse(text=eqs[[x]])
             }
             
-            stored_ss_files$data[[stored_ss_files$current]]$data$parsed_data <- list(
+            stored_ss_parsed_data$data[[stored_ss_files$current]] <- list(
                 var_names=var_names, 
                 params_num=length(params), 
                 param_names=names(params), 
@@ -720,7 +766,7 @@ loading_ss_file <- reactive({
                 eqs=eqs, 
                 ranges=ranges
             )
-            return(preloading_ss_file()$data$parsed_data)
+            return(stored_ss_parsed_data$data[[stored_ss_files$current]])
         } else return(NULL)
     } else return(NULL)
 })
@@ -730,14 +776,19 @@ loading_ss_file <- reactive({
 
 output$param_sliders_bio <- renderUI({
     if(!is.null(loading_vf_file()) && !is.null(loading_vf_file()$params)) {
+        
         lapply(1:length(loading_vf_file()$params), function(i) {
+            print("setter")
             label <- paste0("parameter ",names(loading_vf_file()$params)[i])
             name <- paste0("param_slider_vf_",stored_vf_files$current,"_",i)
-            # name <- paste0("param_slider_vf_",i)
             values <- c(min(as.numeric(loading_vf_file()$params[[i]])),max(as.numeric(loading_vf_file()$params[[i]])))
-            selected_value <- ifelse(!is.null(input[[name]]), input[[name]], 
-                                     ifelse(isempty(preloading_vf_file()$data$current_param_sliders), ((values[2]-values[1])*0.1),
-                                            preloading_vf_file()$data$current_param_sliders[[i]])) # used to be: ((values[2]-values[1])*0.1)
+            # selected_value <- ifelse(!is.null(input[[name]]), current_param_sliders()[[i]], 
+            #                          ifelse(isempty(preloading_vf_file()$data$current_param_sliders), ((values[2]-values[1])*0.1),
+            #                                 preloading_vf_file()$data$current_param_sliders[[i]]))
+            selected_value <- ifelse(length(stored_vf_current_params$data) < stored_vf_files$current || isempty(stored_vf_current_params$data[[stored_vf_files$current]]), 
+                                     (values[2]-values[1])*0.1,
+                                     stored_vf_current_params$data[[stored_vf_files$current]][[i]])
+            
             fluidRow(
                 column(12,
             numericInput(name,label=label,min=values[1],max=values[2],value=selected_value,step=((values[2]-values[1])/1000))
@@ -748,8 +799,7 @@ output$param_sliders_bio <- renderUI({
     }
 })
 current_param_sliders <- reactive({
-    # return(lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",i)]]))
-    return(lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",stored_vf_files$current,"_",i)]]))
+    lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",stored_vf_files$current,"_",i)]])
 })
 # update_param_sliders <- observe({
 #     if(!is.null(loading_vf_file())) {
@@ -879,13 +929,14 @@ observeEvent(input$add_vf_plot,{
         vector_field_space$globals[[vf_chosen$max]] <- NA
         transition_state_space$globals[[vf_chosen$max]] <- NA
         
-        stored_vf_files$data[[stored_vf_files$current]]$data$vf_chosen$data <- c(vf_update(),vf_chosen$max)
+        stored_vf_chosen$data[[stored_vf_files$current]] <- c(vf_update(),vf_chosen$max)
         # vf_chosen$data <- c(vf_chosen$data,vf_chosen$max)
         vf_chosen$max  <- vf_chosen$max + 1
     }
 })
 vf_update <- reactive({
-    return(preloading_vf_file()$data$vf_chosen$data)
+    if(length(stored_vf_chosen$data) < stored_vf_files$current) return(list())
+    else return(stored_vf_chosen$data[[stored_vf_files$current]])
     # return(vf_chosen$data)
 })
 visible_vf_plots <- reactive({
@@ -2053,7 +2104,7 @@ reset_globals_param <- function(i=NA) {
     }
 }
 reset_particular_global_param <- function(i) {
-    stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$data <- param_update()[param_update() != i]
+    stored_ps_chosen$data[[stored_ps_files$current]] <- param_update()[param_update() != i]
     # some kind of garbage collector would be very convenient in this phase
     # either gc() or rm()
     #rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("param_selector_y_",i)]]) #TODO: doplnit dalsie
@@ -2087,16 +2138,14 @@ observeEvent(c(resultFile()),{
     }
 })
 
-observeEvent(input$ps_file,{
-    #TODO: add JS script for cleaning fileInput after loading
+observeEvent(c(input$ps_file,input$reload_result_file),{
     if(!is.null(input$ps_file) && !is.null(input$ps_file$datapath)) {
-        # if(!is.null(loaded_ps_file$filename) && loaded_ps_file$filename != input$ps_file$datapath) {
-        #     #session$reload()
-        #     reset_globals_param()
-        # }
         loaded_ps_file$filename <- input$ps_file$name
         loaded_ps_file$filedata <- readLines(input$ps_file$datapath)
     }
+})
+observeEvent(input$reload_result_file,{
+    updateButton(session,"reload_result_file",disabled=T)
 })
 
 
@@ -2119,9 +2168,9 @@ manage_result_experiments <- observeEvent(loaded_ps_file$filedata,{
     if(!is.null(filedata)) {
         
         if(stored_ps_files$max == 1 || !identical(filedata,stored_ps_files$data[[stored_ps_files$max-1]]$filedata)) {
-            stored_ps_files$data[[stored_ps_files$max]] <- list(filedata=filedata, filepath=loaded_ps_file$filename, timestamp=Sys.time(), 
-                                                                data=list(chosen_ps_formula=1, param_chosen=list(data=NULL), parsed_data=list()) )
-            # loaded_ps_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
+            stored_ps_files$data[[stored_ps_files$max]] <- list(filedata=filedata, filepath=loaded_ps_file$filename, timestamp=Sys.time()) 
+                                                                # data=list(chosen_ps_formula=1, param_chosen=list(data=NULL), parsed_data=list()) )
+            loaded_ps_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
             if(stored_ps_files$max==1)  {
                 stored_ps_files$current <- stored_ps_files$max
                 updateButton(session,"result_del",style="default",disabled=F)
@@ -2134,7 +2183,7 @@ manage_result_experiments <- observeEvent(loaded_ps_file$filedata,{
 })
 manage_result_next <- observeEvent(input$result_next,{
     # reset_globals_param()
-    stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
+    stored_ps_current_formula$data[[stored_ps_files$current]] <- chosen_ps_formulae_clean()
     stored_ps_files$current <- stored_ps_files$current + 1
     updateButton(session,"result_prev",style="default",disabled=F)
     if(stored_ps_files$current+1 == stored_ps_files$max) {
@@ -2145,7 +2194,7 @@ manage_result_next <- observeEvent(input$result_next,{
 })
 manage_result_prev <- observeEvent(input$result_prev,{
     # reset_globals_param()
-    stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
+    stored_ps_current_formula$data[[stored_ps_files$current]] <- chosen_ps_formulae_clean()
     stored_ps_files$current <- stored_ps_files$current - 1
     updateButton(session,"result_next",style="default",disabled=F)
     if(stored_ps_files$current == 1) {
@@ -2156,9 +2205,14 @@ manage_result_prev <- observeEvent(input$result_prev,{
 })
 manage_result_del <- observeEvent(input$result_del,{
     if(stored_ps_files$current > 0) {
-        # reset_globals_param()
+        if(identical(input$ps_file$name, stored_ps_files$data[[stored_ps_files$current]]$filepath))
+            updateButton(session,"reload_result_file",disabled=F)
+        reset_globals_param()
         stored_ps_files$max <- stored_ps_files$max - 1
         stored_ps_files$data[[stored_ps_files$current]] <- NULL
+        stored_ps_chosen$data[[stored_ps_files$current]] <- NULL
+        # stored_ps_parsed_data$data[[stored_ps_files$current]] <- NULL
+        stored_ps_current_formula$data[[stored_ps_files$current]] <- NULL
         if(stored_ps_files$current == stored_ps_files$max) {
             stored_ps_files$current <- stored_ps_files$current - 1
             if(stored_ps_files$current == 0) {
@@ -2175,7 +2229,7 @@ manage_result_del <- observeEvent(input$result_del,{
     }
 })
 
-preloading_ps_file <- eventReactive(c(stored_ps_files$data,stored_ps_files$current),{
+preloading_ps_file <- eventReactive(c(stored_ps_files$current),{
     if(stored_ps_files$current != 0)
         return(stored_ps_files$data[[stored_ps_files$current]])
     else
@@ -2183,9 +2237,9 @@ preloading_ps_file <- eventReactive(c(stored_ps_files$data,stored_ps_files$curre
 })
 loading_ps_file <- reactive({
     if(!is.null(preloading_ps_file())) {
-        if(!isempty(preloading_ps_file()$data$parsed_data)) {
-            return(preloading_ps_file()$data$parsed_data)
-        }
+        # if(length(stored_ps_parsed_data$data) >= stored_ps_files$current && !is.null(stored_ps_parsed_data$data[[stored_ps_files$current]])) {
+        #     return(stored_ps_parsed_data$data[[stored_ps_files$current]])
+        # }
         if(nchar(preloading_ps_file()$filedata) != 0) {
             file <- fromJSON(preloading_ps_file()$filedata)
                 
@@ -2228,10 +2282,9 @@ loading_ps_file <- reactive({
             
             param_bounds <- file$parameter_bounds
             names(param_bounds) <- file$parameters
-            
-            # stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- 1
-            # stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen <- list(data=NULL)#,max=1)
-            stored_ps_files$data[[stored_ps_files$current]]$data$parsed_data <- list(
+        
+            list(
+            # stored_ps_parsed_data$data[[stored_ps_files$current]] <- list(
                 param_space=table,  # DT( formula:string, data:list_of_state_and_param_indices, state:numeric_index_to_states, param:numeric_index_to_params, 
                                     #     cov:numeric_with_states_count_for_this_param )
                 states=states,      # DT( V1,V2,... ) - each pair of columns (e.g., V1,V2) contains boundary threshodls of state (each row), 3D SS has 6 columns
@@ -2243,9 +2296,28 @@ loading_ps_file <- reactive({
                 type=file$type,
                 param_bounds=param_bounds
             )
-            return(preloading_ps_file()$data$parsed_data)
+            # return(stored_ps_parsed_data$data[[stored_ps_files$current]])
         } else return(NULL)
     } else return(NULL)
+})
+
+
+output$chosen_ps_states_ui <- renderUI({
+    if(!is.null(loading_ps_file()) && nrow(loading_ps_file()$param_space) != 0) {
+        id <- paste0("chosen_ps_formula_",stored_ps_files$current)
+        formulae_list <- loading_ps_file()$formulae
+        names(formulae_list) <- loading_ps_file()$formulae
+        # selected_formula <- ifelse(!is.null(input[[id]]), input[[id]], stored_ps_current_formula$data[[stored_ps_files$current]])
+        selected_formula <- ifelse(length(stored_ps_current_formula$data) < stored_ps_files$current || isempty(stored_ps_current_formula$data[[stored_ps_files$current]]), 
+                                 1,
+                                 stored_ps_current_formula$data[[stored_ps_files$current]])
+        list(selectInput(id,"choose formula of interest:",formulae_list,selected_formula,selectize=F,size=1,width="100%"))
+    } else
+        h3("Parameter synthesis has to be run or result file loaded before showing some results")
+})
+chosen_ps_formulae_clean <- eventReactive(input[[paste0("chosen_ps_formula_",stored_ps_files$current)]],{
+    # stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
+    return(input[[paste0("chosen_ps_formula_",stored_ps_files$current)]])
 })
 
 
@@ -2338,12 +2410,14 @@ observeEvent(input$add_param_plot,{
         param_state_space$globals[[param_chosen$max]] <- NA
         #satisfiable_ps$data[[param_chosen$max]] <- NA
         
-        stored_ps_files$data[[stored_ps_files$current]]$data$param_chosen$data <- c(param_update(),param_chosen$max)
+        stored_ps_chosen$data[[stored_ps_files$current]] <- c(param_update(),param_chosen$max)
         param_chosen$max  <- param_chosen$max + 1
     }
 })
 param_update <- reactive({
-    return(preloading_ps_file()$data$param_chosen$data)
+    if(length(stored_ps_chosen$data) < stored_ps_files$current) return(list())
+    else return(stored_ps_chosen$data[[stored_ps_files$current]])
+    # return(preloading_ps_file()$data$param_chosen$data)
 })
 visible_ps_plots <- reactive({
     if(!is.null(loading_ps_file())) {
@@ -2506,10 +2580,11 @@ output$param_space_plots <- renderUI({
                        verbatimTextOutput(paste0("hover_text_ps_",i))
                 ),
                 column(4,
-                       if(input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names)
+                       if(input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names) {
                            helpText("parameter-variable dependency diagram")
-                       else
-                           helpText("parameter space of the model"),
+                       } else {
+                           helpText("parameter space of the model")
+                       },
                        div(id = "plot-container",
                            tags$img(
                                # src = "circle.png",
@@ -2524,9 +2599,15 @@ output$param_space_plots <- renderUI({
                        helpText("... and corresponding transition-state space"),
                        if(!is.null(input[[paste0("param_ss_selector_x_",i)]]) && input[[paste0("param_ss_selector_x_",i)]] != empty_sign &&
                               !is.null(input[[paste0("param_ss_selector_y_",i)]]) && input[[paste0("param_ss_selector_y_",i)]] != empty_sign) {
-                           imageOutput(paste0("param_ss_plot_",i),"auto","auto", click=paste0("param_ss_",i,"_click"), dblclick=paste0("param_ss_",i,"_dblclick"),
-                                       hover=hoverOpts(id=paste0("param_ss_",i,"_hover"),delayType="debounce",delay=hover_delay_limit),
-                                       brush=brushOpts(id=paste0("param_ss_",i,"_brush"),delayType="debounce",delay=brush_delay_limit,resetOnNew=T))
+                           div(id = "plot-container",
+                               tags$img(
+                                   # src = "circle.png",
+                                   src = "spinner.gif",
+                                   id = "loading-spinner"),
+                               imageOutput(paste0("param_ss_plot_",i),"auto","auto", click=paste0("param_ss_",i,"_click"), dblclick=paste0("param_ss_",i,"_dblclick"),
+                                           hover=hoverOpts(id=paste0("param_ss_",i,"_hover"),delayType="debounce",delay=hover_delay_limit),
+                                           brush=brushOpts(id=paste0("param_ss_",i,"_brush"),delayType="debounce",delay=brush_delay_limit,resetOnNew=T))
+                           )
                        }
                 ),
                 column(2,
@@ -3289,6 +3370,9 @@ draw_param_space <- function(name_x, name_y, plot_index, boundaries) {
                            coverage=input$coverage_check,
                            param_ss_clicked_point=param_ss_clicked$point[[plot_index]],
                            formula=chosen_ps_formulae_clean(),
+                           input=loading_ps_file(),
+                           # sps=satisfiable_param_space_for_formula(),
+                           # sss=satisfiable_states(),
                            # counter=input$process_run,
                            sliders_checkbox=list(),
                            sliders=list() )
@@ -3662,18 +3746,6 @@ draw_1D_param_space <- function(name_x, plot_index, boundaries) {
 }
 
 
-output$chosen_ps_states_ui <- renderUI({
-    if(!is.null(loading_ps_file()) && nrow(loading_ps_file()$param_space) != 0) {
-        id <- paste0("chosen_ps_formula_",stored_ps_files$current)
-        formulae_list <- loading_ps_file()$formulae
-        names(formulae_list) <- loading_ps_file()$formulae
-        selected_formula <- ifelse(!is.null(input[[id]]), input[[id]], preloading_ps_file()$data$chosen_ps_formula)
-        list(selectInput(id,"choose formula of interest:",formulae_list,selected_formula,selectize=F,size=1,width="100%"))
-    } else
-        h3("Parameter synthesis has to be run or result file loaded before showing some results")
-})
-
-
 # observers providing zooming and unzooming of state-space plots
 zoom_param_ss_ranges <- observe({
     if(!is.null(loading_ps_file()) ) {
@@ -3955,11 +4027,6 @@ apply_to_all_in_param_ss <- observe({
     }
 })
 
-
-chosen_ps_formulae_clean <- eventReactive(input[[paste0("chosen_ps_formula_",stored_ps_files$current)]],{
-    # stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
-    return(input[[paste0("chosen_ps_formula_",stored_ps_files$current)]])
-})
 
 grey_shade <- reactive({
     return(input$color_alpha_coeficient)

@@ -198,3 +198,4 @@ ramp <- function(value,min,max,a,b) {
 #                list(k1=2.38, k2=3.96, K1=0.86, K2=3.54),
 #                list(k1=3.96, k2=NULL, K1=3.54, K2=NULL))
 # )
+

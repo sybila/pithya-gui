@@ -1,5 +1,6 @@
 if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
 if(!require(shinyBS,quietly = T)) {install.packages("shinyBS", dependencies=T,quiet = T); library(shinyBS,quietly = T)}
+if(!require(shinyjs,quietly = T)) {install.packages("shinyjs", dependencies=T,quiet = T); library(shinyjs,quietly = T)}
 require(parallel) # it is needed because of function for determination of available CPU cores
 #if(!require(shinythemes,quietly=T)) install.packages("shinythemes",quiet=T); library(shinythemes,quietly=T)
 #require(shiny)
@@ -40,6 +41,7 @@ source("global.R")
 
 shinyUI(
     fluidPage(
+        useShinyjs(),
         tags$head(tags$script(HTML(JS.parameterSynthesisFinished))),
     # titlePanel("PITHYA - Parameter Investigation Tool with HYbrid Approach"),
     titlePanel("PITHYA - Parameter Investigation Tool for HYbrid Analysis"),
@@ -256,8 +258,14 @@ tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
                ),
             tags$div(title="Select input parameter space (with '.ps.json' extension) for further analysis.",
                 fileInput("ps_file","choose result '.json' file"),accept=".json"),
-            tags$div(title="This button saves model checking results.",
-                downloadButton("save_result_file","save results"))
+            fluidRow(
+                column(6,
+                       tags$div(title="",
+                                bsButton("reload_result_file","reload",disabled=T))),
+                column(6,
+                       tags$div(title="This button saves model checking results.",
+                                downloadButton("save_result_file","save results")))
+            )
         ),
         column(2,
             tags$div(title="Scaling factor for density of shown rectangles in parameter space.",
