@@ -194,7 +194,9 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
                               tags$div(title="",
                                        bsButton("model_del","delete",disabled=T,block=T)
                               ))
-                   )
+                   ),
+                   tags$div(title="This button saves model description in *.bio format of current experiment.",
+                            downloadButton("save_current_model_file","save current model"))
             ),
             column(4,
                    fluidRow(

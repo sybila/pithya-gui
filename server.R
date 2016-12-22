@@ -82,6 +82,10 @@ session$onSessionEnded(function() {
     for(i in c(progressFileName,resultFileName,configFileName)) if(file.exists(i)) file.remove(i)
 })
 
+hide("save_current_model_file")
+hide("save_result_file")
+# hide("save_model_file")
+# hide("save_prop_file")
 
 loaded_prop_file    <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_vf_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
@@ -253,11 +257,7 @@ observeEvent(c(input$prop_file,input$reset_prop),{
 })
 
 output$save_prop_file <- downloadHandler(
-    filename = function() { 
-        if(!is.null(input$prop_file) && !is.null(input$prop_file$datapath))
-            return(paste0(input$prop_file$datapath))
-        else return("property.ctl")
-    },
+    filename = "property.ctl", #ifelse(!is.null(input$prop_file) && !is.null(input$prop_file$datapath), paste0(input$prop_file$datapath), "property.ctl"),
     content = function(file) {
         if(!is.null(loaded_prop_file$data)) writeLines(loaded_prop_file$data, file)
         else                                writeLines("", file)
@@ -419,7 +419,14 @@ observeEvent(c(input$vf_file,input$reset_model),{
 })
 
 output$save_model_file <- downloadHandler(
-    filename = ifelse(!is.null(preloading_vf_file()), paste0(preloading_vf_file()$filepath), "model.bio"),
+    filename = "model.bio", #ifelse(!is.null(loaded_vf_file$filename), paste0(loaded_vf_file$filename), "model.bio"),
+    content = function(file) {
+        if(!is.null(loaded_vf_file$filedata)) writeLines(loaded_vf_file$filedata, file)
+        else                               writeLines("", file)
+    }
+)
+output$save_current_model_file <- downloadHandler(
+    filename = "model.bio", #ifelse(!is.null(preloading_vf_file()), paste0(preloading_vf_file()$filepath), "model.bio"),
     content = function(file) {
         if(!is.null(preloading_vf_file())) writeLines(preloading_vf_file()$filedata, file)
         else                               writeLines("", file)
@@ -503,6 +510,7 @@ manage_model_experiments <- observe({
                 stored_vf_files$current <- stored_vf_files$max
                 updateButton(session,"model_del",style="default",disabled=F)
                 updateButton(session,"add_vf_plot",style="default",disabled=F)
+                show("save_current_model_file")
             } else    
                 updateButton(session,"model_next",style="success",disabled=F)
             stored_ss_files$max <- stored_ss_files$max + 1
@@ -551,6 +559,7 @@ manage_model_del <- observeEvent(input$model_del,{
             if(stored_ss_files$current == 0) {
                 updateButton(session,"model_del",style="default",disabled=T)
                 updateButton(session,"add_vf_plot",style="default",disabled=T)
+                hide("save_current_model_file")
             }
         }
         if(stored_ss_files$current == 1) {
@@ -2150,7 +2159,7 @@ observeEvent(input$reload_result_file,{
 
 
 output$save_result_file <- downloadHandler(
-    filename = ifelse(!is.null(preloading_ps_file()), paste0(preloading_ps_file()$filepath), "results.json"),
+    filename = "results.json",#ifelse(!is.null(preloading_ps_file()), paste0(preloading_ps_file()$filepath), "results.json"),
     content = function(file) {
         if(!is.null(preloading_ps_file())) writeLines(preloading_ps_file()$filedata, file)
         else                               writeLines("", file)
@@ -2175,6 +2184,7 @@ manage_result_experiments <- observeEvent(loaded_ps_file$filedata,{
                 stored_ps_files$current <- stored_ps_files$max
                 updateButton(session,"result_del",style="default",disabled=F)
                 updateButton(session,"add_param_plot",style="default",disabled=F)
+                show("save_result_file")
             } else    
                 updateButton(session,"result_next",style="success",disabled=F)
             stored_ps_files$max <- stored_ps_files$max + 1
@@ -2218,6 +2228,7 @@ manage_result_del <- observeEvent(input$result_del,{
             if(stored_ps_files$current == 0) {
                 updateButton(session,"result_del",style="default",disabled=T)
                 updateButton(session,"add_param_plot",style="default",disabled=T)
+                hide("save_result_file")
             }
         }
         if(stored_ps_files$current == 1) {
