@@ -168,10 +168,10 @@ observeEvent(input$process_run,{
             cat("Config file is created\n",file=progressFileName,append=T)
             updateButton(session,"process_run",style="default",disabled=F)
             updateButton(session,"process_stop",style="danger",disabled=F)
-            checker_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"),
-                                   ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//",
-                                   "/home/demon/skola/newbiodivine/json-ode-model/target/release/"))     # it must be whole path or be a part of PATH
-            system2(paste0(checker_path,"biodivine-ctl"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
+            # checker_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"),
+            #                        ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//",
+            #                        "/home/demon/skola/newbiodivine/json-ode-model/target/release/"))     # it must be whole path or be a part of PATH
+            system2(paste0(new_programs_path,"biodivine-ctl"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
             cat("Process has started\n",file=progressFileName)
             # system2(paste0(checker_path,"ode_model"), c(configFileName,">",resultFileName,"2>>",progressFileName), wait=F)
         } else cat("\nError: some error occured, because no config file was created!\n")
