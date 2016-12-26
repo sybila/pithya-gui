@@ -154,10 +154,10 @@ param_chosen        <- reactiveValues(data=NULL,max=1)
 #=======================================================================
 
 observeEvent(input$process_run,{
-    if(!is.null(loaded_ss_file$filedata) && input$process_run != 0) {
+    if(!is.null(preloading_ss_file()$filedata) && input$process_run != 0) {
         cat("Parameter synthesis is started\n",file=progressFileName)
         modelTempName  <- paste0(files_path,"model.",session_random,".abst.bio")
-        writeLines(loaded_ss_file$filedata,modelTempName)
+        writeLines(preloading_ss_file()$filedata,modelTempName)
         propTempName   <- paste0(files_path,"prop.",session_random,".ctl")
         writeLines(loaded_prop_file$data,propTempName)
         system2(paste0(new_programs_path,"combine"),c(modelTempName, propTempName), stdout=configFileName, stderr=progressFileName, wait=T)
@@ -179,7 +179,7 @@ observeEvent(input$process_run,{
 })
 
 observeEvent(input$process_stop,{
-    if(!is.null(loaded_ss_file$filedata) && input$process_stop != 0) {
+    if(!is.null(preloading_ss_file()$filedata) && input$process_stop != 0) {
         if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0 && !T %in% grepl("^!!DONE!!$",progressFile())) {
             pid <- gsub("PID: ","",grep("^PID: [0-9]+$",progressFile(),value=T))
             command <- ifelse(.Platform$OS.type=="windows", paste0("taskkill /f /pid ",pid), paste0("kill -9 ",pid))
@@ -233,7 +233,7 @@ output$progress_output <- renderPrint({
 
 observeEvent(input$prop_input_area,{
     loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
-    if(!is.null(loaded_ss_file$filedata)) updateButton(session,"process_run",style="success",disabled=F)
+    if(!is.null(preloading_ss_file()$filedata)) updateButton(session,"process_run",style="success",disabled=F)
 })
 # observeEvent(input$accept_prop_changes,{
 #     if(!is.null(input$prop_input_area) && input$prop_input_area != "")
