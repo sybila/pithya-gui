@@ -1,5 +1,6 @@
 if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
 if(!require(shinyBS,quietly = T)) {install.packages("shinyBS", dependencies=T,quiet = T); library(shinyBS,quietly = T)}
+if(!require(shinyAce,quietly = T)) {install.packages("shinyAce", dependencies=T,quiet = T); library(shinyAce,quietly = T)}
 if(!require(shinyjs,quietly = T)) {install.packages("shinyjs", dependencies=T,quiet = T); library(shinyjs,quietly = T)}
 require(parallel) # it is needed because of function for determination of available CPU cores
 #if(!require(shinythemes,quietly=T)) install.packages("shinythemes",quiet=T); library(shinythemes,quietly=T)
@@ -126,12 +127,14 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
     fluidPage(
         column(6,
                helpText("Model editor:"),
-               tags$textarea(id="model_input_area", rows=200, cols=300)
+               aceEditor("model_input_area","","plain_text","textmate")
+               # tags$textarea(id="model_input_area", rows=200, cols=300)
                # textAreaInput("model_input_area",NULL,width=NULL,height=NULL,rows=200,cols=100,resize="both")
         ),
         column(6,
                helpText("Properties editor:"),
-               tags$textarea(id="prop_input_area", rows=200, cols=300)
+               aceEditor("prop_input_area","","plain_text","textmate")
+               # tags$textarea(id="prop_input_area", rows=200, cols=300)
         )
     ))
 ),

@@ -2,6 +2,7 @@
 
 if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
 if(!require(shinyBS,quietly = T)) {install.packages("shinyBS", dependencies=T,quiet = T); library(shinyBS,quietly = T)}
+if(!require(shinyAce,quietly = T)) {install.packages("shinyAce", dependencies=T,quiet = T); library(shinyAce,quietly = T)}
 if(!require(shinyjs,quietly = T)) {install.packages("shinyjs", dependencies=T,quiet = T); library(shinyjs,quietly = T)}
 if(!require(pracma,quietly = T)) {install.packages("pracma", dependencies=T,quiet = T); require(pracma,quietly = T)}
 if(!require(stringr,quietly = T)) {install.packages("stringr", dependencies=T,quiet = T); library(stringr,quietly = T)}
@@ -254,7 +255,8 @@ observeEvent(c(input$prop_file,input$reset_prop),{
         loaded_prop_file$filename <- paste0(examples_dir,"//repressilator_2D//bistability.ctl")
         loaded_prop_file$data <- readLines(loaded_prop_file$filename)
     }
-    updateTextAreaInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
+    updateAceEditor(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
+    # updateTextAreaInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
 })
 
 output$save_prop_file <- downloadHandler(
@@ -416,7 +418,8 @@ observeEvent(c(input$vf_file,input$reset_model),{
         loaded_vf_file$filename <- paste0(examples_dir,"//repressilator_2D//model_2D_1P_100R.bio")
         loaded_vf_file$filedata <- readLines(loaded_vf_file$filename)
     }
-    updateTextAreaInput(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
+    updateAceEditor(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
+    # updateTextAreaInput(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
 })
 
 output$save_model_file <- downloadHandler(

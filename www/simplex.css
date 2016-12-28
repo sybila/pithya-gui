@@ -6557,14 +6557,14 @@ label {
 #model_input_area {
 	height: 900px;
 	width: 100%;
-	overflow-y: scroll;
-	overflow-x: scroll;
+/*	overflow-y: scroll;
+	overflow-x: scroll;*/
 }
 #prop_input_area {
 	height: 900px;
 	width: 100%;
-	overflow-y: scroll;
-	overflow-x: scroll;
+/*	overflow-y: scroll;
+	overflow-x: scroll;*/
 }
 #progress_output {
 	max-height: 100px;

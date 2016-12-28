@@ -9,4 +9,4 @@ if(!require(data.table,quietly = T)) {install.packages("data.table", dependencie
 if(!require(rjson,quietly = T)) {install.packages("rjson", dependencies=T,quiet = T); library(rjson,quietly = T)}
 #if(!require(shinythemes,quietly=T)) install.packages("shinythemes",quiet=T); library(shinythemes,quietly=T)
 #if(!require(ggplot2,quietly = T)) install.packages("ggplot2",quiet = T); library(ggplot2,quietly = T)
-shiny::runApp('../GUI/',launch.browser=TRUE,host="127.0.0.1",port=8080)
+shiny::runApp('../biodivineGUI/',launch.browser=TRUE,host="127.0.0.1",port=8080)
