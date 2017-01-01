@@ -6,6 +6,8 @@ require(parallel) # it is needed because of function for determination of availa
 #if(!require(shinythemes,quietly=T)) install.packages("shinythemes",quiet=T); library(shinythemes,quietly=T)
 #require(shiny)
 
+source("tooltips.R")
+
 
 ## LOOK AT SHINY.OPTIONS
 # customSlider javascript function for output threshold instead of index
@@ -45,22 +47,23 @@ shinyUI(
         useShinyjs(),
         tags$head(tags$script(HTML(JS.parameterSynthesisFinished))),
     # titlePanel("PITHYA - Parameter Investigation Tool with HYbrid Approach"),
-    titlePanel("PITHYA - Parameter Investigation Tool for HYbrid Analysis"),
+    titlePanel(Tool_name),
     tags$hr(),
     tabsetPanel(id = "dimensions",
                 
-tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
+tabPanel(Editor_label, icon=icon("bug"), # fa-leaf fa-bug
 #          tags$head(tags$script((JS.custom))),
 #          tags$head(tags$script((JS.scaleSliderHandler))),
-    tags$div(title="'Model editor' allows the user load, edit or save input model. Simple model is automatically loaded as example.",
+    tags$div(title=Editor_tooltip,
     fluidPage(
         column(6,
             wellPanel(
                 fluidPage(
                     column(4,
-                        checkboxInput("advanced","advanced settings",F),
-                        tags$div(title="Select input model (with '.bio' extension) for further analysis.",
-                            fileInput("vf_file","choose '.bio' file",accept=".bio"))
+                        tags$div(title=Editor_advancedSettings_tooltip,
+                                 checkboxInput("advanced", Editor_advancedSettings_label, F)),
+                        tags$div(title=Editor_model_Browse_tooltip,
+                                 fileInput("vf_file", Editor_model_Browse_label, accept=".bio"))
                         # ,tags$div(title="Select input state space (with '.ss.json' extension) for further analysis.",
                         #     fileInput("state_space_file","choose '.abst.bio' file",accept=".bio"))
                     ),
@@ -68,10 +71,10 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                            verticalLayout(
                                # tags$div(title="This button accepts all changes made in model editor so they could be passed on to further analysis.",
                                #          actionButton("accept_model_changes","check syntax of model",icon=icon("ok",lib = "glyphicon"))),
-                               tags$div(title="This button resets all changes made up to last load or save of current file.",
-                                        actionButton("reset_model","reset changes in model",icon=icon("remove",lib = "glyphicon"))),
-                               tags$div(title="This button saves current state of model description.",
-                                        downloadButton("save_model_file","save model")
+                               tags$div(title=Editor_model_resetChangesInModel_tooltip,
+                                        actionButton("reset_model", Editor_model_resetChangesInModel_label, icon=icon("remove",lib = "glyphicon"))),
+                               tags$div(title=Editor_model_saveModel_tooltip,
+                                        downloadButton("save_model_file", Editor_model_saveModel_label)
 #                                         ,textInput("save_model_file_name", NULL, "model.bio", "100%", "model.bio")
                                )
                            )
@@ -80,13 +83,13 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                         # wellPanel(
                             conditionalPanel(
                                 condition = "input.advanced == true",
-                                tags$div(title="During The-PWA-approximation of special functions used inside the model new thresholds are generated and some of them could exceed explicit ones. By this checkbox you can tick off this do not be allowed.",
-                                    checkboxInput("thresholds_cut","cut thresholds",F)),
-                                tags$div(title="Two versions of The-PWA-approximation are available. Slower one - more precise and computationally more demanding - and fast one - much faster but also less precise.",
-                                    checkboxInput("fast_approximation","fast approximation",F))
+                                tags$div(title=Editor_cutTresholds_tooltip,
+                                    checkboxInput("thresholds_cut", Editor_cutTresholds_label,F)),
+                                tags$div(title=Editor_fastApproximation_tooltip,
+                                    checkboxInput("fast_approximation", Editor_fastApproximation_label,F))
                             ),
-                            tags$div(title="",
-                                 bsButton("generate_abstraction","generate approximation",disabled=T))
+                            tags$div(title=Editor_generateApproximation_tooltip,
+                                 bsButton("generate_abstraction", Editor_generateApproximation_label, disabled=T))
                         # )
                     )
                 )
@@ -97,16 +100,16 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
             wellPanel(
                 fluidPage(
                     column(6,
-                           tags$div(title="Select input model (with '.bio' extension) for further analysis.",
-                                    fileInput("prop_file","choose '.ctl' file",accept=".ctl"))
+                           tags$div(title=Editor_property_Browse_tooltip,
+                                    fileInput("prop_file", Editor_property_Browse_label, accept=".ctl"))
                     ),
                     column(6,
                            # tags$div(title="This button accepts all changes made in editor so they could be passed on to further analysis.",
                            #          actionButton("accept_prop_changes","check syntax of properties",icon=icon("ok",lib = "glyphicon"))),
-                           tags$div(title="This button resets all changes made up to last load or save of current file.",
-                                    actionButton("reset_prop","reset changes in properties",icon=icon("remove",lib = "glyphicon"))),
-                           tags$div(title="This button saves current state of properties description.",
-                                    downloadButton("save_prop_file","save properties"))
+                           tags$div(title=Editor_property_resetChangesInProperties_tooltip,
+                                    actionButton("reset_prop", Editor_property_resetChangesInProperties_label, icon=icon("remove",lib = "glyphicon"))),
+                           tags$div(title=Editor_property_saveProperties_tooltip,
+                                    downloadButton("save_prop_file", Editor_property_saveProperties_label))
                     )
                 )
             )
@@ -115,26 +118,29 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
                wellPanel(
                    conditionalPanel(
                        condition = "input.advanced == true",
-                       numericInput("threads_number","no. of threads",detectCores(),1,detectCores(),1)
+                       tags$div(title=Editor_numberOfThreads_tooltip,
+                                numericInput("threads_number", Editor_numberOfThreads_label, detectCores(), 1, detectCores(), 1))
                    ),
-                   bsButton("process_run","run parameter synthesis",disabled=T),
-                   bsButton("process_stop","stop parameter synthesis",disabled=T)
+                   tags$div(title=Editor_runParameterSynthesis_tooltip,
+                            bsButton("process_run", Editor_runParameterSynthesis_label, disabled=T)),
+                   tags$div(title=Editor_stopParameterSynthesis_tooltip,
+                            bsButton("process_stop", Editor_stopParameterSynthesis_label, disabled=T))
                )
         )
     ),
-    helpText("Progress bar:"),
-    verbatimTextOutput("progress_output"),
+    tags$div(title=Editor_progressBar_tooltip,
+             helpText(Editor_progressBar_label),
+             verbatimTextOutput("progress_output")),
     fluidPage(
         column(6,
-               helpText("Model editor:"),
-               aceEditor("model_input_area","","plain_text","textmate")
-               # tags$textarea(id="model_input_area", rows=200, cols=300)
-               # textAreaInput("model_input_area",NULL,width=NULL,height=NULL,rows=200,cols=100,resize="both")
+               tags$div(title=Editor_modelTextEditor_tooltip,
+                        helpText(Editor_modelTextEditor_label),
+                        aceEditor("model_input_area","","plain_text","textmate"))
         ),
         column(6,
-               helpText("Properties editor:"),
-               aceEditor("prop_input_area","","plain_text","textmate")
-               # tags$textarea(id="prop_input_area", rows=200, cols=300)
+               tags$div(title=Editor_propertyTextEditor_tooltip,
+                        helpText(Editor_propertyTextEditor_label),
+                        aceEditor("prop_input_area","","plain_text","textmate"))
         )
     ))
 ),
@@ -178,7 +184,8 @@ tabPanel("model editor",icon=icon("bug"), # fa-leaf fa-bug
 #     verbatimTextOutput("progress_output")
 # ),
 
-tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
+tabPanel(Explorer_label, icon=icon("move",lib = "glyphicon"),
+    tags$div(title=Explorer_tooltip,
     fluidPage(
         theme = "simplex.css",
         fluidRow(
@@ -186,38 +193,38 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
                    uiOutput("model_help_text"),
                    fluidRow(
                        column(4,
-                              tags$div(title="",
-                                       bsButton("model_prev","previous",disabled=T,block=T)
+                              tags$div(title=Explorer_previousExperiment_tooltip,
+                                       bsButton("model_prev",Explorer_previousExperiment_label,disabled=T,block=T)
                               )),
                        column(4,
-                              tags$div(title="",
-                                       bsButton("model_next","next",disabled=T,block=T)
+                              tags$div(title=Explorer_nextExperiment_tooltip,
+                                       bsButton("model_next",Explorer_nextExperiment_label,disabled=T,block=T)
                               )),
                        column(4,
-                              tags$div(title="",
-                                       bsButton("model_del","delete",disabled=T,block=T)
+                              tags$div(title=Explorer_deleteExperiment_tooltip,
+                                       bsButton("model_del",Explorer_deleteExperiment_label,disabled=T,block=T)
                               ))
                    ),
-                   tags$div(title="This button saves model description in *.bio format of current experiment.",
-                            downloadButton("save_current_model_file","save current model"))
+                   tags$div(title=Explorer_saveExperimentModel_tooltip,
+                            downloadButton("save_current_model_file",Explorer_saveExperimentModel_label))
             ),
             column(4,
                    fluidRow(
                        column(6,
-                              tags$div(title="Total number of direction arrows per dimension inside vector field(s)",
-                                    sliderInput("arrows_number","count of direction arrows",10,100,step=1,value=25)),
-                              tags$div(title="",
-                                    sliderInput("colThr","coloring threshold",0,0.1,step=0.001,value=0.05))
+                              tags$div(title=Explorer_countOfDirectionArrows_tooltip,
+                                    sliderInput("arrows_number",Explorer_countOfDirectionArrows_label,10,100,step=1,value=25)),
+                              tags$div(title=Explorer_coloringThreshold_tooltip,
+                                    sliderInput("colThr",Explorer_coloringThreshold_label,0,0.1,step=0.001,value=0.05))
                         ),
                        column(6,
-                              tags$div(title="Scaling factor for length of direction arrows inside vector field(s)",
-                                   sliderInput("arrowSize","length of direction arrows",0.01,2,step=0.05,value=0.3)),
-                              tags$div(title="Scaling factor for width of arrows inside vector field(s) and transition-state space(s)",
-                                   sliderInput("transWidth","width of all arrows",1,5,step=0.5,value=1.5))
+                              tags$div(title=Explorer_lengthOfDirectionArrows_tooltip,
+                                   sliderInput("arrowSize",Explorer_lengthOfDirectionArrows_label,0.01,2,step=0.05,value=0.3)),
+                              tags$div(title=Explorer_widthOfAllArrows_tooltip,
+                                   sliderInput("transWidth",Explorer_widthOfAllArrows_label,1,5,step=0.5,value=1.5))
                         )
                    ),
-                   tags$div(title="",
-                        radioButtons("colVariant","coloring direction",list(both="both",none="none",horizontal="horizontal",vertical="vertical"),"both",inline=T))
+                   tags$div(title=Explorer_coloringDirection_tooltip,
+                        radioButtons("colVariant",Explorer_coloringDirection_label,list(both="both",none="none",horizontal="horizontal",vertical="vertical"),"both",inline=T))
             ),
             column(2,
                    uiOutput("param_sliders_bio")
@@ -232,74 +239,76 @@ tabPanel("model explorer", icon=icon("move",lib = "glyphicon"),
 #             ),
             column(4,
                    uiOutput("selector"),
-                   tags$div(title="Button will add new layer of plots for vector field or transition-state space or both, depending on which type of input was loaded. 
-                                    Then you will be able to play with it.",
-                        bsButton("add_vf_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=T))
+                   tags$div(title=Explorer_addPlot_tooltip,
+                        bsButton("add_vf_plot",Explorer_addPlot_label,icon=icon("picture",lib="glyphicon"), disabled=T))
             )
         ),
         tags$hr(),
         uiOutput("plots")
-    )
+    ))
 ),
 
 
-tabPanel("result explorer",icon=icon("barcode",lib = "glyphicon"),
+tabPanel(Result_label, icon=icon("barcode",lib = "glyphicon"),
+    tags$div(title=Result_tooltip,            
     fluidPage(
-        column(2,
-               uiOutput("result_help_text"),
-               fluidRow(
-                   column(4,
-                          tags$div(title="",
-                                   bsButton("result_prev","previous",disabled=T,block=T)
-                   )),
-                   column(4,
-                          tags$div(title="",
-                                   bsButton("result_next","next",disabled=T,block=T)
-                   )),
-                   column(4,
-                          tags$div(title="",
-                                   bsButton("result_del","delete",disabled=T,block=T)
-                   ))
-               ),
-            tags$div(title="Select input parameter space (with '.ps.json' extension) for further analysis.",
-                fileInput("ps_file","choose result '.json' file"),accept=".json"),
-            fluidRow(
-                column(6,
-                       tags$div(title="",
-                                bsButton("reload_result_file","reload",disabled=T))),
-                column(6,
-                       tags$div(title="This button saves model checking results.",
-                                downloadButton("save_result_file","save results")))
+        theme = "simplex.css",
+        fluidRow(
+            column(2,
+                   uiOutput("result_help_text"),
+                   fluidRow(
+                       column(4,
+                              tags$div(title=Result_previousExperiment_tooltip,
+                                       bsButton("result_prev",Result_previousExperiment_label,disabled=T,block=T)
+                       )),
+                       column(4,
+                              tags$div(title=Result_nextExperiment_tooltip,
+                                       bsButton("result_next",Result_nextExperiment_label,disabled=T,block=T)
+                       )),
+                       column(4,
+                              tags$div(title=Result_deleteExperiment_tooltip,
+                                       bsButton("result_del",Result_deleteExperiment_label,disabled=T,block=T)
+                       ))
+                   ),
+                tags$div(title=Result_Browse_tooltip,
+                         fileInput("ps_file", Result_Browse_label,accept=".json")),
+                fluidRow(
+                    column(6,
+                           tags$div(title=Result_BrowseReload_tooltip,
+                                    bsButton("reload_result_file", Result_BrowseReload_label, disabled=T))),
+                    column(6,
+                           tags$div(title=Result_saveResults_tooltip,
+                                    downloadButton("save_result_file",Result_saveResults_label)))
+                )
+            ),
+            column(2,
+                tags$div(title=Result_showParametersCoverage_tooltip,
+                    checkboxInput("coverage_check", Result_showParametersCoverage_label, F)),
+                conditionalPanel(
+                    condition = "input.coverage_check == true",
+                    tags$div(title=Result_greyShadeDegree_tooltip,
+                             sliderInput("color_alpha_coeficient", Result_greyShadeDegree_label,min=0,max=1,value=0.9,step=0.01,ticks=F)),
+                    tags$div(title=Result_parameterDensity_tooltip,
+                             sliderInput("density_coeficient",Result_parameterDensity_label,min=10,max=150,value=50,step=1,ticks=F))
+                ),
+                uiOutput("ps_zoom_sliders")
+            ),
+            column(4,
+                uiOutput("chosen_ps_states_ui")
+            ),
+            column(4,
+                   uiOutput("param_selector"),
+                   tags$div(title=Result_addPlot_tooltip,
+                        bsButton("add_param_plot",Result_addPlot_label,icon=icon("picture",lib="glyphicon"), disabled=T))
             )
         ),
-        column(2,
-            tags$div(title="Scaling factor for density of shown rectangles in parameter space.",
-                checkboxInput("coverage_check","show parameters coverage",F)),
-            conditionalPanel(
-                condition = "input.coverage_check == true",
-                tags$div(title="Scaling factor in the range <0,1> for shade of colour representing parameters.",
-                         sliderInput("color_alpha_coeficient","grey shade degree",min=0,max=1,value=0.9,step=0.01,ticks=F)),
-                tags$div(title="Scaling factor in the range <10,150> for density of shown rectangles in parameter space.",
-                         sliderInput("density_coeficient","density",min=10,max=150,value=50,step=1,ticks=F))
-            ),
-            uiOutput("ps_zoom_sliders")
-        ),
-        column(4,
-            uiOutput("chosen_ps_states_ui")
-        ),
-        column(4,
-               uiOutput("param_selector"),
-               tags$div(title="Button will add new layer of plots for parameter space and corresponding transition-state space as soon as some file is loaded. 
-                                    Then you will be able to play with it.",
-                    bsButton("add_param_plot","add plot",icon=icon("picture",lib="glyphicon"), disabled=T))
-        )
-    ),
-    tags$hr(),
-    uiOutput("param_space_plots")
+        tags$hr(),
+        uiOutput("param_space_plots")
+    ))
 )
+
     )
-)
-)
+))
               
               
               

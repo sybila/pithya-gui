@@ -14,6 +14,7 @@ if(!require(rjson,quietly = T)) {install.packages("rjson", dependencies=T,quiet 
 #if(!require(shinythemes,quietly=T)) install.packages("shinythemes",quiet=T); library(shinythemes,quietly=T)
 #if(!require(ggplot2,quietly = T)) install.packages("ggplot2",quiet = T); library(ggplot2,quietly = T)
 
+source("tooltips.R")
 source("global.R")
 #source("generator.R")
 
@@ -157,7 +158,8 @@ param_chosen        <- reactiveValues(data=NULL,max=1)
 
 observeEvent(input$process_run,{
     if(!is.null(preloading_ss_file()$filedata) && input$process_run != 0) {
-        cat("Parameter synthesis is started\n",file=progressFileName)
+        cat(Parameter_synthesis_started)
+        cat(Parameter_synthesis_started, file=progressFileName)
         modelTempName  <- paste0(files_path,"model.",session_random,".abst.bio")
         writeLines(preloading_ss_file()$filedata,modelTempName)
         propTempName   <- paste0(files_path,"prop.",session_random,".ctl")
@@ -167,14 +169,14 @@ observeEvent(input$process_run,{
         file.remove(modelTempName,propTempName)
         if(file.exists(configFileName) && length(readLines(configFileName)) > 0) {
             cat("config file is created\n")
-            cat("Config file is created\n",file=progressFileName,append=T)
+            # cat("Config file is created\n",file=progressFileName,append=T)
             updateButton(session,"process_run",style="default",disabled=F)
             updateButton(session,"process_stop",style="danger",disabled=F)
             # checker_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"),
             #                        ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//",
             #                        "/home/demon/skola/newbiodivine/json-ode-model/target/release/"))     # it must be whole path or be a part of PATH
             system2(paste0(new_programs_path,"biodivine-ctl"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
-            cat("Process has started\n",file=progressFileName)
+            # cat("Process has started\n",file=progressFileName)
             # system2(paste0(checker_path,"ode_model"), c(configFileName,">",resultFileName,"2>>",progressFileName), wait=F)
         } else cat("\nError: some error occured, because no config file was created!\n")
     }
@@ -186,7 +188,8 @@ observeEvent(input$process_stop,{
             pid <- gsub("PID: ","",grep("^PID: [0-9]+$",progressFile(),value=T))
             command <- ifelse(.Platform$OS.type=="windows", paste0("taskkill /f /pid ",pid), paste0("kill -9 ",pid))
             system(command,wait=T)
-            cat("Process was killed!\n",file=progressFileName)
+            cat(Parameter_synthesis_stopped)
+            cat(Parameter_synthesis_stopped, file=progressFileName)
             updateButton(session,"process_stop",style="default",disabled=T)
             updateButton(session,"process_run",style="success",disabled=F)
         }
@@ -204,14 +207,14 @@ output$progress_output <- renderPrint({
             # string <- gsub(", \t","",gsub("You have to use an exact threshold in propositions! Proposition:","",
             #                grep("You have to use an exact threshold in propositions! Proposition: [^,]+,",progressFile(),value=T)))
             # print(string)
-            js_string <- 'alert("Missing threshold!");'
+            js_string <- paste0('alert("Missing threshold!");')
             session$sendCustomMessage(type='jsCode', list(value = js_string))
         }
         if(T %in% grepl("^!!DONE!!$",progressFile())) {
             # TODO: here should be call for message window
             updateButton(session,"process_stop",style="default",disabled=T)
             updateButton(session,"add_result_plot", disabled=F)
-            js_string <- 'alert("Parameter synthesis done!");'
+            js_string <- paste0('alert("Parameter synthesis done!");')
             session$sendCustomMessage(type='jsCode', list(value = js_string))
         }
         
@@ -405,7 +408,7 @@ observeEvent(input$model_input_area,{
 })
 
 observeEvent(c(input$vf_file,input$reset_model),{
-    cat("Start with button 'generate approximation'.\n",file=progressFileName)
+    cat(Starting_advice, file=progressFileName)
     if(!is.null(input$vf_file) && !is.null(input$vf_file$datapath)) {
         # if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename != input$vf_file$datapath) {
         #     #session$reload()
@@ -443,8 +446,8 @@ output$save_current_model_file <- downloadHandler(
 observeEvent(input$generate_abstraction,{
     if(input$generate_abstraction != 0) {
         # loaded_ss_file$filedata <- readLines(paste0(examples_dir,"//model_2D_1P_400R.abst.bio"))
-        cat("tractor is about to run\n")
-        cat("Approximation is started\n",file=progressFileName)
+        cat(Approximation_started)
+        cat(Approximation_started, file=progressFileName)
         
         withProgress({
             model_temp_name  <- paste0(files_path,"model.",session_random,".bio")
@@ -465,15 +468,15 @@ observeEvent(input$generate_abstraction,{
                 loaded_ss_file$filename <- abstracted_model_temp_name
                 loaded_ss_file$filedata <- readLines(abstracted_model_temp_name)
                 file.remove(abstracted_model_temp_name)
-                cat("abstracted file is loaded\n")
-                cat("Approxition is finished\n",file=progressFileName,append=T)
+                cat(Approximation_finished)
+                cat(Approximation_finished, file=progressFileName,append=T)
                 updateButton(session,"generate_abstraction",style="default",disabled=F)
                 updateButton(session,"process_run",style="success",disabled=F)
             } else {
-                cat("\nError: some error occured during the approximation process!\n")
-                cat("Some error occured during abstraction generation!\n",file=progressFileName,append=T)
+                cat(Approximation_error)
+                cat(Approximation_error, file=progressFileName,append=T)
             }
-        }, message="Model approximation is running...", value=0.5)
+        }, message=Approximation_running, value=0.5)
     }
 })
 
@@ -496,7 +499,7 @@ observeEvent(input$generate_abstraction,{
 
 output$model_help_text <- renderUI({
     if(stored_ss_files$current != 0) {
-        helpText(paste0("Experiment no. ",stored_vf_files$current," (",stored_vf_files$data[[stored_vf_files$current]]$timestamp,")"))
+        helpText(paste0(Explorer_experiment_label, stored_vf_files$current," (",stored_vf_files$data[[stored_vf_files$current]]$timestamp,")"))
     }
 })
 
@@ -792,7 +795,7 @@ output$param_sliders_bio <- renderUI({
         
         lapply(1:length(loading_vf_file()$params), function(i) {
             print("setter")
-            label <- paste0("parameter ",names(loading_vf_file()$params)[i])
+            label <- paste0(Explorer_parameter_label,names(loading_vf_file()$params)[i])
             name <- paste0("param_slider_vf_",stored_vf_files$current,"_",i)
             values <- c(min(as.numeric(loading_vf_file()$params[[i]])),max(as.numeric(loading_vf_file()$params[[i]])))
             # selected_value <- ifelse(!is.null(input[[name]]), current_param_sliders()[[i]], 
@@ -804,7 +807,8 @@ output$param_sliders_bio <- renderUI({
             
             fluidRow(
                 column(12,
-            numericInput(name,label=label,min=values[1],max=values[2],value=selected_value,step=((values[2]-values[1])/1000))
+                       tags$div(title=Explorer_parameter_tooltip,
+                                numericInput(name,label=label,min=values[1],max=values[2],value=selected_value,step=((values[2]-values[1])/1000)))
             #,sliderInput(paste0("num_",name),NULL,min=values[1],max=values[2],value=((values[2]-values[1])*0.1),step=((values[2]-values[1])/1000))
                 )
             )
@@ -850,13 +854,13 @@ output$selector <- renderUI({
         variables <- loading_vf_file()$vars
         lapply(vf_update(), function(i) {
             idx <- paste0("vf_selector_x_",i)
-            labelx <- paste0("horizontal")
+            labelx <- paste0(Explorer_horizontal_label)
             choicesx <- list_of_names
             selectedx <- ifelse(!is.null(input[[paste0("vf_selector_x_",i)]]), input[[paste0("vf_selector_x_",i)]], #empty_sign)
                                 variables[[1]])
             
             idy <- paste0("vf_selector_y_",i)
-            labely <- paste0("vertical")
+            labely <- paste0(Explorer_vertical_label)
             choicesy <- list_of_names
             selectedy <- ifelse(!is.null(input[[paste0("vf_selector_y_",i)]]), input[[paste0("vf_selector_y_",i)]], #empty_sign)
                                 ifelse(length(variables) > 1, variables[[2]], variables[[1]]))
@@ -866,14 +870,18 @@ output$selector <- renderUI({
 #                            helpText(paste0("Plot no. ",i))
 #                     ),
                 column(5,
-                       selectInput(idx, labelx, choicesx, selectedx)
+                       tags$div(title=Explorer_horizontal_tooltip,
+                                selectInput(idx, labelx, choicesx, selectedx))
                 ),
                 column(5,
-                       selectInput(idy, labely, choicesy, selectedy)
+                       tags$div(title=Explorer_vertical_tooltip,
+                                selectInput(idy, labely, choicesy, selectedy))
                 ),
                 column(2,
-                       bsButton(paste0("cancel_vf_",i), "cancel"),
-                       checkboxInput(paste0("hide_vf_",i),"hide", ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],F))
+                       tags$div(title=Explorer_cancel_tooltip,
+                                bsButton(paste0("cancel_vf_",i), Explorer_cancel_label)),
+                       tags$div(title=Explorer_hide_tooltip,
+                                checkboxInput(paste0("hide_vf_",i), Explorer_hide_label, ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],F)))
                        # bsButton(paste0("hide_vf_",i), type="toggle", "hide", value=ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],F))
                 )
             )
@@ -973,44 +981,52 @@ output$plots <- renderUI({
         one_line <- lapply(visible_vf_plots(), function(i) {
             fluidRow(
                 column(2,
-                       actionButton(paste0("apply_plot_vf_",i),"Apply to all"),
+                       tags$div(title=Explorer_VF_ApplyToAll_tooltip,
+                                actionButton(paste0("apply_plot_vf_",i),Explorer_VF_ApplyToAll_label)),
                        if(!is.null(loading_ss_file())) {
-                           actionButton(paste0("apply_to_tss_vf_",i),"Apply to TSS")
+                           tags$div(title=Explorer_VF_ApplyToTSS_tooltip,
+                                    actionButton(paste0("apply_to_tss_vf_",i),Explorer_VF_ApplyToTSS_label))
                        },
-                       actionButton(paste0("clear_plot_vf_",i),"Clear plot"),
-                       actionButton(paste0("unzoom_plot_vf_",i),"Unzoom"),
+                       tags$div(title=Explorer_VF_ClearPlot_tooltip,
+                                actionButton(paste0("clear_plot_vf_",i),Explorer_VF_ClearPlot_label)),
+                       tags$div(title=Explorer_VF_Unzoom_tooltip,
+                                actionButton(paste0("unzoom_plot_vf_",i),Explorer_VF_Unzoom_label)),
                        if(!is.null(loading_ss_file())) {
                            conditionalPanel(
                                condition = "input.advanced == true",
-                               checkboxInput(paste0("abst_vf_",i),"use PWA model",ifelse(!is.null(input[[paste0("abst_vf_",i)]]), input[[paste0("abst_vf_",i)]], F))
+                               tags$div(title=Explorer_VF_UsePWAmodel_tooltip,
+                                        checkboxInput(paste0("abst_vf_",i), Explorer_VF_UsePWAmodel_label, 
+                                                      ifelse(!is.null(input[[paste0("abst_vf_",i)]]), input[[paste0("abst_vf_",i)]], F)))
                            )
                        },
                        lapply(1:length(loading_vf_file()$vars), function(t) {
                            name <- loading_vf_file()$vars[[t]]
                            if(!name %in% c(input[[paste0("vf_selector_x_",i)]],input[[paste0("vf_selector_y_",i)]])) {
-                               label <- paste0("continues scale in ",loading_vf_file()$vars[[t]])
+                               label <- paste0(Explorer_VF_ScaleSlider_label, loading_vf_file()$vars[[t]])
                                wname <- paste0("scale_slider_vf_",i,"_",t)
                                if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]])
                                    values <- loading_ss_file()$ranges[[name]]
                                else
                                    values <- loading_vf_file()$ranges[[name]]
-                               sliderInput(wname,label=label,min=values[1],max=values[2],step=zoom_granul,
-                                           value=ifelse(is.null(input[[wname]]),values[1],input[[wname]]))
+                               tags$div(title=Explorer_VF_ScaleSlider_tooltip,
+                                        sliderInput(wname,label=label,min=values[1],max=values[2],step=zoom_granul,
+                                           value=ifelse(is.null(input[[wname]]),values[1],input[[wname]])))
                            }
                        }),
-                       verbatimTextOutput(paste0("hover_text_vf_",i))
+                       tags$div(title=Explorer_VF_HoverTextArea_tooltip,
+                                verbatimTextOutput(paste0("hover_text_vf_",i)))
                 ),
                 column(4,
-                       helpText("vector field of the model"),
+                       helpText(Explorer_VF_label),
                        imageOutput(paste0("plot_vf_",i),"auto","auto",click=paste0("vf_",i,"_click"),dblclick=paste0("vf_",i,"_dblclick"),
                                    brush=brushOpts(id=paste0("vf_",i,"_brush"),delayType="debounce",delay=brush_delay_limit,resetOnNew=T),
                                    hover=hoverOpts(id=paste0("vf_",i,"_hover"),delayType="debounce",delay=hover_delay_limit))
                 ),
                 column(4,
                        if(!is.null(loading_ss_file()))
-                           helpText("transition-state space of the model")
+                           helpText(Explorer_SS_label)
                        else
-                           h3("Approximation have to be generated before showing transition-state space"),
+                           h3(Explorer_SS_error),
                        if(!is.null(loading_ss_file()))
                            imageOutput(paste0("plot_ss_",i),"auto","auto",click=paste0("ss_",i,"_click"),dblclick=paste0("ss_",i,"_dblclick"),
                                        hover=hoverOpts(id=paste0("ss_",i,"_hover"),delayType="debounce",delay=hover_delay_limit),
@@ -1018,30 +1034,35 @@ output$plots <- renderUI({
                 ),
                 column(2,
                        if(!is.null(loading_ss_file())) {
-                           actionButton(paste0("apply_plot_ss_",i),"Apply to all")
+                           tags$div(title=Explorer_SS_ApplyToAll_tooltip,
+                                    actionButton(paste0("apply_plot_ss_",i),Explorer_SS_ApplyToAll_label))
                        },
                        if(!is.null(loading_ss_file())) {
-                           actionButton(paste0("clear_plot_ss_",i),"Clear plot")
+                           tags$div(title=Explorer_SS_ClearPlot_tooltip,
+                                    actionButton(paste0("clear_plot_ss_",i),Explorer_SS_ClearPlot_label))
                        },
                        if(!is.null(loading_ss_file())) {
-                           actionButton(paste0("unzoom_plot_ss_",i),"Unzoom")
+                           tags$div(title=Explorer_SS_Unzoom_tooltip,
+                                    actionButton(paste0("unzoom_plot_ss_",i),Explorer_SS_Unzoom_label))
                        },
                        if(!is.null(loading_ss_file())) {
                            lapply(1:length(loading_ss_file()$var_names), function(t) {
                                if(!loading_ss_file()$var_names[[t]] %in% c(input[[paste0("vf_selector_x_",i)]],input[[paste0("vf_selector_y_",i)]])) {
-                                   label <- paste0("discrete scale in ",loading_ss_file()$var_names[[t]])
+                                   label <- paste0(Explorer_SS_ScaleSlider_label, loading_ss_file()$var_names[[t]])
                                    wname <- paste0("scale_slider_ss_",i,"_",t)
                                    # values <- c(1,ifelse(max(loading_ss_file()$thr[[t]]) > loading_vf_file()$ranges[[t]][2],
                                    #                      length(loading_ss_file()$thr[[t]][which(loading_ss_file()$thr[[t]] <= loading_vf_file()$ranges[[t]][2])]),
                                    #                      length(loading_ss_file()$thr[[t]])-1))
                                    values <- c(1, length(loading_ss_file()$thr[[t]])-1)
-                                   sliderInput(wname,label=label,min=values[1],max=values[2],step=1,
-                                               value=ifelse(is.null(input[[wname]]),values[1],input[[wname]]))
+                                   tags$div(title=Explorer_SS_ScaleSlider_tooltip,
+                                            sliderInput(wname,label=label,min=values[1],max=values[2],step=1,
+                                               value=ifelse(is.null(input[[wname]]),values[1],input[[wname]])))
                                }
                            })
                        },
                        if(!is.null(loading_ss_file())) {
-                           verbatimTextOutput(paste0("hover_text_ss_",i))
+                           tags$div(title=Explorer_SS_HoverTextArea_tooltip,
+                                    verbatimTextOutput(paste0("hover_text_ss_",i)))
                        }
                 )
             )
@@ -1703,7 +1724,7 @@ draw_state_space_new_2 <- function(name_x, name_y, plot_index, boundaries) {
                 out2 <- NULL
                 tmp_out <- NULL   
                 dt <- NULL
-            }, message="waiting for transition-state space"))
+            }, message=Waiting_for_state_space))
             cat(paste0("computing state-space for ",plot_index,"\n"))
             print(timing)
         }
@@ -2048,7 +2069,7 @@ draw_1D_state_space <- function(name_x, plot_index, boundaries) {
                 out2 <- NULL
                 tmp_out <- NULL   
                 dt <- NULL
-            }, message="waiting for transition-state space"))
+            }, message=Waiting_for_state_space))
             cat(paste0("computing state-space for ",plot_index,"\n"))
             print(timing)
         }
@@ -2172,7 +2193,7 @@ output$save_result_file <- downloadHandler(
 
 output$result_help_text <- renderUI({
     if(stored_ps_files$current != 0) {
-        helpText(paste0("Experiment no. ",stored_ps_files$current," (",stored_ps_files$data[[stored_ps_files$current]]$timestamp,")"))
+        helpText(paste0(Result_experiment_label, stored_ps_files$current," (",stored_ps_files$data[[stored_ps_files$current]]$timestamp,")"))
     }
 })
 
@@ -2326,9 +2347,12 @@ output$chosen_ps_states_ui <- renderUI({
         selected_formula <- ifelse(length(stored_ps_current_formula$data) < stored_ps_files$current || isempty(stored_ps_current_formula$data[[stored_ps_files$current]]), 
                                  1,
                                  stored_ps_current_formula$data[[stored_ps_files$current]])
-        list(selectInput(id,"choose formula of interest:",formulae_list,selected_formula,selectize=F,size=1,width="100%"))
+        list(
+            tags$div(title=Result_chooseFormulaOfInterest_tooltip,
+                     selectInput(id, Result_chooseFormulaOfInterest_label, formulae_list, selected_formula, selectize=F, size=1, width="100%"))
+        )
     } else
-        h3("Parameter synthesis has to be run or result file loaded before showing some results")
+        h3(Result_chooseFormulaOfInterest_error)
 })
 chosen_ps_formulae_clean <- eventReactive(input[[paste0("chosen_ps_formula_",stored_ps_files$current)]],{
     # stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
@@ -2342,27 +2366,31 @@ output$param_selector <- renderUI({
         #list_of_param_names <- as.list(c(loading_ps_file()$param_names, "Choose"=empty_sign))
         lapply(param_update(), function(i) {
             idx <- paste0("param_selector_x_",i)
-            labelx <- paste0("horizontal")# axis in plot ",i)
+            labelx <- paste0(Result_horizontal_label)# axis in plot ",i)
             choicesx <- list_of_param_names
             selectedx <- ifelse(!is.null(input[[paste0("param_selector_x_",i)]]), input[[paste0("param_selector_x_",i)]], #empty_sign)
                                 list_of_param_names[1])
             
             idy <- paste0("param_selector_y_",i)
-            labely <- paste0("vertical")# axis in plot ",i)
+            labely <- paste0(Result_vertical_label)# axis in plot ",i)
             choicesy <- list_of_param_names
             selectedy <- ifelse(!is.null(input[[paste0("param_selector_y_",i)]]), input[[paste0("param_selector_y_",i)]], #empty_sign)
                                 ifelse(length(list_of_param_names) > 1, list_of_param_names[2], list_of_param_names[1]))
             
             fluidRow(
                 column(5,
-                       selectInput(idx,labelx,choicesx,selectedx)
+                       tags$div(title=Result_horizontal_tooltip,
+                                selectInput(idx,labelx,choicesx,selectedx))
                 ),
                 column(5,
-                       selectInput(idy,labely,choicesy,selectedy)
+                       tags$div(title=Result_vertical_tooltip,
+                                selectInput(idy,labely,choicesy,selectedy))
                 ),
                 column(2,
-                       actionButton(paste0("cancel_ps_",i), "cancel"),
-                       checkboxInput(paste0("hide_ps_",i), "hide", ifelse(!is.null(input[[paste0("hide_ps_",i)]]),input[[paste0("hide_ps_",i)]],F))
+                       tags$div(title=Result_cancel_tooltip,
+                                actionButton(paste0("cancel_ps_",i), Result_cancel_label)),
+                       tags$div(title=Result_hide_tooltip,
+                                checkboxInput(paste0("hide_ps_",i), Result_hide_label, ifelse(!is.null(input[[paste0("hide_ps_",i)]]),input[[paste0("hide_ps_",i)]],F)))
                 )
             )
         })
@@ -2455,18 +2483,20 @@ output$param_space_plots <- renderUI({
         list_of_param_names <- loading_ps_file()$param_names
         one_line <- lapply(visible_ps_plots(), function(i) {
             if(input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names && input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names)
-                h3("Please select at least one parameter.")
+                h3(Result_noParameterSelected_error)
             else
             fluidRow(
                 column(2,
                        #actionButton(paste0("apply_plot_ps_",i),"Apply to all"),
-                       actionButton(paste0("clear_plot_ps_",i),"Deselect click"),
-                       actionButton(paste0("unzoom_plot_ps_",i),"Unzoom"),
+                       tags$div(title=Result_PS_DeselectClick_tooltip,
+                                actionButton(paste0("clear_plot_ps_",i),Result_PS_DeselectClick_label)),
+                       tags$div(title=Result_PS_Unzoom_tooltip,
+                                actionButton(paste0("unzoom_plot_ps_",i),Result_PS_Unzoom_label)),
                        lapply(1:length(list_of_all_names), function(t) {
                           if(!list_of_all_names[[t]] %in% c(input[[paste0("param_selector_x_",i)]],input[[paste0("param_selector_y_",i)]])) {
                               is_mixed <- input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names
                               is_var <- list_of_all_names[[t]] %in% loading_ps_file()$var_names
-                              label <- paste0("scale in ",list_of_all_names[[t]])
+                              label <- paste0(Result_PS_ScaleSlider_label,list_of_all_names[[t]])
                               name <- paste0("scale_slider_ps_",i,"_",t)
                               if(is_var)    values <- range(loading_ps_file()$thresholds[[ which(loading_ps_file()$var_names == list_of_all_names[[t]]) ]])
                               else          values <- param_ranges()[[t]]
@@ -2476,10 +2506,10 @@ output$param_space_plots <- renderUI({
                                              column(1,
                                                 conditionalPanel(
                                                     condition = "input.advanced == true",
-                                                    checkboxInput(paste0("scale_switch_ps_",i,"_",t), label=NULL,
-                                                          ifelse(!is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), input[[paste0("scale_switch_ps_",i,"_",t)]],
-                                                          ifelse(is_var, F, T))
-                                                    )
+                                                    tags$div(title=Result_PS_ScaleSwitch_tooltip,
+                                                             checkboxInput(paste0("scale_switch_ps_",i,"_",t), label=NULL,
+                                                                           ifelse(!is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), 
+                                                                                  input[[paste0("scale_switch_ps_",i,"_",t)]], ifelse(is_var, F, T))))
                                                 )
                                              ),
                                              column(11,
@@ -2489,8 +2519,9 @@ output$param_space_plots <- renderUI({
                                          ),
                                          conditionalPanel(
                                              condition = paste0("input.scale_switch_ps_",i,"_",t," == true"),
-                                             sliderInput(name,label=NULL,min=values[1],max=values[2],step=0.001,
-                                                         value=ifelse(is.null(input[[name]]), values[1], input[[name]] ))
+                                             tags$div(title=Result_PS_ScaleSlider_tooltip,
+                                                      sliderInput(name,label=NULL,min=values[1],max=values[2],step=0.001,
+                                                         value=ifelse(is.null(input[[name]]), values[1], input[[name]] )))
                                          )
                                   )
                               )
@@ -2592,13 +2623,14 @@ output$param_space_plots <- renderUI({
 #                                }
 #                            })
 #                        },
-                       verbatimTextOutput(paste0("hover_text_ps_",i))
+                    tags$div(title=Result_PS_HoverTextArea_tooltip,
+                             verbatimTextOutput(paste0("hover_text_ps_",i)))
                 ),
                 column(4,
                        if(input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names) {
-                           helpText("parameter-variable dependency diagram")
+                           helpText(Result_PSmixed_label)
                        } else {
-                           helpText("parameter space of the model")
+                           helpText(Result_PS_label)
                        },
                        div(id = "plot-container",
                            tags$img(
@@ -2611,7 +2643,7 @@ output$param_space_plots <- renderUI({
                        )
                 ),
                 column(4,
-                       helpText("... and corresponding transition-state space"),
+                       helpText(Result_SS_label),
                        if(!is.null(input[[paste0("param_ss_selector_x_",i)]]) && input[[paste0("param_ss_selector_x_",i)]] != empty_sign &&
                               !is.null(input[[paste0("param_ss_selector_y_",i)]]) && input[[paste0("param_ss_selector_y_",i)]] != empty_sign) {
                            div(id = "plot-container",
@@ -2627,33 +2659,40 @@ output$param_space_plots <- renderUI({
                 ),
                 column(2,
                        #actionButton(paste0("apply_plot_param_ss_",i),"Apply to all"),
-                       actionButton(paste0("clear_plot_param_ss_",i),"Deselect all"),
-                       actionButton(paste0("unzoom_plot_param_ss_",i),"Unzoom"),
+                       tags$div(title=Result_SS_DeselectAll_tooltip,
+                                actionButton(paste0("clear_plot_param_ss_",i),Result_SS_DeselectAll_label)),
+                       tags$div(title=Result_SS_Unzoom_tooltip,
+                                actionButton(paste0("unzoom_plot_param_ss_",i),Result_SS_Unzoom_label)),
                        fluidRow(
                            column(6,
-                                  selectInput(paste0("param_ss_selector_x_",i),"horizontal axis",list_of_var_names,
-                                              ifelse(!is.null(input[[paste0("param_ss_selector_x_",i)]]),input[[paste0("param_ss_selector_x_",i)]], list_of_var_names[[1]]))
+                                  tags$div(title=Result_SS_horizontal_tooltip,
+                                           selectInput(paste0("param_ss_selector_x_",i),Result_SS_horizontal_label,list_of_var_names,
+                                               ifelse(!is.null(input[[paste0("param_ss_selector_x_",i)]]),input[[paste0("param_ss_selector_x_",i)]], list_of_var_names[[1]])))
                            ),
                            column(6,
-                                  selectInput(paste0("param_ss_selector_y_",i),"vertical axis",list_of_var_names,
-                                              ifelse(!is.null(input[[paste0("param_ss_selector_y_",i)]]),input[[paste0("param_ss_selector_y_",i)]], #empty_sign))
-                                                     ifelse(length(loading_ps_file()$var_names) > 1, list_of_var_names[[2]], list_of_var_names[[1]])))
+                                  tags$div(title=Result_SS_vertical_tooltip,
+                                           selectInput(paste0("param_ss_selector_y_",i),Result_SS_vertical_label,list_of_var_names,
+                                               ifelse(!is.null(input[[paste0("param_ss_selector_y_",i)]]),input[[paste0("param_ss_selector_y_",i)]], #empty_sign))
+                                                      ifelse(length(loading_ps_file()$var_names) > 1, list_of_var_names[[2]], list_of_var_names[[1]]))))
                            )
                        ),
                        if(!is.null(input[[paste0("param_ss_selector_x_",i)]]) && input[[paste0("param_ss_selector_x_",i)]] != empty_sign &&
                                 !is.null(input[[paste0("param_ss_selector_y_",i)]]) && input[[paste0("param_ss_selector_y_",i)]] != empty_sign) {
                            lapply(1:length(loading_ps_file()$var_names), function(t) {
                                if(!loading_ps_file()$var_names[[t]] %in% c(input[[paste0("param_ss_selector_x_",i)]],input[[paste0("param_ss_selector_y_",i)]])) {
-                                   label <- paste0("discrete scale in ",loading_ps_file()$var_names[[t]])
+                                   label <- paste0(Result_SS_ScaleSlider_label,loading_ps_file()$var_names[[t]])
                                    name <- paste0("scale_slider_param_ss_",i,"_",t)
                                    #values <- c(1,length(loading_ps_file()$thresholds[[t]])-1)
                                    values <- range(loading_ps_file()$thresholds[[t]])
-                                   sliderInput(name,label=label,min=values[1],max=values[2],step=0.001, #,step=1,
-                                               value=ifelse(is.null(input[[paste0("scale_slider_param_ss_",i,"_",t)]]),values[1],input[[paste0("scale_slider_param_ss_",i,"_",t)]]))
+                                   tags$div(title=Result_SS_ScaleSlider_tooltip,
+                                            sliderInput(name,label=label,min=values[1],max=values[2],step=0.001, #,step=1,
+                                                value=ifelse(is.null(input[[paste0("scale_slider_param_ss_",i,"_",t)]]),values[1],
+                                                             input[[paste0("scale_slider_param_ss_",i,"_",t)]])))
                                }
                            })
                        },
-                       verbatimTextOutput(paste0("hover_text_param_ss_",i))
+                       tags$div(title=Result_SS_HoverTextArea_tooltip,
+                                verbatimTextOutput(paste0("hover_text_param_ss_",i)))
                 )
             )
             #}
