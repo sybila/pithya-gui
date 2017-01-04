@@ -177,7 +177,6 @@ observeEvent(input$process_run,{
             #                        "/home/demon/skola/newbiodivine/json-ode-model/target/release/"))     # it must be whole path or be a part of PATH
             system2(paste0(new_programs_path,"biodivine-ctl"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
             # cat("Process has started\n",file=progressFileName)
-            # system2(paste0(checker_path,"ode_model"), c(configFileName,">",resultFileName,"2>>",progressFileName), wait=F)
         } else cat("\nError: some error occured, because no config file was created!\n")
     }
 })
@@ -202,26 +201,63 @@ output$progress_output <- renderPrint({
         # if(T %in% grepl("Model does not contain threshold",progressFile())) cat("chyba threshold\n")
         
         # TEMPLATE: You have to use an exact threshold in propositions! Proposition: y > 8.0,
-        if(T %in% grepl("You have to use an exact threshold in propositions! Proposition: [^,]+,",progressFile())) {
-            # # cat("chyba threshold\n")
-            # string <- gsub(", \t","",gsub("You have to use an exact threshold in propositions! Proposition:","",
-            #                grep("You have to use an exact threshold in propositions! Proposition: [^,]+,",progressFile(),value=T)))
-            # print(string)
-            js_string <- paste0('alert("Missing threshold!");')
-            session$sendCustomMessage(type='jsCode', list(value = js_string))
+        # if(T %in% grepl("You have to use an exact threshold in propositions! Proposition: [^,]+,",progressFile())) {
+        
+        if(T %in% grepl("Missing thresholds: .*",progressFile())) {
+            missing_thr_message <- grep('Missing thresholds: .*',progressFile(),value=T)
+            missing_thr_list <- lapply(tstrsplit(gsub(" ","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) unlist(strsplit(sub(".*:","",x),",",fixed=T)))
+            names(missing_thr_list) <- sapply(tstrsplit(gsub(" ","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) sub(":.*","",x))
+            js_string <- paste0('confirm("',missing_thr_message,'! It will be added into model.");')
+            js_string <- paste0('confirm("',missing_thr_message,'!");')
+            session$sendCustomMessage(type='missThres', list(value = js_string, data = missing_thr_list))
         }
         if(T %in% grepl("^!!DONE!!$",progressFile())) {
-            # TODO: here should be call for message window
             updateButton(session,"process_stop",style="default",disabled=T)
             updateButton(session,"add_result_plot", disabled=F)
             js_string <- paste0('alert("Parameter synthesis done!");')
-            session$sendCustomMessage(type='jsCode', list(value = js_string))
+            session$sendCustomMessage(type='paramSynthEnd', list(value = js_string))
         }
         
         # if(length(progressFile()) > progressMaxLength)
         #     cat(paste0(progressFile()[(length(progressFile())-progressMaxLength+1):length(progressFile())],collapse="\n"))
         # else
         cat(paste0(progressFile(),collapse="\n"))
+    }
+})
+
+observeEvent(input$missing_threshold_counter,{
+    if(input$missing_threshold) {
+        # Ok button was clicked
+        
+        # # adds thresholds into approximated model
+        # data <- preloading_ss_file()$filedata
+        # for(i in 1:length(input$missing_threshold_data)) {
+        #     line_id <- grep(paste0("THRES:",names(input$missing_threshold_data)[[1]]),gsub(" ","",data))
+        #     data[[line_id]] <- paste0(data[[line_id]],",",paste0(input$missing_threshold_data[[1]],collapse = ","))
+        # }
+        # loaded_ss_file$filedata <- data
+        # 
+        # # adds thresholds into original model + into model editor
+        # data <- preloading_vf_file()$filedata
+        # for(i in 1:length(input$missing_threshold_data)) {
+        #     line_id <- grep(paste0("THRES:",names(input$missing_threshold_data)[[1]]),gsub(" ","",data))
+        #     data[[line_id]] <- paste0(data[[line_id]],",",paste0(input$missing_threshold_data[[1]],collapse = ","))
+        # }
+        # loaded_vf_file$filedata <- data
+        # updateAceEditor(session,"model_input_area",value = paste(data,collapse="\n"))
+        
+        
+        #temporary
+        cat(Parameter_synthesis_stopped)
+        cat(Parameter_synthesis_stopped, file=progressFileName)
+        updateButton(session,"process_stop",style="default",disabled=T)
+        updateButton(session,"process_run",style="success",disabled=F)
+    } else {
+        # Cancel button was clicked
+        cat(Parameter_synthesis_stopped)
+        cat(Parameter_synthesis_stopped, file=progressFileName)
+        updateButton(session,"process_stop",style="default",disabled=T)
+        updateButton(session,"process_run",style="success",disabled=F)
     }
 })
 
@@ -403,8 +439,10 @@ else {
 })
 
 observeEvent(input$model_input_area,{
-    loaded_vf_file$filedata <- strsplit(input$model_input_area,"\n",fixed=T)[[1]]
-    updateButton(session,"generate_abstraction", style="success", disabled=F)
+    if(!identical(loaded_vf_file$filedata,strsplit(input$model_input_area,"\n",fixed=T)[[1]])) {
+        loaded_vf_file$filedata <- strsplit(input$model_input_area,"\n",fixed=T)[[1]]
+        updateButton(session,"generate_abstraction", style="success", disabled=F)
+    }
 })
 
 observeEvent(c(input$vf_file,input$reset_model),{
@@ -464,7 +502,7 @@ observeEvent(input$generate_abstraction,{
             #                   ">", abstracted_model_temp_name,
             #                   "2>",progressFileName), wait=T)
             file.remove(c(model_temp_name))
-            if(file.exists(abstracted_model_temp_name)) {
+            if(file.exists(abstracted_model_temp_name) && length(readLines(abstracted_model_temp_name)) > 0) {
                 loaded_ss_file$filename <- abstracted_model_temp_name
                 loaded_ss_file$filedata <- readLines(abstracted_model_temp_name)
                 file.remove(abstracted_model_temp_name)
@@ -2307,7 +2345,7 @@ loading_ps_file <- reactive({
             if(file$type == "smt") {
                 # params <- data.table(expr=sapply(1:length(file$parameter_values),function(x) file$parameter_values[[x]]$Rexpression))
                 params <- data.table(expr=paste0("function(ip)",gsub("||","|",gsub("&&","&", sapply(1:length(file$parameter_values),
-                                                                                        function(x) file$parameter_values[[x]]$Rexpression),fixed=T),fixed=T)))
+                                                                                                    function(x) file$parameter_values[[x]]$Rexpression),fixed=T),fixed=T)))
                 params[, id:=1:nrow(params)]
                 params[, row_id:=1:nrow(params)]
                 setkey(params,id)
@@ -2708,17 +2746,10 @@ draw_param_ss_plots <- observe({
             if(!is.null(input[[paste0("param_ss_selector_x_",my_i)]]) && input[[paste0("param_ss_selector_x_",my_i)]] != empty_sign &&
                    !is.null(input[[paste0("param_ss_selector_y_",my_i)]]) && input[[paste0("param_ss_selector_y_",my_i)]] != empty_sign) {
                 plotname <- paste0("param_ss_plot_",my_i)
-                if(input[[paste0("param_ss_selector_x_",my_i)]] != input[[paste0("param_ss_selector_y_",my_i)]]) {
-                    output[[plotname]] <- renderPlot({
-                        draw_param_ss(isolate(input[[paste0("param_ss_selector_x_",my_i)]]), isolate(input[[paste0("param_ss_selector_y_",my_i)]]), my_i, param_ss_brushed$data[[my_i]])
-                    },height=change_height() # input$height
-                    )
-                } else {
-                    output[[plotname]] <- renderPlot({
-                        draw_1D_param_ss(isolate(input[[paste0("param_ss_selector_x_",my_i)]]), my_i, param_ss_brushed$data[[my_i]])
-                    },height=change_height() # input$height
-                    )
-                }
+                output[[plotname]] <- renderPlot({
+                    draw_param_ss_crossroad(isolate(input[[paste0("param_ss_selector_x_",my_i)]]), isolate(input[[paste0("param_ss_selector_y_",my_i)]]), my_i, 
+                                            param_ss_brushed$data[[my_i]])
+                },height=change_height())
             }
         })
     }
@@ -2835,6 +2866,11 @@ reset_advanced_settings <- observeEvent(input$advanced,{
 })
 
 
+draw_param_ss_crossroad <- function(name_x, name_y, plot_index, boundaries) {
+    variables <- loading_ps_file()$var_names
+    if(name_x == name_y) return(draw_1D_param_ss(name_x, plot_index, boundaries))
+    else                 return(draw_param_ss(name_x, name_y, plot_index, boundaries))
+}
 draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
     variables <- loading_ps_file()$var_names
     params <- loading_ps_file()$param_names
@@ -3115,7 +3151,6 @@ draw_param_space_crossroad <- function(name_x, name_y, plot_index, boundaries) {
         else return(draw_param_space(name_x, name_y, plot_index, boundaries))
     }
 }
-# TODO: for now I suppose that one dimension is variable and one is parameter
 draw_param_space_mixed <- function(name_x, name_y, plot_index, boundaries) {
     variables <- loading_ps_file()$var_names
     params    <- loading_ps_file()$param_names

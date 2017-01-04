@@ -161,7 +161,7 @@ Explorer_SS_ScaleSlider_tooltip <- ""
 
 Explorer_SS_HoverTextArea_label <- ""                               #TODO: probably remove
 Explorer_SS_HoverTextArea_tooltip <- ""
-#WARNING: it is used in server.R - END
+#WARNING: these are used in server.R - END
 
 #Explorer_SS__label <- ""
 #Explorer_SS__tooltip <- ""

@@ -34,10 +34,17 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 
 # message handler for giving an information about finished prameter synthesis
 JS.parameterSynthesisFinished <- "
-Shiny.addCustomMessageHandler('jsCode',
-    function(message) {
+Shiny.addCustomMessageHandler('paramSynthEnd', function(message) {
         eval(message.value);
 });
+"
+# message handler for giving an information about missing threshold
+JS.missingThreshold <- "
+Shiny.addCustomMessageHandler('missThres', function(message) {
+    Shiny.onInputChange('missing_threshold_counter',Math.random());
+    Shiny.onInputChange('missing_threshold',eval(message.value));
+    Shiny.onInputChange('missing_threshold_data',eval(message.data));
+})
 "
 
 source("global.R")
@@ -46,14 +53,12 @@ shinyUI(
     fluidPage(
         useShinyjs(),
         tags$head(tags$script(HTML(JS.parameterSynthesisFinished))),
-    # titlePanel("PITHYA - Parameter Investigation Tool with HYbrid Approach"),
-    titlePanel(Tool_name),
-    tags$hr(),
-    tabsetPanel(id = "dimensions",
+        tags$head(tags$script(HTML(JS.missingThreshold))),
+        titlePanel(Tool_name),
+        tags$hr(),
+        tabsetPanel(id = "dimensions",
                 
 tabPanel(Editor_label, icon=icon("bug"), # fa-leaf fa-bug
-#          tags$head(tags$script((JS.custom))),
-#          tags$head(tags$script((JS.scaleSliderHandler))),
     tags$div(title=Editor_tooltip,
     fluidPage(
         column(6,
@@ -119,7 +124,8 @@ tabPanel(Editor_label, icon=icon("bug"), # fa-leaf fa-bug
                    conditionalPanel(
                        condition = "input.advanced == true",
                        tags$div(title=Editor_numberOfThreads_tooltip,
-                                numericInput("threads_number", Editor_numberOfThreads_label, detectCores(), 1, detectCores(), 1))
+                                numericInput("threads_number", Editor_numberOfThreads_label, 1,#detectCores(), 
+                                             1, detectCores(), 1))
                    ),
                    tags$div(title=Editor_runParameterSynthesis_tooltip,
                             bsButton("process_run", Editor_runParameterSynthesis_label, disabled=T)),
@@ -128,6 +134,10 @@ tabPanel(Editor_label, icon=icon("bug"), # fa-leaf fa-bug
                )
         )
     ),
+    # bsModal("missing_threshold","neco","",size="small",wellPanel(
+    #     actionButton("yes_button", "Ok"),
+    #     actionButton("no_button", "Cancel"))
+    # ),
     tags$div(title=Editor_progressBar_tooltip,
              helpText(Editor_progressBar_label),
              verbatimTextOutput("progress_output")),
@@ -135,12 +145,12 @@ tabPanel(Editor_label, icon=icon("bug"), # fa-leaf fa-bug
         column(6,
                tags$div(title=Editor_modelTextEditor_tooltip,
                         helpText(Editor_modelTextEditor_label),
-                        aceEditor("model_input_area","","plain_text","textmate"))
+                        aceEditor("model_input_area","","plain_text","textmate",debounce=100))
         ),
         column(6,
                tags$div(title=Editor_propertyTextEditor_tooltip,
                         helpText(Editor_propertyTextEditor_label),
-                        aceEditor("prop_input_area","","plain_text","textmate"))
+                        aceEditor("prop_input_area","","plain_text","textmate",debounce=100))
         )
     ))
 ),
