@@ -95,16 +95,16 @@ loaded_vf_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_ss_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 loaded_ps_file      <- reactiveValues(data=NULL,filedata=NULL,filename=NULL)
 
-stored_vf_files     <- reactiveValues(data=list(),current=0,max=1)
-stored_vf_current_params    <- reactiveValues(data=list())
-stored_vf_chosen    <- reactiveValues(data=list())
-stored_vf_parsed_data   <- reactiveValues(data=list())
-stored_ss_files     <- reactiveValues(data=list(),current=0,max=1)
-stored_ss_parsed_data   <- reactiveValues(data=list())
-stored_ps_files     <- reactiveValues(data=list(),current=0,max=1)
-stored_ps_current_formula    <- reactiveValues(data=list())
-stored_ps_parsed_data   <- reactiveValues(data=list())
-stored_ps_chosen    <- reactiveValues(data=list())
+# stored_vf_files     <- reactiveValues(data=list(),current=0,max=1)
+# stored_vf_current_params    <- reactiveValues(data=list())
+# stored_vf_chosen    <- reactiveValues(data=list())
+# stored_vf_parsed_data   <- reactiveValues(data=list())
+# stored_ss_files     <- reactiveValues(data=list(),current=0,max=1)
+# stored_ss_parsed_data   <- reactiveValues(data=list())
+# stored_ps_files     <- reactiveValues(data=list(),current=0,max=1)
+# stored_ps_current_formula    <- reactiveValues(data=list())
+# stored_ps_parsed_data   <- reactiveValues(data=list())
+# stored_ps_chosen    <- reactiveValues(data=list())
 
 vf_brushed          <- reactiveValues(data=list(),click_counter=list())
 ss_brushed          <- reactiveValues(data=list(),click_counter=list())
@@ -157,11 +157,11 @@ param_chosen        <- reactiveValues(data=NULL,max=1)
 #=======================================================================
 
 observeEvent(input$process_run,{
-    if(!is.null(preloading_ss_file()$filedata) && input$process_run != 0) {
+    if(!is.null(loaded_ss_file$filedata) && input$process_run != 0) {
         cat(Parameter_synthesis_started)
         cat(Parameter_synthesis_started, file=progressFileName)
         modelTempName  <- paste0(files_path,"model.",session_random,".abst.bio")
-        writeLines(preloading_ss_file()$filedata,modelTempName)
+        writeLines(loaded_ss_file$filedata,modelTempName)
         propTempName   <- paste0(files_path,"prop.",session_random,".ctl")
         writeLines(loaded_prop_file$data,propTempName)
         system2(paste0(new_programs_path,"combine"),c(modelTempName, propTempName), stdout=configFileName, stderr=progressFileName, wait=T)
@@ -182,7 +182,7 @@ observeEvent(input$process_run,{
 })
 
 observeEvent(input$process_stop,{
-    if(!is.null(preloading_ss_file()$filedata) && input$process_stop != 0) {
+    if(!is.null(loaded_ss_file$filedata) && input$process_stop != 0) {
         if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0 && !T %in% grepl("^!!DONE!!$",progressFile())) {
             pid <- gsub("PID: ","",grep("^PID: [0-9]+$",progressFile(),value=T))
             command <- ifelse(.Platform$OS.type=="windows", paste0("taskkill /f /pid ",pid), paste0("kill -9 ",pid))
@@ -196,33 +196,38 @@ observeEvent(input$process_stop,{
 })
 
 output$progress_output <- renderPrint({
-    if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0) {
-        # progress$set(value = as.numeric(progressFile()[length(progressFile())]))
-        # if(T %in% grepl("Model does not contain threshold",progressFile())) cat("chyba threshold\n")
-        
-        # TEMPLATE: You have to use an exact threshold in propositions! Proposition: y > 8.0,
-        # if(T %in% grepl("You have to use an exact threshold in propositions! Proposition: [^,]+,",progressFile())) {
-        
-        if(T %in% grepl("Missing thresholds: .*",progressFile())) {
-            missing_thr_message <- grep('Missing thresholds: .*',progressFile(),value=T)
-            missing_thr_list <- lapply(tstrsplit(gsub(" ","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) unlist(strsplit(sub(".*:","",x),",",fixed=T)))
-            names(missing_thr_list) <- sapply(tstrsplit(gsub(" ","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) sub(":.*","",x))
-            js_string <- paste0('confirm("',missing_thr_message,'! It will be added into model.");')
-            js_string <- paste0('confirm("',missing_thr_message,'!");')
-            session$sendCustomMessage(type='missThres', list(value = js_string, data = missing_thr_list))
+    progressFile()
+    isolate({
+        if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0) {
+            # progress$set(value = as.numeric(progressFile()[length(progressFile())]))
+            # if(T %in% grepl("Model does not contain threshold",progressFile())) cat("chyba threshold\n")
+            
+            # TEMPLATE: You have to use an exact threshold in propositions! Proposition: y > 8.0,
+            # if(T %in% grepl("You have to use an exact threshold in propositions! Proposition: [^,]+,",progressFile())) {
+            
+            if(T %in% grepl("Missing thresholds: .*",progressFile())) {
+                missing_thr_message <- grep('Missing thresholds: .*',progressFile(),value=T)
+                missing_thr_list <- lapply(tstrsplit(gsub(" ","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) unlist(strsplit(sub(".*:","",x),",",fixed=T)))
+                names(missing_thr_list) <- sapply(tstrsplit(gsub(" ","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) sub(":.*","",x))
+                js_string <- paste0('confirm("',missing_thr_message,'! It will be added into model.");')
+                js_string <- paste0('confirm("',missing_thr_message,'!");')
+                session$sendCustomMessage(type='missThres', list(value = js_string, data = missing_thr_list))
+            }
+            if(T %in% grepl("^!!DONE!!$",progressFile())) {
+                updateButton(session,"process_stop",style="default",disabled=T)
+                updateButton(session,"add_result_plot", disabled=F)
+                js_string <- paste0('alert("Parameter synthesis done!");')
+                session$sendCustomMessage(type='paramSynthEnd', list(value = js_string))
+                updateButton(session,"add_param_plot",style="default",disabled=F)
+                reset_globals_param()
+            }
+            
+            # if(length(progressFile()) > progressMaxLength)
+            #     cat(paste0(progressFile()[(length(progressFile())-progressMaxLength+1):length(progressFile())],collapse="\n"))
+            # else
+            cat(paste0(progressFile(),collapse="\n"))
         }
-        if(T %in% grepl("^!!DONE!!$",progressFile())) {
-            updateButton(session,"process_stop",style="default",disabled=T)
-            updateButton(session,"add_result_plot", disabled=F)
-            js_string <- paste0('alert("Parameter synthesis done!");')
-            session$sendCustomMessage(type='paramSynthEnd', list(value = js_string))
-        }
-        
-        # if(length(progressFile()) > progressMaxLength)
-        #     cat(paste0(progressFile()[(length(progressFile())-progressMaxLength+1):length(progressFile())],collapse="\n"))
-        # else
-        cat(paste0(progressFile(),collapse="\n"))
-    }
+    })
 })
 
 observeEvent(input$missing_threshold_counter,{
@@ -274,7 +279,7 @@ observeEvent(input$missing_threshold_counter,{
 
 observeEvent(input$prop_input_area,{
     loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
-    if(!is.null(preloading_ss_file()$filedata)) updateButton(session,"process_run",style="success",disabled=F)
+    if(!is.null(loaded_ss_file$filedata)) updateButton(session,"process_run",style="success",disabled=F)
 })
 # observeEvent(input$accept_prop_changes,{
 #     if(!is.null(input$prop_input_area) && input$prop_input_area != "")
@@ -317,8 +322,8 @@ reset_globals <- function(i=NA) {
     }
 }
 reset_particular_global <- function(i) {
-    stored_vf_chosen$data[[stored_vf_files$current]] <- vf_update()[vf_update() != i]
-    # vf_chosen$data <- vf_chosen$data[vf_chosen$data != i]
+    # stored_vf_chosen$data[[stored_vf_files$current]] <- vf_update()[vf_update() != i]
+    vf_chosen$data <- vf_update()[vf_update() != i]
     # some kind of garbage collector would be very convenient in this phase
     # either gc() or rm()
     #                rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("vf_selector_y_",i)]]) #TODO: doplnit dalsie
@@ -470,13 +475,13 @@ output$save_model_file <- downloadHandler(
         else                               writeLines("", file)
     }
 )
-output$save_current_model_file <- downloadHandler(
-    filename = "model.bio", #ifelse(!is.null(preloading_vf_file()), paste0(preloading_vf_file()$filepath), "model.bio"),
-    content = function(file) {
-        if(!is.null(preloading_vf_file())) writeLines(preloading_vf_file()$filedata, file)
-        else                               writeLines("", file)
-    }
-)
+# output$save_current_model_file <- downloadHandler(
+#     filename = "model.bio", #ifelse(!is.null(preloading_vf_file()), paste0(preloading_vf_file()$filepath), "model.bio"),
+#     content = function(file) {
+#         if(!is.null(preloading_vf_file())) writeLines(preloading_vf_file()$filedata, file)
+#         else                               writeLines("", file)
+#     }
+# )
 
 #=======================================================================
 
@@ -510,6 +515,9 @@ observeEvent(input$generate_abstraction,{
                 cat(Approximation_finished, file=progressFileName,append=T)
                 updateButton(session,"generate_abstraction",style="default",disabled=F)
                 updateButton(session,"process_run",style="success",disabled=F)
+                updateButton(session,"add_vf_plot",style="default",disabled=F)
+                reset_globals()
+                reset_globals_param()     # for the case we would liek to reset result tab along with model explorer tab
             } else {
                 cat(Approximation_error)
                 cat(Approximation_error, file=progressFileName,append=T)
@@ -535,109 +543,109 @@ observeEvent(input$generate_abstraction,{
 #=============== LOADING OF FILES ======================================
 #=======================================================================
 
-output$model_help_text <- renderUI({
-    if(stored_ss_files$current != 0) {
-        helpText(paste0(Explorer_experiment_label, stored_vf_files$current," (",stored_vf_files$data[[stored_vf_files$current]]$timestamp,")"))
-    }
-})
-
-manage_model_experiments <- observe({
-    filedata <- loaded_ss_file$filedata
-    if(!is.null(filedata)) {
-        
-        # Here will be core of managing switching between experiments models
-        if(stored_ss_files$max == 1 || !identical(filedata,stored_ss_files$data[[stored_ss_files$max-1]]$filedata)) {
-            stored_ss_files$data[[stored_ss_files$max]] <- list(filedata=filedata, filepath=loaded_ss_file$filename, timestamp=Sys.time())
-            stored_vf_files$data[[stored_vf_files$max]] <- list(filedata=loaded_vf_file$filedata, filepath=loaded_vf_file$filename, timestamp=Sys.time())
-            loaded_ss_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
-            if(stored_ss_files$max==1)  {
-                stored_ss_files$current <- stored_ss_files$max
-                stored_vf_files$current <- stored_vf_files$max
-                updateButton(session,"model_del",style="default",disabled=F)
-                updateButton(session,"add_vf_plot",style="default",disabled=F)
-                show("save_current_model_file")
-            } else    
-                updateButton(session,"model_next",style="success",disabled=F)
-            stored_ss_files$max <- stored_ss_files$max + 1
-            stored_vf_files$max <- stored_vf_files$max + 1
-        }
-    }
-})
-manage_model_next <- observeEvent(input$model_next,{
-    # reset_globals()
-    stored_vf_current_params$data[[stored_vf_files$current]] <- current_param_sliders()
-    stored_ss_files$current <- stored_ss_files$current + 1
-    stored_vf_files$current <- stored_vf_files$current + 1
-    updateButton(session,"model_prev",style="default",disabled=F)
-    if(stored_ss_files$current+1 == stored_ss_files$max) {
-        updateButton(session,"model_next",style="default",disabled=T)
-    } else {
-        # updateButton(session,"model_next",style="default")
-    }
-})
-manage_model_prev <- observeEvent(input$model_prev,{
-    # reset_globals()
-    stored_vf_current_params$data[[stored_vf_files$current]] <- current_param_sliders()
-    stored_ss_files$current <- stored_ss_files$current - 1
-    stored_vf_files$current <- stored_vf_files$current - 1
-    updateButton(session,"model_next",style="default",disabled=F)
-    if(stored_ss_files$current == 1) {
-        updateButton(session,"model_prev",style="default",disabled=T)
-    } else {
-        # updateButton(session,"model_prev",style="default")
-    }
-})
-manage_model_del <- observeEvent(input$model_del,{
-    if(stored_ss_files$current > 0) {
-        reset_globals()
-        stored_ss_files$max <- stored_ss_files$max - 1
-        stored_ss_files$data[[stored_ss_files$current]] <- NULL
-        stored_ss_parsed_data$data[[stored_ss_files$current]] <- NULL
-        stored_vf_files$max <- stored_vf_files$max - 1
-        stored_vf_files$data[[stored_vf_files$current]] <- NULL
-        stored_vf_current_params$data[[stored_vf_files$current]] <- NULL
-        stored_vf_parsed_data$data[[stored_vf_files$current]] <- NULL
-        stored_vf_chosen$data[[stored_vf_files$current]] <- NULL
-        if(stored_ss_files$current == stored_ss_files$max) {
-            stored_ss_files$current <- stored_ss_files$current - 1
-            stored_vf_files$current <- stored_vf_files$current - 1
-            if(stored_ss_files$current == 0) {
-                updateButton(session,"model_del",style="default",disabled=T)
-                updateButton(session,"add_vf_plot",style="default",disabled=T)
-                hide("save_current_model_file")
-            }
-        }
-        if(stored_ss_files$current == 1) {
-            updateButton(session,"model_prev",style="default",disabled=T)
-        }
-        if(stored_ss_files$current+1 == stored_ss_files$max) {
-            updateButton(session,"model_next",style="default",disabled=T)
-        }
-    }
-})
-
-
-preloading_vf_file <- eventReactive(c(stored_vf_files$current),{
-    if(stored_vf_files$current != 0)
-        return(stored_vf_files$data[[stored_vf_files$current]])
-    else
-        return(NULL)
-})
-
-preloading_ss_file <- eventReactive(c(stored_ss_files$current),{
-    if(stored_ss_files$current != 0)
-        return(stored_ss_files$data[[stored_ss_files$current]])
-    else
-        return(NULL)
-})
+# output$model_help_text <- renderUI({
+#     if(stored_ss_files$current != 0) {
+#         helpText(paste0(Explorer_experiment_label, stored_vf_files$current," (",stored_vf_files$data[[stored_vf_files$current]]$timestamp,")"))
+#     }
+# })
+# 
+# manage_model_experiments <- observeEvent(c(loaded_ss_file$filedata),{
+#     filedata <- loaded_ss_file$filedata
+#     if(!is.null(filedata)) {
+#         
+#         # Here will be core of managing switching between experiments models
+#         if(stored_ss_files$max == 1 || !identical(filedata,stored_ss_files$data[[stored_ss_files$max-1]]$filedata)) {
+#             stored_ss_files$data[[stored_ss_files$max]] <- list(filedata=filedata, filepath=loaded_ss_file$filename, timestamp=Sys.time())
+#             stored_vf_files$data[[stored_vf_files$max]] <- list(filedata=loaded_vf_file$filedata, filepath=loaded_vf_file$filename, timestamp=Sys.time())
+#             # loaded_ss_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
+#             # if(stored_ss_files$max==1)  {
+#                 stored_ss_files$current <- stored_ss_files$max
+#                 stored_vf_files$current <- stored_vf_files$max
+#                 # updateButton(session,"model_del",style="default",disabled=F)
+#                 updateButton(session,"add_vf_plot",style="default",disabled=F)
+#                 # show("save_current_model_file")
+#             # } else    
+#             #     updateButton(session,"model_next",style="success",disabled=F)
+#             # stored_ss_files$max <- stored_ss_files$max + 1
+#             # stored_vf_files$max <- stored_vf_files$max + 1
+#         }
+#     }
+# })
+# manage_model_next <- observeEvent(input$model_next,{
+#     # reset_globals()
+#     stored_vf_current_params$data[[stored_vf_files$current]] <- current_param_sliders()
+#     stored_ss_files$current <- stored_ss_files$current + 1
+#     stored_vf_files$current <- stored_vf_files$current + 1
+#     updateButton(session,"model_prev",style="default",disabled=F)
+#     if(stored_ss_files$current+1 == stored_ss_files$max) {
+#         updateButton(session,"model_next",style="default",disabled=T)
+#     } else {
+#         # updateButton(session,"model_next",style="default")
+#     }
+# })
+# manage_model_prev <- observeEvent(input$model_prev,{
+#     # reset_globals()
+#     stored_vf_current_params$data[[stored_vf_files$current]] <- current_param_sliders()
+#     stored_ss_files$current <- stored_ss_files$current - 1
+#     stored_vf_files$current <- stored_vf_files$current - 1
+#     updateButton(session,"model_next",style="default",disabled=F)
+#     if(stored_ss_files$current == 1) {
+#         updateButton(session,"model_prev",style="default",disabled=T)
+#     } else {
+#         # updateButton(session,"model_prev",style="default")
+#     }
+# })
+# manage_model_del <- observeEvent(input$model_del,{
+#     if(stored_ss_files$current > 0) {
+#         reset_globals()
+#         stored_ss_files$max <- stored_ss_files$max - 1
+#         stored_ss_files$data[[stored_ss_files$current]] <- NULL
+#         stored_ss_parsed_data$data[[stored_ss_files$current]] <- NULL
+#         stored_vf_files$max <- stored_vf_files$max - 1
+#         stored_vf_files$data[[stored_vf_files$current]] <- NULL
+#         stored_vf_current_params$data[[stored_vf_files$current]] <- NULL
+#         stored_vf_parsed_data$data[[stored_vf_files$current]] <- NULL
+#         stored_vf_chosen$data[[stored_vf_files$current]] <- NULL
+#         if(stored_ss_files$current == stored_ss_files$max) {
+#             stored_ss_files$current <- stored_ss_files$current - 1
+#             stored_vf_files$current <- stored_vf_files$current - 1
+#             if(stored_ss_files$current == 0) {
+#                 updateButton(session,"model_del",style="default",disabled=T)
+#                 updateButton(session,"add_vf_plot",style="default",disabled=T)
+#                 hide("save_current_model_file")
+#             }
+#         }
+#         if(stored_ss_files$current == 1) {
+#             updateButton(session,"model_prev",style="default",disabled=T)
+#         }
+#         if(stored_ss_files$current+1 == stored_ss_files$max) {
+#             updateButton(session,"model_next",style="default",disabled=T)
+#         }
+#     }
+# })
+# 
+# 
+# preloading_vf_file <- eventReactive(c(stored_vf_files$current,input$generate_abstraction),{
+#     if(stored_vf_files$current != 0)
+#         return(stored_vf_files$data[[stored_vf_files$current]])
+#     else
+#         return(NULL)
+# })
+# 
+# preloading_ss_file <- eventReactive(c(stored_ss_files$current,input$generate_abstraction),{
+#     if(stored_ss_files$current != 0)
+#         return(stored_ss_files$data[[stored_ss_files$current]])
+#     else
+#         return(NULL)
+# })
     
-loading_vf_file <- reactive({
-    if(!is.null(preloading_vf_file())) {
-        if(length(stored_vf_parsed_data$data) >= stored_vf_files$current && !is.null(stored_vf_parsed_data$data[[stored_vf_files$current]])) {
-            return(stored_vf_parsed_data$data[[stored_vf_files$current]])
-        }
-        if(length(preloading_vf_file()$filedata) != 0) {
-            biofile <- preloading_vf_file()$filedata
+loading_vf_file <- eventReactive(c(input$generate_abstraction),{
+    if(!is.null(loaded_vf_file$filedata)) {
+        # if(length(stored_vf_parsed_data$data) >= stored_vf_files$current && !is.null(stored_vf_parsed_data$data[[stored_vf_files$current]])) {
+        #     return(stored_vf_parsed_data$data[[stored_vf_files$current]])
+        # }
+        if(length(loaded_vf_file$filedata) != 0) {
+            biofile <- loaded_vf_file$filedata
     
             # VARIABLES
             # result is vector of VAR NAMES
@@ -717,28 +725,27 @@ loading_vf_file <- reactive({
                 funcs[[x]] <<- parse(text=eqs[[x]])
             }
             
-            # list(
-            stored_vf_parsed_data$data[[stored_vf_files$current]] <- list(
+            return(list(
                 vars=var_names, 
                 consts=consts, 
                 params=params, 
                 thres=thres, 
                 eqs=eqs, 
                 ranges=ranges
-            )
-            return(stored_vf_parsed_data$data[[stored_vf_files$current]])
+            ))
+            # return(stored_vf_parsed_data$data[[stored_vf_files$current]])
         } else return(NULL)
     } else return(NULL)
 })
 
 
-loading_ss_file <- reactive({
-    if(!is.null(preloading_ss_file())) {
-        if(length(stored_ss_parsed_data$data) >= stored_ss_files$current && !is.null(stored_ss_parsed_data$data[[stored_ss_files$current]])) {
-            return(stored_ss_parsed_data$data[[stored_ss_files$current]])
-        }
-        if(length(preloading_ss_file()$filedata) != 0) {
-            biofile <- preloading_ss_file()$filedata
+loading_ss_file <- eventReactive(c(input$generate_abstraction),{
+    if(!is.null(loaded_ss_file$filedata)) {
+        # if(length(stored_ss_parsed_data$data) >= stored_ss_files$current && !is.null(stored_ss_parsed_data$data[[stored_ss_files$current]])) {
+        #     return(stored_ss_parsed_data$data[[stored_ss_files$current]])
+        # }
+        if(length(loaded_ss_file$filedata) != 0) {
+            biofile <- loaded_ss_file$filedata
             
             # VARIABLES
             # result is vector of VAR NAMES
@@ -811,7 +818,7 @@ loading_ss_file <- reactive({
                 funcs_abst[[x]] <<- parse(text=eqs[[x]])
             }
             
-            stored_ss_parsed_data$data[[stored_ss_files$current]] <- list(
+            return(list(
                 var_names=var_names, 
                 params_num=length(params), 
                 param_names=names(params), 
@@ -819,8 +826,8 @@ loading_ss_file <- reactive({
                 thr=thres, 
                 eqs=eqs, 
                 ranges=ranges
-            )
-            return(stored_ss_parsed_data$data[[stored_ss_files$current]])
+            ))
+            # return(stored_ss_parsed_data$data[[stored_ss_files$current]])
         } else return(NULL)
     } else return(NULL)
 })
@@ -832,16 +839,13 @@ output$param_sliders_bio <- renderUI({
     if(!is.null(loading_vf_file()) && !is.null(loading_vf_file()$params)) {
         
         lapply(1:length(loading_vf_file()$params), function(i) {
-            print("setter")
             label <- paste0(Explorer_parameter_label,names(loading_vf_file()$params)[i])
-            name <- paste0("param_slider_vf_",stored_vf_files$current,"_",i)
+            name <- paste0("param_slider_vf_",1,"_",i)
             values <- c(min(as.numeric(loading_vf_file()$params[[i]])),max(as.numeric(loading_vf_file()$params[[i]])))
-            # selected_value <- ifelse(!is.null(input[[name]]), current_param_sliders()[[i]], 
-            #                          ifelse(isempty(preloading_vf_file()$data$current_param_sliders), ((values[2]-values[1])*0.1),
-            #                                 preloading_vf_file()$data$current_param_sliders[[i]]))
-            selected_value <- ifelse(length(stored_vf_current_params$data) < stored_vf_files$current || isempty(stored_vf_current_params$data[[stored_vf_files$current]]), 
-                                     (values[2]-values[1])*0.1,
-                                     stored_vf_current_params$data[[stored_vf_files$current]][[i]])
+            selected_value <- ifelse(!is.null(input[[name]]), current_param_sliders()[[i]], ((values[2]-values[1])*0.1))
+            # selected_value <- ifelse(length(stored_vf_current_params$data) < stored_vf_files$current || isempty(stored_vf_current_params$data[[stored_vf_files$current]]), 
+            #                          (values[2]-values[1])*0.1,
+            #                          stored_vf_current_params$data[[stored_vf_files$current]][[i]])
             
             fluidRow(
                 column(12,
@@ -854,7 +858,7 @@ output$param_sliders_bio <- renderUI({
     }
 })
 current_param_sliders <- reactive({
-    lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",stored_vf_files$current,"_",i)]])
+    lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",1,"_",i)]])
 })
 # update_param_sliders <- observe({
 #     if(!is.null(loading_vf_file())) {
@@ -988,15 +992,15 @@ observeEvent(input$add_vf_plot,{
         vector_field_space$globals[[vf_chosen$max]] <- NA
         transition_state_space$globals[[vf_chosen$max]] <- NA
         
-        stored_vf_chosen$data[[stored_vf_files$current]] <- c(vf_update(),vf_chosen$max)
-        # vf_chosen$data <- c(vf_chosen$data,vf_chosen$max)
+        # stored_vf_chosen$data[[stored_vf_files$current]] <- c(vf_update(),vf_chosen$max)
+        vf_chosen$data <- c(vf_update(),vf_chosen$max)
         vf_chosen$max  <- vf_chosen$max + 1
     }
 })
 vf_update <- reactive({
-    if(length(stored_vf_chosen$data) < stored_vf_files$current) return(list())
-    else return(stored_vf_chosen$data[[stored_vf_files$current]])
-    # return(vf_chosen$data)
+    # if(length(stored_vf_chosen$data) < stored_vf_files$current) return(list())
+    # else return(stored_vf_chosen$data[[stored_vf_files$current]])
+    return(vf_chosen$data)
 })
 visible_vf_plots <- reactive({
     if(!is.null(loading_vf_file())) {
@@ -1429,7 +1433,7 @@ draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
                        arrows_number=input$arrows_number,
                        color_variant=input$colVariant,
                        abst_model=input[[paste0("abst_vf_",plot_index)]],
-                       counter=input$accept_model_changes,
+                       # counter=input$generate_abstraction,
                        parameters=list(),
                        sliders=list() )
     if(!is.null(loading_vf_file()$params)) {
@@ -1546,7 +1550,7 @@ draw_1D_vector_field <- function(name_x, plot_index, boundaries) {
                        arrows_number=input$arrows_number,
                        color_variant=input$colVariant,
                        abst_model=input[[paste0("abst_vf_",plot_index)]],
-                       counter=input$accept_model_changes,
+                       # counter=input$generate_abstraction,
                        parameters=list(),
                        sliders=list() )
     if(!is.null(loading_vf_file()$params)) {
@@ -2176,7 +2180,8 @@ reset_globals_param <- function(i=NA) {
     }
 }
 reset_particular_global_param <- function(i) {
-    stored_ps_chosen$data[[stored_ps_files$current]] <- param_update()[param_update() != i]
+    # stored_ps_chosen$data[[stored_ps_files$current]] <- param_update()[param_update() != i]
+    param_chosen$data <- param_update()[param_update() != i]
     # some kind of garbage collector would be very convenient in this phase
     # either gc() or rm()
     #rm(input[[paste0("vf_selector_x_",i)]], input[[paste0("param_selector_y_",i)]]) #TODO: doplnit dalsie
@@ -2200,7 +2205,7 @@ reset_particular_global_param <- function(i) {
     param_ss_brushed$data[[i]] <- NA
     param_ss_brushed$click_counter[[i]] <- NA
     
-    print(gc())
+    # print(gc())
 }
 
 observeEvent(c(resultFile()),{
@@ -2224,98 +2229,98 @@ observeEvent(input$reload_result_file,{
 output$save_result_file <- downloadHandler(
     filename = "results.json",#ifelse(!is.null(preloading_ps_file()), paste0(preloading_ps_file()$filepath), "results.json"),
     content = function(file) {
-        if(!is.null(preloading_ps_file())) writeLines(preloading_ps_file()$filedata, file)
+        if(!is.null(loaded_ps_file$filedata)) writeLines(loaded_ps_file$filedata, file)
         else                               writeLines("", file)
     }
 )
 
-output$result_help_text <- renderUI({
-    if(stored_ps_files$current != 0) {
-        helpText(paste0(Result_experiment_label, stored_ps_files$current," (",stored_ps_files$data[[stored_ps_files$current]]$timestamp,")"))
-    }
-})
-
-manage_result_experiments <- observeEvent(loaded_ps_file$filedata,{
-    filedata <- loaded_ps_file$filedata
-    if(!is.null(filedata)) {
-        
-        if(stored_ps_files$max == 1 || !identical(filedata,stored_ps_files$data[[stored_ps_files$max-1]]$filedata)) {
-            stored_ps_files$data[[stored_ps_files$max]] <- list(filedata=filedata, filepath=loaded_ps_file$filename, timestamp=Sys.time()) 
-                                                                # data=list(chosen_ps_formula=1, param_chosen=list(data=NULL), parsed_data=list()) )
-            loaded_ps_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
-            if(stored_ps_files$max==1)  {
-                stored_ps_files$current <- stored_ps_files$max
-                updateButton(session,"result_del",style="default",disabled=F)
-                updateButton(session,"add_param_plot",style="default",disabled=F)
-                show("save_result_file")
-            } else    
-                updateButton(session,"result_next",style="success",disabled=F)
-            stored_ps_files$max <- stored_ps_files$max + 1
-        }
-    }
-})
-manage_result_next <- observeEvent(input$result_next,{
-    # reset_globals_param()
-    stored_ps_current_formula$data[[stored_ps_files$current]] <- chosen_ps_formulae_clean()
-    stored_ps_files$current <- stored_ps_files$current + 1
-    updateButton(session,"result_prev",style="default",disabled=F)
-    if(stored_ps_files$current+1 == stored_ps_files$max) {
-        updateButton(session,"result_next",style="default",disabled=T)
-    } else {
-        # updateButton(session,"result_next",style="default")
-    }
-})
-manage_result_prev <- observeEvent(input$result_prev,{
-    # reset_globals_param()
-    stored_ps_current_formula$data[[stored_ps_files$current]] <- chosen_ps_formulae_clean()
-    stored_ps_files$current <- stored_ps_files$current - 1
-    updateButton(session,"result_next",style="default",disabled=F)
-    if(stored_ps_files$current == 1) {
-        updateButton(session,"result_prev",style="default",disabled=T)
-    } else {
-        # updateButton(session,"result_prev",style="default")
-    }
-})
-manage_result_del <- observeEvent(input$result_del,{
-    if(stored_ps_files$current > 0) {
-        if(identical(input$ps_file$name, stored_ps_files$data[[stored_ps_files$current]]$filepath))
-            updateButton(session,"reload_result_file",disabled=F)
-        reset_globals_param()
-        stored_ps_files$max <- stored_ps_files$max - 1
-        stored_ps_files$data[[stored_ps_files$current]] <- NULL
-        stored_ps_chosen$data[[stored_ps_files$current]] <- NULL
-        # stored_ps_parsed_data$data[[stored_ps_files$current]] <- NULL
-        stored_ps_current_formula$data[[stored_ps_files$current]] <- NULL
-        if(stored_ps_files$current == stored_ps_files$max) {
-            stored_ps_files$current <- stored_ps_files$current - 1
-            if(stored_ps_files$current == 0) {
-                updateButton(session,"result_del",style="default",disabled=T)
-                updateButton(session,"add_param_plot",style="default",disabled=T)
-                hide("save_result_file")
-            }
-        }
-        if(stored_ps_files$current == 1) {
-            updateButton(session,"result_prev",style="default",disabled=T)
-        }
-        if(stored_ps_files$current+1 == stored_ps_files$max) {
-            updateButton(session,"result_next",style="default",disabled=T)
-        }
-    }
-})
-
-preloading_ps_file <- eventReactive(c(stored_ps_files$current),{
-    if(stored_ps_files$current != 0)
-        return(stored_ps_files$data[[stored_ps_files$current]])
-    else
-        return(NULL)
-})
+# output$result_help_text <- renderUI({
+#     if(stored_ps_files$current != 0) {
+#         helpText(paste0(Result_experiment_label, stored_ps_files$current," (",stored_ps_files$data[[stored_ps_files$current]]$timestamp,")"))
+#     }
+# })
+# 
+# manage_result_experiments <- observeEvent(loaded_ps_file$filedata,{
+#     filedata <- loaded_ps_file$filedata
+#     if(!is.null(filedata)) {
+#         
+#         if(stored_ps_files$max == 1 || !identical(filedata,stored_ps_files$data[[stored_ps_files$max-1]]$filedata)) {
+#             stored_ps_files$data[[stored_ps_files$max]] <- list(filedata=filedata, filepath=loaded_ps_file$filename, timestamp=Sys.time()) 
+#                                                                 # data=list(chosen_ps_formula=1, param_chosen=list(data=NULL), parsed_data=list()) )
+#             loaded_ps_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
+#             if(stored_ps_files$max==1)  {
+#                 stored_ps_files$current <- stored_ps_files$max
+#                 updateButton(session,"result_del",style="default",disabled=F)
+#                 updateButton(session,"add_param_plot",style="default",disabled=F)
+#                 show("save_result_file")
+#             } else    
+#                 updateButton(session,"result_next",style="success",disabled=F)
+#             stored_ps_files$max <- stored_ps_files$max + 1
+#         }
+#     }
+# })
+# manage_result_next <- observeEvent(input$result_next,{
+#     # reset_globals_param()
+#     stored_ps_current_formula$data[[stored_ps_files$current]] <- chosen_ps_formulae_clean()
+#     stored_ps_files$current <- stored_ps_files$current + 1
+#     updateButton(session,"result_prev",style="default",disabled=F)
+#     if(stored_ps_files$current+1 == stored_ps_files$max) {
+#         updateButton(session,"result_next",style="default",disabled=T)
+#     } else {
+#         # updateButton(session,"result_next",style="default")
+#     }
+# })
+# manage_result_prev <- observeEvent(input$result_prev,{
+#     # reset_globals_param()
+#     stored_ps_current_formula$data[[stored_ps_files$current]] <- chosen_ps_formulae_clean()
+#     stored_ps_files$current <- stored_ps_files$current - 1
+#     updateButton(session,"result_next",style="default",disabled=F)
+#     if(stored_ps_files$current == 1) {
+#         updateButton(session,"result_prev",style="default",disabled=T)
+#     } else {
+#         # updateButton(session,"result_prev",style="default")
+#     }
+# })
+# manage_result_del <- observeEvent(input$result_del,{
+#     if(stored_ps_files$current > 0) {
+#         if(identical(input$ps_file$name, stored_ps_files$data[[stored_ps_files$current]]$filepath))
+#             updateButton(session,"reload_result_file",disabled=F)
+#         reset_globals_param()
+#         stored_ps_files$max <- stored_ps_files$max - 1
+#         stored_ps_files$data[[stored_ps_files$current]] <- NULL
+#         stored_ps_chosen$data[[stored_ps_files$current]] <- NULL
+#         # stored_ps_parsed_data$data[[stored_ps_files$current]] <- NULL
+#         stored_ps_current_formula$data[[stored_ps_files$current]] <- NULL
+#         if(stored_ps_files$current == stored_ps_files$max) {
+#             stored_ps_files$current <- stored_ps_files$current - 1
+#             if(stored_ps_files$current == 0) {
+#                 updateButton(session,"result_del",style="default",disabled=T)
+#                 updateButton(session,"add_param_plot",style="default",disabled=T)
+#                 hide("save_result_file")
+#             }
+#         }
+#         if(stored_ps_files$current == 1) {
+#             updateButton(session,"result_prev",style="default",disabled=T)
+#         }
+#         if(stored_ps_files$current+1 == stored_ps_files$max) {
+#             updateButton(session,"result_next",style="default",disabled=T)
+#         }
+#     }
+# })
+# 
+# preloading_ps_file <- eventReactive(c(stored_ps_files$current),{
+#     if(stored_ps_files$current != 0)
+#         return(stored_ps_files$data[[stored_ps_files$current]])
+#     else
+#         return(NULL)
+# })
 loading_ps_file <- reactive({
-    if(!is.null(preloading_ps_file())) {
+    if(!is.null(loaded_ps_file$filedata)) {
         # if(length(stored_ps_parsed_data$data) >= stored_ps_files$current && !is.null(stored_ps_parsed_data$data[[stored_ps_files$current]])) {
         #     return(stored_ps_parsed_data$data[[stored_ps_files$current]])
         # }
-        if(nchar(preloading_ps_file()$filedata) != 0) {
-            file <- fromJSON(preloading_ps_file()$filedata)
+        if(nchar(loaded_ps_file$filedata) != 0) {
+            file <- fromJSON(loaded_ps_file$filedata)
                 
             # musi byt kontrola ci result file vobec nieco obsahuje !!!!
             
@@ -2378,13 +2383,13 @@ loading_ps_file <- reactive({
 
 output$chosen_ps_states_ui <- renderUI({
     if(!is.null(loading_ps_file()) && nrow(loading_ps_file()$param_space) != 0) {
-        id <- paste0("chosen_ps_formula_",stored_ps_files$current)
+        id <- paste0("chosen_ps_formula_",1)
         formulae_list <- loading_ps_file()$formulae
         names(formulae_list) <- loading_ps_file()$formulae
-        # selected_formula <- ifelse(!is.null(input[[id]]), input[[id]], stored_ps_current_formula$data[[stored_ps_files$current]])
-        selected_formula <- ifelse(length(stored_ps_current_formula$data) < stored_ps_files$current || isempty(stored_ps_current_formula$data[[stored_ps_files$current]]), 
-                                 1,
-                                 stored_ps_current_formula$data[[stored_ps_files$current]])
+        selected_formula <- ifelse(!is.null(input[[id]]), input[[id]], 1)
+        # selected_formula <- ifelse(length(stored_ps_current_formula$data) < stored_ps_files$current || isempty(stored_ps_current_formula$data[[stored_ps_files$current]]),
+        #                          1,
+        #                          stored_ps_current_formula$data[[stored_ps_files$current]])
         list(
             tags$div(title=Result_chooseFormulaOfInterest_tooltip,
                      selectInput(id, Result_chooseFormulaOfInterest_label, formulae_list, selected_formula, selectize=F, size=1, width="100%"))
@@ -2392,9 +2397,9 @@ output$chosen_ps_states_ui <- renderUI({
     } else
         h3(Result_chooseFormulaOfInterest_error)
 })
-chosen_ps_formulae_clean <- eventReactive(input[[paste0("chosen_ps_formula_",stored_ps_files$current)]],{
+chosen_ps_formulae_clean <- eventReactive(input[[paste0("chosen_ps_formula_",1)]],{
     # stored_ps_files$data[[stored_ps_files$current]]$data$chosen_ps_formula <- input$chosen_ps_formula
-    return(input[[paste0("chosen_ps_formula_",stored_ps_files$current)]])
+    return(input[[paste0("chosen_ps_formula_",1)]])
 })
 
 
@@ -2491,14 +2496,16 @@ observeEvent(input$add_param_plot,{
         param_state_space$globals[[param_chosen$max]] <- NA
         #satisfiable_ps$data[[param_chosen$max]] <- NA
         
-        stored_ps_chosen$data[[stored_ps_files$current]] <- c(param_update(),param_chosen$max)
+        # stored_ps_chosen$data[[stored_ps_files$current]] <- c(param_update(),param_chosen$max)
+        param_chosen$data <- c(param_update(),param_chosen$max)
         param_chosen$max  <- param_chosen$max + 1
     }
 })
 param_update <- reactive({
-    if(length(stored_ps_chosen$data) < stored_ps_files$current) return(list())
-    else return(stored_ps_chosen$data[[stored_ps_files$current]])
+    # if(length(stored_ps_chosen$data) < stored_ps_files$current) return(list())
+    # else return(stored_ps_chosen$data[[stored_ps_files$current]])
     # return(preloading_ps_file()$data$param_chosen$data)
+    return(param_chosen$data)
 })
 visible_ps_plots <- reactive({
     if(!is.null(loading_ps_file())) {

@@ -199,25 +199,25 @@ tabPanel(Explorer_label, icon=icon("move",lib = "glyphicon"),
     fluidPage(
         theme = "simplex.css",
         fluidRow(
-            column(2,
-                   uiOutput("model_help_text"),
-                   fluidRow(
-                       column(4,
-                              tags$div(title=Explorer_previousExperiment_tooltip,
-                                       bsButton("model_prev",Explorer_previousExperiment_label,disabled=T,block=T)
-                              )),
-                       column(4,
-                              tags$div(title=Explorer_nextExperiment_tooltip,
-                                       bsButton("model_next",Explorer_nextExperiment_label,disabled=T,block=T)
-                              )),
-                       column(4,
-                              tags$div(title=Explorer_deleteExperiment_tooltip,
-                                       bsButton("model_del",Explorer_deleteExperiment_label,disabled=T,block=T)
-                              ))
-                   ),
-                   tags$div(title=Explorer_saveExperimentModel_tooltip,
-                            downloadButton("save_current_model_file",Explorer_saveExperimentModel_label))
-            ),
+            # column(2,
+            #        uiOutput("model_help_text"),
+            #        fluidRow(
+            #            column(4,
+            #                   tags$div(title=Explorer_previousExperiment_tooltip,
+            #                            bsButton("model_prev",Explorer_previousExperiment_label,disabled=T,block=T)
+            #                   )),
+            #            column(4,
+            #                   tags$div(title=Explorer_nextExperiment_tooltip,
+            #                            bsButton("model_next",Explorer_nextExperiment_label,disabled=T,block=T)
+            #                   )),
+            #            column(4,
+            #                   tags$div(title=Explorer_deleteExperiment_tooltip,
+            #                            bsButton("model_del",Explorer_deleteExperiment_label,disabled=T,block=T)
+            #                   ))
+            #        ),
+            #        tags$div(title=Explorer_saveExperimentModel_tooltip,
+            #                 downloadButton("save_current_model_file",Explorer_saveExperimentModel_label))
+            # ),
             column(4,
                    fluidRow(
                        column(6,
@@ -265,31 +265,31 @@ tabPanel(Result_label, icon=icon("barcode",lib = "glyphicon"),
         theme = "simplex.css",
         fluidRow(
             column(2,
-                   uiOutput("result_help_text"),
-                   fluidRow(
-                       column(4,
-                              tags$div(title=Result_previousExperiment_tooltip,
-                                       bsButton("result_prev",Result_previousExperiment_label,disabled=T,block=T)
-                       )),
-                       column(4,
-                              tags$div(title=Result_nextExperiment_tooltip,
-                                       bsButton("result_next",Result_nextExperiment_label,disabled=T,block=T)
-                       )),
-                       column(4,
-                              tags$div(title=Result_deleteExperiment_tooltip,
-                                       bsButton("result_del",Result_deleteExperiment_label,disabled=T,block=T)
-                       ))
-                   ),
+                   # uiOutput("result_help_text"),
+                   # fluidRow(
+                   #     column(4,
+                   #            tags$div(title=Result_previousExperiment_tooltip,
+                   #                     bsButton("result_prev",Result_previousExperiment_label,disabled=T,block=T)
+                   #     )),
+                   #     column(4,
+                   #            tags$div(title=Result_nextExperiment_tooltip,
+                   #                     bsButton("result_next",Result_nextExperiment_label,disabled=T,block=T)
+                   #     )),
+                   #     column(4,
+                   #            tags$div(title=Result_deleteExperiment_tooltip,
+                   #                     bsButton("result_del",Result_deleteExperiment_label,disabled=T,block=T)
+                   #     ))
+                   # ),
                 tags$div(title=Result_Browse_tooltip,
-                         fileInput("ps_file", Result_Browse_label,accept=".json")),
-                fluidRow(
-                    column(6,
-                           tags$div(title=Result_BrowseReload_tooltip,
-                                    bsButton("reload_result_file", Result_BrowseReload_label, disabled=T))),
-                    column(6,
-                           tags$div(title=Result_saveResults_tooltip,
-                                    downloadButton("save_result_file",Result_saveResults_label)))
-                )
+                         fileInput("ps_file", Result_Browse_label,accept=".json"))
+                # ,fluidRow(
+                #     column(6,
+                #            tags$div(title=Result_BrowseReload_tooltip,
+                #                     bsButton("reload_result_file", Result_BrowseReload_label, disabled=T))),
+                #     column(6,
+                #            tags$div(title=Result_saveResults_tooltip,
+                #                     downloadButton("save_result_file",Result_saveResults_label)))
+                # )
             ),
             column(2,
                 tags$div(title=Result_showParametersCoverage_tooltip,
