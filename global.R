@@ -8,7 +8,7 @@ zoom_granul <- 0.01
 transitions_line_type <- "solid" #"dashed" #"dotted"
 num_of_flow_points <- 500
 size_of_flow_points <- 3
-progressMaxLength <- 10
+progressMaxLength <- 5
 hover_delay_limit <- 50
 brush_delay_limit <- 700
 param_space_clicked_point <- list(type=4, color="blue", size=3, width=2)

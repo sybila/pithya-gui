@@ -156,28 +156,27 @@ param_chosen        <- reactiveValues(data=NULL,max=1)
 #=============== PROCESS SETTINGS TAB ==================================
 #=======================================================================
 
+parameter_synthesis_run <- function() {
+    cat(Parameter_synthesis_started)
+    cat(Parameter_synthesis_started, file=progressFileName)
+    modelTempName  <- paste0(files_path,"model.",session_random,".abst.bio")
+    writeLines(loaded_ss_file$filedata,modelTempName)
+    propTempName   <- paste0(files_path,"prop.",session_random,".ctl")
+    writeLines(loaded_prop_file$data,propTempName)
+    system2(paste0(new_programs_path,"combine"),c(modelTempName, propTempName), stdout=configFileName, stderr=progressFileName, wait=T)
+    file.remove(modelTempName,propTempName)
+    if(file.exists(configFileName) && length(readLines(configFileName)) > 0) {
+        cat("config file is created\n")
+        # cat("Config file is created\n",file=progressFileName,append=T)
+        updateButton(session,"process_run",style="default",disabled=F)
+        updateButton(session,"process_stop",style="danger",disabled=F)
+        system2(paste0(new_programs_path,"biodivine-ctl"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
+        # cat("Process has started\n",file=progressFileName)
+    } else cat("\nError: some error occured, because no config file was created!\n")
+}
 observeEvent(input$process_run,{
     if(!is.null(loaded_ss_file$filedata) && input$process_run != 0) {
-        cat(Parameter_synthesis_started)
-        cat(Parameter_synthesis_started, file=progressFileName)
-        modelTempName  <- paste0(files_path,"model.",session_random,".abst.bio")
-        writeLines(loaded_ss_file$filedata,modelTempName)
-        propTempName   <- paste0(files_path,"prop.",session_random,".ctl")
-        writeLines(loaded_prop_file$data,propTempName)
-        system2(paste0(new_programs_path,"combine"),c(modelTempName, propTempName), stdout=configFileName, stderr=progressFileName, wait=T)
-        # system2("java", c("-jar",paste0(java_programs_path,"combine.jar"), modelTempName, propTempName, ">", configFileName, "2>", progressFileName), wait=T)
-        file.remove(modelTempName,propTempName)
-        if(file.exists(configFileName) && length(readLines(configFileName)) > 0) {
-            cat("config file is created\n")
-            # cat("Config file is created\n",file=progressFileName,append=T)
-            updateButton(session,"process_run",style="default",disabled=F)
-            updateButton(session,"process_stop",style="danger",disabled=F)
-            # checker_path <- ifelse(.Platform$OS.type=="windows", paste0("..//biodivine-ctl//build//install//biodivine-ctl//bin//"),
-            #                        ifelse(Sys.info()["nodename"]=="psyche05","..//biodivine-ctl//build//install//biodivine-ctl//bin//",
-            #                        "/home/demon/skola/newbiodivine/json-ode-model/target/release/"))     # it must be whole path or be a part of PATH
-            system2(paste0(new_programs_path,"biodivine-ctl"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
-            # cat("Process has started\n",file=progressFileName)
-        } else cat("\nError: some error occured, because no config file was created!\n")
+        parameter_synthesis_run()
     }
 })
 
@@ -199,18 +198,13 @@ output$progress_output <- renderPrint({
     progressFile()
     isolate({
         if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0) {
-            # progress$set(value = as.numeric(progressFile()[length(progressFile())]))
-            # if(T %in% grepl("Model does not contain threshold",progressFile())) cat("chyba threshold\n")
-            
-            # TEMPLATE: You have to use an exact threshold in propositions! Proposition: y > 8.0,
-            # if(T %in% grepl("You have to use an exact threshold in propositions! Proposition: [^,]+,",progressFile())) {
             
             if(T %in% grepl("Missing thresholds: .*",progressFile())) {
                 missing_thr_message <- grep('Missing thresholds: .*',progressFile(),value=T)
                 missing_thr_list <- lapply(tstrsplit(gsub(" ","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) unlist(strsplit(sub(".*:","",x),",",fixed=T)))
                 names(missing_thr_list) <- sapply(tstrsplit(gsub(" ","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) sub(":.*","",x))
-                js_string <- paste0('confirm("',missing_thr_message,'! It will be added into model.");')
-                js_string <- paste0('confirm("',missing_thr_message,'!");')
+                js_string <- paste0('confirm("',missing_thr_message,'! They will be added into model.");')
+                # js_string <- paste0('confirm("',missing_thr_message,'!");')
                 session$sendCustomMessage(type='missThres', list(value = js_string, data = missing_thr_list))
             }
             if(T %in% grepl("^!!DONE!!$",progressFile())) {
@@ -225,7 +219,7 @@ output$progress_output <- renderPrint({
             # if(length(progressFile()) > progressMaxLength)
             #     cat(paste0(progressFile()[(length(progressFile())-progressMaxLength+1):length(progressFile())],collapse="\n"))
             # else
-            cat(paste0(progressFile(),collapse="\n"))
+                cat(paste0(progressFile(),collapse="\n"))
         }
     })
 })
@@ -234,29 +228,30 @@ observeEvent(input$missing_threshold_counter,{
     if(input$missing_threshold) {
         # Ok button was clicked
         
-        # # adds thresholds into approximated model
-        # data <- preloading_ss_file()$filedata
-        # for(i in 1:length(input$missing_threshold_data)) {
-        #     line_id <- grep(paste0("THRES:",names(input$missing_threshold_data)[[1]]),gsub(" ","",data))
-        #     data[[line_id]] <- paste0(data[[line_id]],",",paste0(input$missing_threshold_data[[1]],collapse = ","))
-        # }
-        # loaded_ss_file$filedata <- data
-        # 
-        # # adds thresholds into original model + into model editor
-        # data <- preloading_vf_file()$filedata
-        # for(i in 1:length(input$missing_threshold_data)) {
-        #     line_id <- grep(paste0("THRES:",names(input$missing_threshold_data)[[1]]),gsub(" ","",data))
-        #     data[[line_id]] <- paste0(data[[line_id]],",",paste0(input$missing_threshold_data[[1]],collapse = ","))
-        # }
-        # loaded_vf_file$filedata <- data
-        # updateAceEditor(session,"model_input_area",value = paste(data,collapse="\n"))
+        # adds thresholds into approximated model
+        data <- loaded_ss_file$filedata
+        for(i in 1:length(input$missing_threshold_data)) {
+            line_id <- grep(paste0("THRES:",names(input$missing_threshold_data)[[1]]),gsub(" ","",data))
+            data[[line_id]] <- paste0(data[[line_id]],",",paste0(input$missing_threshold_data[[1]],collapse = ","))
+        }
+        loaded_ss_file$filedata <- data
+
+        # adds thresholds into original model + into model editor
+        data <- loaded_vf_file$filedata
+        for(i in 1:length(input$missing_threshold_data)) {
+            line_id <- grep(paste0("THRES:",names(input$missing_threshold_data)[[1]]),gsub(" ","",data))
+            data[[line_id]] <- paste0(data[[line_id]],",",paste0(input$missing_threshold_data[[1]],collapse = ","))
+        }
+        loaded_vf_file$filedata <- data
+        updateAceEditor(session,"model_input_area",value = paste(data,collapse="\n"))
         
+        parameter_synthesis_run()
         
         #temporary
-        cat(Parameter_synthesis_stopped)
-        cat(Parameter_synthesis_stopped, file=progressFileName)
-        updateButton(session,"process_stop",style="default",disabled=T)
-        updateButton(session,"process_run",style="success",disabled=F)
+        # cat(Parameter_synthesis_stopped)
+        # cat(Parameter_synthesis_stopped, file=progressFileName)
+        # updateButton(session,"process_stop",style="default",disabled=T)
+        # updateButton(session,"process_run",style="success",disabled=F)
     } else {
         # Cancel button was clicked
         cat(Parameter_synthesis_stopped)

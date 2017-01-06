@@ -8,8 +8,8 @@ Approximation_running <- "Model approximation is running..."
 Approximation_finished <- "Approximation is finished\n"
 Approximation_error <- "Some error occured during approximation!\n"
 
-Parameter_synthesis_started <- "Parameter synthesis is started\n"
-Parameter_synthesis_stopped <- "Process was killed!\n"
+Parameter_synthesis_started <- "Parameter synthesis has started\n"
+Parameter_synthesis_stopped <- "Process was stopped!\n"
 
 Waiting_for_state_space <- "Waiting for transition-state space"
 
