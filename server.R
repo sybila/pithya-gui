@@ -125,6 +125,8 @@ param_space_clicked   <- reactiveValues(data=list(),point=list(),old_point=list(
 vf_chosen           <- reactiveValues(data=NULL,max=1)
 param_chosen        <- reactiveValues(data=NULL,max=1)
 
+abstraction_reactivation <- reactiveValues(counter=0)
+
 
 #=============== TEST TAB ==============================================
 
@@ -201,9 +203,9 @@ output$progress_output <- renderPrint({
             
             if(T %in% grepl("Missing thresholds: .*",progressFile())) {
                 missing_thr_message <- grep('Missing thresholds: .*',progressFile(),value=T)
-                missing_thr_list <- lapply(tstrsplit(gsub(" ","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) unlist(strsplit(sub(".*:","",x),",",fixed=T)))
-                names(missing_thr_list) <- sapply(tstrsplit(gsub(" ","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) sub(":.*","",x))
-                js_string <- paste0('confirm("',missing_thr_message,'! They will be added into model.");')
+                missing_thr_list <- lapply(tstrsplit(gsub("[ \t]","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) unlist(strsplit(sub(".*:","",x),",",fixed=T)))
+                names(missing_thr_list) <- sapply(tstrsplit(gsub("[ \t]","",sub("Missing thresholds:","",missing_thr_message)),";"),function(x) sub(":.*","",x))
+                js_string <- paste0('confirm("',missing_thr_message,'! They will be added into model and approximation will be regenerated.");')
                 # js_string <- paste0('confirm("',missing_thr_message,'!");')
                 session$sendCustomMessage(type='missThres', list(value = js_string, data = missing_thr_list))
             }
@@ -225,33 +227,34 @@ output$progress_output <- renderPrint({
 })
 
 observeEvent(input$missing_threshold_counter,{
-    if(input$missing_threshold) {
+    if(!is.null(input$missing_threshold) && input$missing_threshold) {
         # Ok button was clicked
         
         # adds thresholds into approximated model
-        data <- loaded_ss_file$filedata
-        for(i in 1:length(input$missing_threshold_data)) {
-            line_id <- grep(paste0("THRES:",names(input$missing_threshold_data)[[1]]),gsub(" ","",data))
-            data[[line_id]] <- paste0(data[[line_id]],",",paste0(input$missing_threshold_data[[1]],collapse = ","))
-        }
-        loaded_ss_file$filedata <- data
+        # data <- loaded_ss_file$filedata
+        # for(i in 1:length(input$missing_threshold_data)) {
+        #     line_id <- grep(paste0("THRES:",names(input$missing_threshold_data)[[i]]),gsub("[ \t]","",data))
+        #     insert_ind <- gregexpr(":",data[[line_id]])[[1]][2]
+        #     data[[line_id]] <- paste0(str_sub(data[[line_id]],1,insert_ind),
+        #                               paste0(sort(as.numeric(gsub("[ \t]","",strsplit(paste0(str_sub(data[[line_id]],insert_ind+1),",",
+        #                                                                                      paste0(input$missing_threshold_data[[i]],collapse = ",")),",")[[1]]))),collapse=","))
+        #     # data[[line_id]] <- paste0(data[[line_id]],",",paste0(input$missing_threshold_data[[i]],collapse = ","))
+        # }
+        # loaded_ss_file$filedata <- data
 
         # adds thresholds into original model + into model editor
         data <- loaded_vf_file$filedata
         for(i in 1:length(input$missing_threshold_data)) {
-            line_id <- grep(paste0("THRES:",names(input$missing_threshold_data)[[1]]),gsub(" ","",data))
-            data[[line_id]] <- paste0(data[[line_id]],",",paste0(input$missing_threshold_data[[1]],collapse = ","))
+            line_id <- grep(paste0("THRES:",names(input$missing_threshold_data)[[i]]),gsub("[ \t]","",data))
+            insert_ind <- gregexpr(":",data[[line_id]])[[1]][2]
+            data[[line_id]] <- paste0(str_sub(data[[line_id]],1,insert_ind),paste0(input$missing_threshold_data[[i]],collapse = ","),",",str_sub(data[[line_id]],insert_ind+1))
+            # data[[line_id]] <- paste0(data[[line_id]],",",paste0(input$missing_threshold_data[[i]],collapse = ","))
         }
         loaded_vf_file$filedata <- data
         updateAceEditor(session,"model_input_area",value = paste(data,collapse="\n"))
-        
+        abstraction_reactivation$counter <- abstraction_reactivation$counter+1
+        generate_abstraction_run()
         parameter_synthesis_run()
-        
-        #temporary
-        # cat(Parameter_synthesis_stopped)
-        # cat(Parameter_synthesis_stopped, file=progressFileName)
-        # updateButton(session,"process_stop",style="default",disabled=T)
-        # updateButton(session,"process_run",style="success",disabled=F)
     } else {
         # Cancel button was clicked
         cat(Parameter_synthesis_stopped)
@@ -291,7 +294,7 @@ observeEvent(c(input$prop_file,input$reset_prop),{
         loaded_prop_file$data <- readLines(input$prop_file$datapath)
     } else {
         # initial example file (temporary)
-        loaded_prop_file$filename <- paste0(examples_dir,"//repressilator_2D//bistability.ctl")
+        loaded_prop_file$filename <- paste0(examples_dir,"//repressilator_2D//properties.with_comments.ctl")
         loaded_prop_file$data <- readLines(loaded_prop_file$filename)
     }
     updateAceEditor(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
@@ -355,88 +358,6 @@ reset_particular_global <- function(i) {
 #     }
 # })
 
-observeEvent(input$accept_model_changes,{
-    if(!is.null(input$model_input_area) && input$model_input_area != "") {
-        the_lines <- strsplit(input$model_input_area,"\n",fixed=T)[[1]]        
-        its_ok <- F
-
-lines <- the_lines[which(the_lines!="")]
-name <- "[a-zA-Z][a-zA-Z0-9_]*"
-rnum <- "[+-]?([0-9]*[.])?[0-9]+" # TODO: overit "[+-]?(([1-9][0-9]*)|(0))([.][0-9]+)?"
-znum <- "[0-9]+"
-
-line_id <- which(grepl(paste0("^VARS:",name,"(,",name,")*$"), gsub(" ","",lines)) )
-if(length(line_id) == 0 || length(line_id) > 1) cat("'VARS:' line is missing or duplicated or contains syntax error!\n",file=progressFileName)
-else {
-    vars_num <- length(strsplit(gsub(" ","",sub("^VARS:","",lines[line_id])),",")[[1]])
-    lines <- lines[-line_id]
-    
-    p_item <- paste0(name,",",rnum,",",rnum)
-    line_id <- which(grepl(paste0("^PARAMS:",p_item,"(;",p_item,")*$"), gsub(" ","",lines)) )
-    if(length(line_id) == 0 || length(line_id) > 1) cat("'PARAMS:' line is missing or duplicated or contains syntax error!\n",file=progressFileName)
-    else {
-        lines <- lines[-line_id]
-        
-        line_id <- which(grepl(paste0("^THRES:",name,":",rnum,"(,",rnum,")+$"), gsub(" ","",lines)) )
-        if(length(line_id) != vars_num) cat("'THRES:' lines contain syntax error or there is different number of them than variables!\n",file=progressFileName)
-        else {
-            lines <- lines[-line_id]
-            
-#             fname <- "" # TODO:
-#             func <- paste0(fname,"\\(",name,",",rnum,"(,",rnum,"){1:3}\\)")
-            line_id <- which(grepl(paste0("^EQ:",name,"=",".+"), gsub(" ","",lines)) )
-            if(length(line_id) == 0 || length(line_id) > vars_num) cat("'EQ:' lines contain syntax error or there is different number of them than variables!\n",file=progressFileName)
-            else {
-                lines <- lines[-line_id]
-                
-                line_id <- which(grepl("(^CONSTS:|^VAR_POINTS:)", gsub(" ","",lines)) )
-                if(length(lines) != length(line_id)) cat("Line [",which(the_lines %in% ifelse(length(line_id)==0,lines,lines[-line_id])),"] is undefined or contains syntax error!\n",file=progressFileName)
-                else {
-                    line_id <- which(grepl(paste0("^CONSTS:"), gsub(" ","",lines)) )
-                    if(length(line_id) > 1) cat("'CONSTS:' line is duplicated!\n",file=progressFileName)
-                    else if(length(line_id) == 1) {
-                        p_item <- paste0(name,",",rnum)
-                        line_id <- which(grepl(paste0("^CONSTS:",p_item,"(;",p_item,")*$"), gsub(" ","",lines)) )
-                        if(length(line_id) == 0 || length(line_id) > 1) cat("'CONSTS:' line contains syntax error!\n",file=progressFileName)
-                        else {
-                            lines <- lines[-line_id]
-                            line_id <- which(grepl(paste0("^VAR_POINTS:"), gsub(" ","",lines)) )
-                            if(length(line_id) > 1) cat("'VAR_POINTS:' line is duplicated!\n",file=progressFileName)
-                            else if(length(line_id) == 1) {
-                                p_item <- paste0(name,":",znum,",",znum)
-                                line_id <- which(grepl(paste0("^VAR_POINTS:",p_item,"(;",p_item,"){",0,",",vars_num-1,"}$"), gsub(" ","",lines)) )
-                                if(length(line_id) == 0 || length(line_id) > 1) cat("'VAR_POINTS:' line contains syntax error or contains more items than variables!\n",file=progressFileName)
-                                else its_ok <- T
-                            } else its_ok <- T # no VAR_POINTS line
-                        }
-                    } else {
-                        # no CONSTS line
-                        line_id <- which(grepl(paste0("^VAR_POINTS:"), gsub(" ","",lines)) )
-                        if(length(line_id) > 1) cat("'VAR_POINTS:' line is duplicated!\n",file=progressFileName)
-                        else if(length(line_id) == 1) {
-                            p_item <- paste0(name,":",znum,",",znum)
-                            line_id <- which(grepl(paste0("^VAR_POINTS:",p_item,"(;",p_item,"){",0,",",vars_num-1,"}$"), gsub(" ","",lines)) )
-                            if(length(line_id) == 0 || length(line_id) > 1) cat("'VAR_POINTS:' line contains syntax error or contains more items than variables!\n",file=progressFileName)
-                            else its_ok <- T
-                        } else its_ok <- T # no VAR_POINTS line and no CONSTS line
-                    }
-                }
-            }
-        }
-    }
-}
-        
-        # grepl(paste0("^VARS:",name,"(,",name,")*$"), gsub(" ","",lines))
-        # grepl(paste0("^PARAMS:",p_item,"(;",p_item,")*$"), gsub(" ","",lines))
-        # grepl(paste0("^THRES:",name,":",rnum,"(,",rnum,")+$"), gsub(" ","",lines))
-        # grepl(paste0("^EQ:",name,"=",rnum,"(,",rnum,")+$"), gsub(" ","",lines))
-        
-        if(its_ok) {
-            cat("Syntax of model is good ;) You may proceed with generating approximation.",file=progressFileName)
-            loaded_vf_file$filedata <- the_lines
-        }
-    }
-})
 
 observeEvent(input$model_input_area,{
     if(!identical(loaded_vf_file$filedata,strsplit(input$model_input_area,"\n",fixed=T)[[1]])) {
@@ -446,20 +367,21 @@ observeEvent(input$model_input_area,{
 })
 
 observeEvent(c(input$vf_file,input$reset_model),{
-    cat(Starting_advice, file=progressFileName)
     if(!is.null(input$vf_file) && !is.null(input$vf_file$datapath)) {
         # if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename != input$vf_file$datapath) {
         #     #session$reload()
         #     reset_globals()
         # }
         loaded_vf_file$filename <- input$vf_file$name
-        loaded_vf_file$filedata <- readLines(input$vf_file$datapath)
+        filedata <- readLines(input$vf_file$datapath)
     } else {
         # initial example file (temporary)
-        loaded_vf_file$filename <- paste0(examples_dir,"//repressilator_2D//model_2D_1P_100R.bio")
-        loaded_vf_file$filedata <- readLines(loaded_vf_file$filename)
+        cat(Starting_advice, file=progressFileName)
+        loaded_vf_file$filename <- paste0(examples_dir,"//repressilator_2D//model_indep.with_comments.bio")
+        filedata <- readLines(loaded_vf_file$filename)
     }
-    updateAceEditor(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
+    updateAceEditor(session,"model_input_area",value = paste(filedata,collapse="\n"))
+    # updateButton(session,"generate_abstraction", style="success", disabled=F)
     # updateTextAreaInput(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
 })
 
@@ -480,44 +402,46 @@ output$save_model_file <- downloadHandler(
 
 #=======================================================================
 
-
+generate_abstraction_run <- function() {
+    cat(Approximation_started)
+    cat(Approximation_started, file=progressFileName)
+    
+    withProgress({
+        model_temp_name  <- paste0(files_path,"model.",session_random,".bio")
+        writeLines(loaded_vf_file$filedata,model_temp_name)
+        abstracted_model_temp_name <- paste0(files_path,"model.",session_random,".abst.bio")
+        system2(paste0(new_programs_path,"tractor"),c(model_temp_name,
+                                                      ifelse(input$fast_approximation,"true","false"),
+                                                      ifelse(input$thresholds_cut,"true","false")),
+                stdout = abstracted_model_temp_name,
+                stderr = progressFileName, wait=T)
+        # system2("java", c("-jar",paste0(java_programs_path,"tractor.jar"), model_temp_name, 
+        #                   ifelse(input$fast_approximation,"true","false"),
+        #                   ifelse(input$thresholds_cut,"true","false"),
+        #                   ">", abstracted_model_temp_name,
+        #                   "2>",progressFileName), wait=T)
+        file.remove(c(model_temp_name))
+        if(file.exists(abstracted_model_temp_name) && length(readLines(abstracted_model_temp_name)) > 0) {
+            loaded_ss_file$filename <- abstracted_model_temp_name
+            loaded_ss_file$filedata <- readLines(abstracted_model_temp_name)
+            file.remove(abstracted_model_temp_name)
+            cat(Approximation_finished)
+            cat(Approximation_finished, file=progressFileName,append=T)
+            updateButton(session,"generate_abstraction",style="default",disabled=F)
+            updateButton(session,"process_run",style="success",disabled=F)
+            updateButton(session,"add_vf_plot",style="default",disabled=F)
+            reset_globals()
+            reset_globals_param()     # for the case we would liek to reset result tab along with model explorer tab
+        } else {
+            cat(Approximation_error)
+            cat(Approximation_error, file=progressFileName,append=T)
+        }
+    }, message=Approximation_running, value=0.5)
+}
 observeEvent(input$generate_abstraction,{
     if(input$generate_abstraction != 0) {
         # loaded_ss_file$filedata <- readLines(paste0(examples_dir,"//model_2D_1P_400R.abst.bio"))
-        cat(Approximation_started)
-        cat(Approximation_started, file=progressFileName)
-        
-        withProgress({
-            model_temp_name  <- paste0(files_path,"model.",session_random,".bio")
-            writeLines(loaded_vf_file$filedata,model_temp_name)
-            abstracted_model_temp_name <- paste0(files_path,"model.",session_random,".abst.bio")
-            system2(paste0(new_programs_path,"tractor"),c(model_temp_name,
-                                                          ifelse(input$fast_approximation,"true","false"),
-                                                          ifelse(input$thresholds_cut,"true","false")),
-                                                          stdout = abstracted_model_temp_name,
-                                                          stderr = progressFileName, wait=T)
-            # system2("java", c("-jar",paste0(java_programs_path,"tractor.jar"), model_temp_name, 
-            #                   ifelse(input$fast_approximation,"true","false"),
-            #                   ifelse(input$thresholds_cut,"true","false"),
-            #                   ">", abstracted_model_temp_name,
-            #                   "2>",progressFileName), wait=T)
-            file.remove(c(model_temp_name))
-            if(file.exists(abstracted_model_temp_name) && length(readLines(abstracted_model_temp_name)) > 0) {
-                loaded_ss_file$filename <- abstracted_model_temp_name
-                loaded_ss_file$filedata <- readLines(abstracted_model_temp_name)
-                file.remove(abstracted_model_temp_name)
-                cat(Approximation_finished)
-                cat(Approximation_finished, file=progressFileName,append=T)
-                updateButton(session,"generate_abstraction",style="default",disabled=F)
-                updateButton(session,"process_run",style="success",disabled=F)
-                updateButton(session,"add_vf_plot",style="default",disabled=F)
-                reset_globals()
-                reset_globals_param()     # for the case we would liek to reset result tab along with model explorer tab
-            } else {
-                cat(Approximation_error)
-                cat(Approximation_error, file=progressFileName,append=T)
-            }
-        }, message=Approximation_running, value=0.5)
+        generate_abstraction_run()
     }
 })
 
@@ -634,13 +558,14 @@ observeEvent(input$generate_abstraction,{
 #         return(NULL)
 # })
     
-loading_vf_file <- eventReactive(c(input$generate_abstraction),{
-    if(!is.null(loaded_vf_file$filedata)) {
+loading_vf_file <- eventReactive(c(input$generate_abstraction,abstraction_reactivation$counter),{
+    if(!is.null(loaded_vf_file$filedata) && input$generate_abstraction > 0) {
         # if(length(stored_vf_parsed_data$data) >= stored_vf_files$current && !is.null(stored_vf_parsed_data$data[[stored_vf_files$current]])) {
         #     return(stored_vf_parsed_data$data[[stored_vf_files$current]])
         # }
         if(length(loaded_vf_file$filedata) != 0) {
             biofile <- loaded_vf_file$filedata
+            biofile <- gsub("#.*","",gsub("//.*","",biofile))
     
             # VARIABLES
             # result is vector of VAR NAMES
@@ -734,8 +659,8 @@ loading_vf_file <- eventReactive(c(input$generate_abstraction),{
 })
 
 
-loading_ss_file <- eventReactive(c(input$generate_abstraction),{
-    if(!is.null(loaded_ss_file$filedata)) {
+loading_ss_file <- eventReactive(c(input$generate_abstraction,abstraction_reactivation$counter),{
+    if(!is.null(loaded_ss_file$filedata) && input$generate_abstraction > 0) {
         # if(length(stored_ss_parsed_data$data) >= stored_ss_files$current && !is.null(stored_ss_parsed_data$data[[stored_ss_files$current]])) {
         #     return(stored_ss_parsed_data$data[[stored_ss_files$current]])
         # }

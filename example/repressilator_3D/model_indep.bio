@@ -1,0 +1,18 @@
+###########################################################################
+# This is model of repressilator of 3 genes with mutual negative feedback #
+# It has oscillatory behaviour for specific parameters                    #
+###########################################################################
+
+VARS: x,y,z											# Here, variables are defined (usually genes or proteins)
+CONSTS: k1,1; k2,1; k3,1							# Here, constants used in ODEs are defined (optional)
+PARAMS: deg_x,0,1; deg_y,0,1; deg_z,0,1				# Here, parameters of the model are defined
+
+EQ: x = k1*hillm(y,5,5,1,0) - deg_x*x				# Here, ODE for variable 'x' is defined (hillm is keyword for negative Hill function - for more look into manual)
+EQ: y = k2*hillm(z,5,5,1,0) - deg_y*y				# Here, ODE for variable 'y' is defined (hillm is keyword for negative Hill function - for more look into manual)
+EQ: z = k3*hillm(x,5,5,1,0) - deg_z*z				# Here, ODE for variable 'z' is defined (hillm is keyword for negative Hill function - for more look into manual)
+
+VAR_POINTS: x: 2500, 10; y: 2500, 10; z: 2500, 10	# Here, settings for PWA approximation are defined (optional)
+
+THRES: x: 0, 15										# Here, explicit thresholds for variable 'x' are defined (at least 2 thresholds are needed as bounds)
+THRES: y: 0, 15										# Here, explicit thresholds for variable 'y' are defined (at least 2 thresholds are needed as bounds)
+THRES: z: 0, 15										# Here, explicit thresholds for variable 'z' are defined (at least 2 thresholds are needed as bounds)
