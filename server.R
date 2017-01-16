@@ -86,7 +86,7 @@ session$onSessionEnded(function() {
 })
 
 hide("save_current_model_file")
-hide("save_result_file")
+# hide("save_result_file")
 # hide("save_model_file")
 # hide("save_prop_file")
 

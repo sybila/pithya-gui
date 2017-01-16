@@ -282,14 +282,14 @@ tabPanel(Result_label, icon=icon("barcode",lib = "glyphicon"),
                    # ),
                 tags$div(title=Result_Browse_tooltip,
                          fileInput("ps_file", Result_Browse_label,accept=".json"))
-                # ,fluidRow(
+                ,fluidRow(
                 #     column(6,
                 #            tags$div(title=Result_BrowseReload_tooltip,
                 #                     bsButton("reload_result_file", Result_BrowseReload_label, disabled=T))),
-                #     column(6,
-                #            tags$div(title=Result_saveResults_tooltip,
-                #                     downloadButton("save_result_file",Result_saveResults_label)))
-                # )
+                column(6,
+                       tags$div(title=Result_saveResults_tooltip,
+                                downloadButton("save_result_file",Result_saveResults_label)))
+                )
             ),
             column(2,
                 tags$div(title=Result_showParametersCoverage_tooltip,
