@@ -1253,6 +1253,10 @@ apply_to_all_in_state_space <- observe({
     }
 })
 
+set_num_of_flow_points <- reactive({
+    return(num_of_flow_points)
+})
+
 #====================== OUTPUTS =========================================
 #========================================================================
 
@@ -1435,7 +1439,7 @@ draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
             #     else flow_data <- rbind(flow_data,new_move)
             # }
             ########
-            for(r in seq(num_of_flow_points)) {
+            for(r in seq(set_num_of_flow_points())) {
                 input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
                 for(i in 1:length(variables)) {
                     input_params <- paste0(input_params,variables[i],"=",flow_data[r,get(variables[[i]])],",")
@@ -1530,7 +1534,7 @@ draw_1D_vector_field <- function(name_x, plot_index, boundaries) {
            !identical(vector_field_space$globals[[plot_index]],checkpoint)) {
             
             flow_data <- as.data.table(t(point))
-            for(r in seq(num_of_flow_points)) {
+            for(r in seq(set_num_of_flow_points())) {
                 input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
                 for(i in 1:length(variables)) {
                     input_params <- paste0(input_params,variables[i],"=",flow_data[r,get(variables[[i]])],",")
@@ -1547,7 +1551,7 @@ draw_1D_vector_field <- function(name_x, plot_index, boundaries) {
             vector_field_clicked$data[[plot_index]] <- flow_data
         }
         flow_data <- vector_field_clicked$data[[plot_index]]
-        xspline(flow_data[,get(name_x)], rep(0.5,num_of_flow_points+1), shape=1, col="blue", border="blue", lwd=size_of_flow_points)
+        xspline(flow_data[,get(name_x)], rep(0.5,set_num_of_flow_points()+1), shape=1, col="blue", border="blue", lwd=size_of_flow_points)
         # it has to be at the end
         vector_field_clicked$old_point[[plot_index]] <- point
     }
