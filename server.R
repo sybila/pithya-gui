@@ -761,7 +761,8 @@ output$param_sliders_bio <- renderUI({
             label <- paste0(Explorer_parameter_label,names(loading_vf_file()$params)[i])
             name <- paste0("param_slider_vf_",1,"_",i)
             values <- c(min(as.numeric(loading_vf_file()$params[[i]])),max(as.numeric(loading_vf_file()$params[[i]])))
-            selected_value <- ifelse(!is.null(input[[name]]), current_param_sliders()[[i]], ((values[2]-values[1])*0.1))
+            selected_value <- ((values[2]-values[1])*0.1)
+            # selected_value <- ifelse(!is.null(input[[name]]), current_param_sliders()[[i]], ((values[2]-values[1])*0.1))
             # selected_value <- ifelse(length(stored_vf_current_params$data) < stored_vf_files$current || isempty(stored_vf_current_params$data[[stored_vf_files$current]]), 
             #                          (values[2]-values[1])*0.1,
             #                          stored_vf_current_params$data[[stored_vf_files$current]][[i]])
@@ -2324,7 +2325,8 @@ output$chosen_ps_states_ui <- renderUI({
         id <- paste0("chosen_ps_formula_",1)
         formulae_list <- loading_ps_file()$formulae
         names(formulae_list) <- loading_ps_file()$formulae
-        selected_formula <- ifelse(!is.null(input[[id]]), input[[id]], 1)
+        selected_formula <- 1
+        # selected_formula <- ifelse(!is.null(input[[id]]), input[[id]], 1)
         # selected_formula <- ifelse(length(stored_ps_current_formula$data) < stored_ps_files$current || isempty(stored_ps_current_formula$data[[stored_ps_files$current]]),
         #                          1,
         #                          stored_ps_current_formula$data[[stored_ps_files$current]])
