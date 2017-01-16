@@ -47,16 +47,16 @@ Editor_fastApproximation_label <- "fast approximation"
 Editor_fastApproximation_tooltip <- "" # "Two versions of The-PWA-approximation are available. Slower one - more precise and computationally more demanding - and fast one - much faster but also less precise."
 
 Editor_generateApproximation_label <- "generate approximation"
-Editor_generateApproximation_tooltip <- ""
+Editor_generateApproximation_tooltip <- "" #TODO
 
 Editor_progressBar_label <- "progress bar:"
 Editor_progressBar_tooltip <- "Shows progress and miscellaneous usefull information."
 
 Editor_modelTextEditor_label <- "model editor:"
-Editor_modelTextEditor_tooltip <- ""
+Editor_modelTextEditor_tooltip <- "" #TODO
 
 Editor_propertyTextEditor_label <- "properties editor:"
-Editor_propertyTextEditor_tooltip <- ""
+Editor_propertyTextEditor_tooltip <- "" #TODO
 
 Editor_numberOfThreads_label <- "no. of threads"
 Editor_numberOfThreads_tooltip <- "Sets number of threads to compute model exploration with."
@@ -126,7 +126,7 @@ Explorer_VF_ApplyToAll_label <- "apply to all"
 Explorer_VF_ApplyToAll_tooltip <- "Apply this starting point to all vector field plots."
 
 Explorer_VF_ApplyToTSS_label <- "apply to SS"
-Explorer_VF_ApplyToTSS_tooltip <- "Apply this starting point to coresponding state space plot."
+Explorer_VF_ApplyToTSS_tooltip <- "Apply this starting point to corresponding state space plot."
 
 Explorer_VF_ClearPlot_label <- "clear plot"
 Explorer_VF_ClearPlot_tooltip <- "Clear this plot."
@@ -135,10 +135,10 @@ Explorer_VF_Unzoom_label <- "unzoom"
 Explorer_VF_Unzoom_tooltip <- "Unzoom this vector field plot."
 
 Explorer_VF_UsePWAmodel_label <- "use PWA model"
-Explorer_VF_UsePWAmodel_tooltip <- ""
+Explorer_VF_UsePWAmodel_tooltip <- "" #TODO
 
 Explorer_VF_ScaleSlider_label <- "continues scale in "
-Explorer_VF_ScaleSlider_tooltip <- ""
+Explorer_VF_ScaleSlider_tooltip <- "" 
 
 Explorer_VF_HoverTextArea_label <- ""                               #TODO: probably remove
 Explorer_VF_HoverTextArea_tooltip <- ""
@@ -235,7 +235,7 @@ Result_PS_Unzoom_label <- "unzoom"
 Result_PS_Unzoom_tooltip <- "Unzoom this vector field plot."
 
 Result_PS_ScaleSlider_label <- "scale in "
-Result_PS_ScaleSlider_tooltip <- ""
+Result_PS_ScaleSlider_tooltip <- "" #TODO
 Result_PS_ScaleSwitch_tooltip <- ""
 
 Result_PS_HoverTextArea_label <- ""         #TODO: probably remove
@@ -245,7 +245,7 @@ Result_SS_label <- "satisfying state space:" # "state space of the model:"  "...
 Result_SS_tooltip <- ""                     #TODO: probably remove
 
 Result_SS_DeselectAll_label <- "deselect all"
-Result_SS_DeselectAll_tooltip <- ""
+Result_SS_DeselectAll_tooltip <- "" #TODO
 
 Result_SS_Unzoom_label <- "unzoom"
 Result_SS_Unzoom_tooltip <- "Unzoom this state space plot."
