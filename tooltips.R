@@ -256,7 +256,7 @@ Result_SS_horizontal_tooltip <- "Set variable to show on horizontal axis."
 Result_SS_vertical_label <- "vertical axis"
 Result_SS_vertical_tooltip <- "Set variable to show on vertical axis."
 
-Result_SS_ScaleSlider_label <- "discrete scale in "
+Result_SS_ScaleSlider_label <- "scale in "
 Result_SS_ScaleSlider_tooltip <- ""
 
 Result_SS_HoverTextArea_label <- ""         #TODO: probably remove

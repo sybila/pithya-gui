@@ -211,7 +211,6 @@ output$progress_output <- renderPrint({
             }
             if(T %in% grepl("^!!DONE!!$",progressFile())) {
                 updateButton(session,"process_stop",style="default",disabled=T)
-                updateButton(session,"add_result_plot", disabled=F)
                 js_string <- paste0('alert("Parameter synthesis done!");')
                 session$sendCustomMessage(type='paramSynthEnd', list(value = js_string))
                 updateButton(session,"add_param_plot",style="default",disabled=F)
@@ -2139,6 +2138,7 @@ observeEvent(c(input$ps_file,input$reload_result_file),{
     if(!is.null(input$ps_file) && !is.null(input$ps_file$datapath)) {
         loaded_ps_file$filename <- input$ps_file$name
         loaded_ps_file$filedata <- readLines(input$ps_file$datapath)
+        updateButton(session,"add_param_plot",style="default",disabled=F)
     }
 })
 observeEvent(input$reload_result_file,{
@@ -2255,25 +2255,43 @@ loading_ps_file <- reactive({
             table[,cov:=nrow(.SD), by=list(formula,param)]
             table[,data:=NULL]
             
-            states <- as.data.table(t(sapply(lapply(1:length(file$states),function(x) file$states[[x]]$bounds), function(s) unlist(s))))
-            states[, id:=1:nrow(states)]
+            if(length(file$states)==0) {
+                string <- "data.table("
+                for(i in 1:(2*length(file$variables))) string <- paste0(string,"NA,")
+                string <- paste0(string,"id=NA)")
+                states <- eval(parse(text=string))
+            } else {
+                states <- as.data.table(t(sapply(lapply(1:length(file$states),function(x) file$states[[x]]$bounds), function(s) unlist(s))))
+                states[, id:=1:nrow(states)]
+            }
             
             if(file$type == "rectangular") {    
                 # file$parameter_values [[1]] [[1]] [[1]] [1:2]
                 #                        set  rect   dim  range
-                params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
-                not_empty_ids <- 1:length(file$parameter_values)
-                times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
-                params[, id:=unlist(sapply(1:length(not_empty_ids),function(x) rep.int(not_empty_ids[x],times[x])))]
-                params[, row_id:=1:nrow(params)]
+                if(length(file$parameter_values)==0) {
+                    string <- "data.table("
+                    for(i in 1:(2*length(file$parameters))) string <- paste0(string,"NA,")
+                    string <- paste0(string,"id=NA,row_id=NA)")
+                    params <- eval(parse(text=string))
+                } else {
+                    params <- as.data.table(t(sapply(chunk(unlist(file$parameter_values),2*length(file$parameters)),unlist)))
+                    not_empty_ids <- 1:length(file$parameter_values)
+                    times <- sapply(lapply(not_empty_ids,function(x) file$parameter_values[[x]]),length)
+                    params[, id:=unlist(sapply(1:length(not_empty_ids),function(x) rep.int(not_empty_ids[x],times[x])))]
+                    params[, row_id:=1:nrow(params)]
+                }
             }
             if(file$type == "smt") {
-                # params <- data.table(expr=sapply(1:length(file$parameter_values),function(x) file$parameter_values[[x]]$Rexpression))
-                params <- data.table(expr=paste0("function(ip)",gsub("||","|",gsub("&&","&", sapply(1:length(file$parameter_values),
-                                                                                                    function(x) file$parameter_values[[x]]$Rexpression),fixed=T),fixed=T)))
-                params[, id:=1:nrow(params)]
-                params[, row_id:=1:nrow(params)]
-                setkey(params,id)
+                if(length(file$parameter_values)==0) {
+                    params <- data.table(id=NA,row_id=NA,expr=NA)
+                } else {
+                    # params <- data.table(expr=sapply(1:length(file$parameter_values),function(x) file$parameter_values[[x]]$Rexpression))
+                    params <- data.table(expr=paste0("function(ip)",gsub("||","|",gsub("&&","&", sapply(1:length(file$parameter_values),
+                                                                                                        function(x) file$parameter_values[[x]]$Rexpression),fixed=T),fixed=T)))
+                    params[, id:=1:nrow(params)]
+                    params[, row_id:=1:nrow(params)]
+                    setkey(params,id)
+                }
             }
             
             thrs <- file$thresholds
@@ -4067,7 +4085,7 @@ satisfiable_param_space_for_formula <- reactive({
 # })
 
 param_ranges <- reactive({
-    if(!is.null(loading_ps_file()) && nrow(loading_ps_file()$params) != 0) {
+    if(!is.null(loading_ps_file())) {
         # if(loading_ps_file()$type == "smt") {
         #     return(list(deg_x=c(0,1),k1=c(0,2)))    # TODO: temporary
         # } else {
