@@ -117,7 +117,8 @@ param_state_space   <- reactiveValues(data=list(),globals=list())
 param_space         <- reactiveValues(data=list(),globals=list())
 #satisfiable_ps      <- reactiveValues(data=list())
 
-vector_field_clicked  <- reactiveValues(data=list(),point=list(),old_point=list(),click_counter=list(),apply_to_all_click_counter=list(),apply_to_tss_click_counter=list())
+vector_field_clicked  <- reactiveValues(data=list(),point=list(),old_point=list(),click_counter=list(),apply_to_all_click_counter=list(),apply_to_tss_click_counter=list(),
+                                        old_count=list(),old_dense=list())
 state_space_clicked   <- reactiveValues(data=list(),point=list(),old_point=list(),click_counter=list(),apply_to_all_click_counter=list())
 param_ss_clicked      <- reactiveValues(data=list(),point=list(),old_point=list(),click_counter=list(),apply_to_all_click_counter=list())
 param_space_clicked   <- reactiveValues(data=list(),point=list(),old_point=list(),click_counter=list(),apply_to_all_click_counter=list())
@@ -344,6 +345,8 @@ reset_particular_global <- function(i) {
     vector_field_clicked$click_counter[[i]] <- NA
     vector_field_clicked$point[[i]] <- NA
     vector_field_clicked$old_point[[i]] <- NA
+    vector_field_clicked$old_count[[i]] <- NA
+    vector_field_clicked$old_dense[[i]] <- NA
     vf_brushed$data[[i]] <- NA
     vf_brushed$click_counter[[i]] <- NA
     
@@ -903,6 +906,8 @@ observeEvent(input$add_vf_plot,{
         vf_brushed$click_counter[[vf_chosen$max]] <- -1
         ss_brushed$click_counter[[vf_chosen$max]] <- -1
         vector_field_clicked$old_point[[vf_chosen$max]] <- NA
+        vector_field_clicked$old_count[[vf_chosen$max]] <- NA
+        vector_field_clicked$old_dense[[vf_chosen$max]] <- NA
         vector_field_clicked$click_counter[[vf_chosen$max]] <- -1
         vector_field_clicked$apply_to_all_click_counter[[vf_chosen$max]] <- -1
         vector_field_clicked$apply_to_tss_click_counter[[vf_chosen$max]] <- -1
@@ -1254,7 +1259,12 @@ apply_to_all_in_state_space <- observe({
 })
 
 set_num_of_flow_points <- reactive({
-    return(num_of_flow_points)
+    # return(num_of_flow_points)
+    return(input$flow_points_count)
+})
+
+set_flow_points_density <- reactive({
+    return(input$flow_points_density)
 })
 
 #====================== OUTPUTS =========================================
@@ -1415,31 +1425,27 @@ draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
     if(length(vector_field_clicked$point) >= plot_index && !(is.null(vector_field_clicked$point[[plot_index]]) || is.na(vector_field_clicked$point[[plot_index]]))) {
         
         point <- vector_field_clicked$point[[plot_index]]
+        count <- set_num_of_flow_points()
+        dense <- set_flow_points_density()
         if(is.na(vector_field_clicked$old_point[[plot_index]]) || !identical(vector_field_clicked$old_point[[plot_index]],point) ||
-               !identical(vector_field_space$globals[[plot_index]],checkpoint)) {
+           !identical(vector_field_space$globals[[plot_index]],checkpoint) || !identical(vector_field_clicked$old_count[[plot_index]],count) ||
+           !identical(vector_field_clicked$old_dense[[plot_index]],dense)) {
             
-            flow_data <- as.data.table(t(point))
-            #########
-            # repeat {
-            #     r <- nrow(flow_data)
-            #     input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
-            #     for(i in 1:length(variables)) {
-            #         input_params <- paste0(input_params,variables[i],"=",flow_data[r,get(variables[[i]])],",")
-            #     }
-            #     substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
-            #     new_move <- sapply(1:length(variables), function(i) {
-            #         if(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]])
-            #             eval(funcs_abst[[i]])(eval(parse(text=input_params)))
-            #         else
-            #             eval(funcs[[i]])(eval(parse(text=input_params)))
-            #     })
-            #     new_move <- flow_data[r]+new_move
-            #     print(paste0("point ",r,"=",new_move))
-            #     if(nrow(flow_data[round(x,rounding_in_flow)==round(new_move$x,rounding_in_flow) & round(y,rounding_in_flow)==round(new_move$y,rounding_in_flow)]) > 0) break
-            #     else flow_data <- rbind(flow_data,new_move)
-            # }
-            ########
-            for(r in seq(set_num_of_flow_points())) {
+            if(identical(vector_field_clicked$old_point[[plot_index]],point) && identical(vector_field_space$globals[[plot_index]],checkpoint) &&
+               identical(vector_field_clicked$old_dense[[plot_index]],dense) && !identical(vector_field_clicked$old_count[[plot_index]],count)) {
+                
+                if(count > vector_field_clicked$old_count[[plot_index]]) {
+                    flow_data <- vector_field_clicked$data[[plot_index]]
+                    flow_count <- (vector_field_clicked$old_count[[plot_index]]+1):count
+                } else {
+                    flow_data <- vector_field_clicked$data[[plot_index]][1:(count+1)]
+                    flow_count <- NULL
+                }
+            } else {
+                flow_data <- as.data.table(t(point))
+                flow_count <- seq(count)
+            }
+            for(r in flow_count) {
                 input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
                 for(i in 1:length(variables)) {
                     input_params <- paste0(input_params,variables[i],"=",flow_data[r,get(variables[[i]])],",")
@@ -1451,15 +1457,23 @@ draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
                     else
                         eval(funcs[[i]])(eval(parse(text=input_params)))
                 })
-                flow_data <- rbind(flow_data,flow_data[r]+new_move)
+                # names(new_move) <- variables
+                # new_move <- new_move*sapply(names(boundaries),function(x) ifelse(abs(new_move[[x]])>(dist(range(boundaries[[x]]))[1])/50,10^log10((dist(range(boundaries[[x]]))[1])/50),1))
+                min_scale <- min(sapply(loading_ss_file()$ranges,function(x) dist(range(x))[1]))
+                new_move <- new_move*ifelse(max(abs(new_move))>min_scale/50,10^log10(min_scale/50),1)
+                # flow_data <- rbind(flow_data,flow_data[r]+ifelse(max(abs(new_move))>= 0.1,0.1,1)*new_move)
+                flow_data <- rbind(flow_data,flow_data[r]+new_move*dense)
             }
             #########
             vector_field_clicked$data[[plot_index]] <- flow_data
         }
         flow_data <- vector_field_clicked$data[[plot_index]]
-        xspline(flow_data[,get(name_x)], flow_data[,get(name_y)], shape=1, col="blue", border="blue", lwd=size_of_flow_points)
+        # xspline(flow_data[,get(name_x)], flow_data[,get(name_y)], shape=1, col="blue", border="blue", lwd=size_of_flow_points)
+        lines(flow_data[,get(name_x)], flow_data[,get(name_y)], col="blue", lwd=size_of_flow_points)
         # it has to be at the end
         vector_field_clicked$old_point[[plot_index]] <- point
+        vector_field_clicked$old_count[[plot_index]] <- count
+        vector_field_clicked$old_dense[[plot_index]] <- dense
     }
     # it has to be at the end
     vector_field_space$globals[[plot_index]] <- checkpoint
@@ -1530,11 +1544,27 @@ draw_1D_vector_field <- function(name_x, plot_index, boundaries) {
     if(length(vector_field_clicked$point) >= plot_index && !(is.null(vector_field_clicked$point[[plot_index]]) || is.na(vector_field_clicked$point[[plot_index]]))) {
         
         point <- vector_field_clicked$point[[plot_index]]
+        count <- set_num_of_flow_points()
+        dense <- set_flow_points_density()
         if(is.na(vector_field_clicked$old_point[[plot_index]]) || !identical(vector_field_clicked$old_point[[plot_index]],point) ||
-           !identical(vector_field_space$globals[[plot_index]],checkpoint)) {
+           !identical(vector_field_space$globals[[plot_index]],checkpoint) || !identical(vector_field_clicked$old_count[[plot_index]],count) ||
+           !identical(vector_field_clicked$old_dense[[plot_index]],dense)) {
             
-            flow_data <- as.data.table(t(point))
-            for(r in seq(set_num_of_flow_points())) {
+            if(identical(vector_field_clicked$old_point[[plot_index]],point) && identical(vector_field_space$globals[[plot_index]],checkpoint) &&
+               identical(vector_field_clicked$old_dense[[plot_index]],dense) && !identical(vector_field_clicked$old_count[[plot_index]],count)) {
+                
+                if(count > vector_field_clicked$old_count[[plot_index]]) {
+                    flow_data <- vector_field_clicked$data[[plot_index]]
+                    flow_count <- (vector_field_clicked$old_count[[plot_index]]+1):count
+                } else {
+                    flow_data <- vector_field_clicked$data[[plot_index]][1:(count+1)]
+                    flow_count <- NULL
+                }
+            } else {
+                flow_data <- as.data.table(t(point))
+                flow_count <- seq(count)
+            }
+            for(r in flow_count) {
                 input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
                 for(i in 1:length(variables)) {
                     input_params <- paste0(input_params,variables[i],"=",flow_data[r,get(variables[[i]])],",")
@@ -1546,14 +1576,20 @@ draw_1D_vector_field <- function(name_x, plot_index, boundaries) {
                     else
                         eval(funcs[[i]])(eval(parse(text=input_params)))
                 })
-                flow_data <- rbind(flow_data,flow_data[r]+new_move)
+                min_scale <- min(sapply(loading_ss_file()$ranges,function(x) dist(range(x))[1]))
+                new_move <- new_move*ifelse(max(abs(new_move))>min_scale/50,10^log10(min_scale/50),1)
+                # flow_data <- rbind(flow_data,flow_data[r]+ifelse(max(abs(new_move))>= 0.1,0.1,1)*new_move)
+                flow_data <- rbind(flow_data,flow_data[r]+new_move*dense)
             }
             vector_field_clicked$data[[plot_index]] <- flow_data
         }
         flow_data <- vector_field_clicked$data[[plot_index]]
-        xspline(flow_data[,get(name_x)], rep(0.5,set_num_of_flow_points()+1), shape=1, col="blue", border="blue", lwd=size_of_flow_points)
+        # xspline(flow_data[,get(name_x)], rep(0.5,set_num_of_flow_points()+1), shape=1, col="blue", border="blue", lwd=size_of_flow_points)
+        lines(flow_data[,get(name_x)], rep(0.5,count+1), col="blue", lwd=size_of_flow_points)
         # it has to be at the end
         vector_field_clicked$old_point[[plot_index]] <- point
+        vector_field_clicked$old_count[[plot_index]] <- count
+        vector_field_clicked$old_dense[[plot_index]] <- dense
     }
     # it has to be at the end
     vector_field_space$globals[[plot_index]] <- checkpoint

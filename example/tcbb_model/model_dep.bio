@@ -13,7 +13,7 @@ PARAMS: y_pRB,0.001,1; k1,0.1,10
 CONSTS: y_E2F1,0.1; a,0.04; kp,0.05; k2,1
 
 # Here, settings for PWA approximation are defined (optional)
-VAR_POINTS: pRB: 2500, 20; E2F1: 2500, 20
+VAR_POINTS: pRB: 1500, 20; E2F1: 1500, 20
 
 # Here, ODEs for variables are defined (Hillm is keyword for negative Hill function and Hillp for positive Hill function - for more look into manual)
 EQ: pRB = k1*Hillp(E2F1,0.5,1,0,1)*Hillm(pRB,0.5,1,1,0) - y_pRB*pRB

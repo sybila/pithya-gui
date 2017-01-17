@@ -228,7 +228,7 @@ tabPanel(Explorer_label, icon=icon("move",lib = "glyphicon"),
                         ),
                        column(6,
                               tags$div(title=Explorer_lengthOfDirectionArrows_tooltip,
-                                   sliderInput("arrowSize",Explorer_lengthOfDirectionArrows_label,0.01,2,step=0.05,value=0.3)),
+                                   sliderInput("arrowSize",Explorer_lengthOfDirectionArrows_label,0.01,10,step=0.05,value=0.3)),
                               tags$div(title=Explorer_widthOfAllArrows_tooltip,
                                    sliderInput("transWidth",Explorer_widthOfAllArrows_label,1,5,step=0.5,value=1.5))
                         )
@@ -237,10 +237,14 @@ tabPanel(Explorer_label, icon=icon("move",lib = "glyphicon"),
                         radioButtons("colVariant",Explorer_coloringDirection_label,list(both="both",none="none",horizontal="horizontal",vertical="vertical"),"both",inline=T))
             ),
             column(2,
-                   uiOutput("param_sliders_bio")
-            ),
-            column(2
+                   tags$div(title=Explorer_flowPointsCount_tooltip,
+                            numericInput("flow_points_count",Explorer_flowPointsCount_label,min=50,max=NA,step=50,value=500)),
+                   tags$div(title=Explorer_flowPointsDensity_tooltip,
+                            sliderInput("flow_points_density",Explorer_flowPointsDensity_label,0.01,10,step=0.01,value=1))
 #                   ,uiOutput("param_sliders")
+            ),
+            column(2,
+                   uiOutput("param_sliders_bio")
             ),
 #             column(2,
 #                    sliderInput("height","height of plots",min=200,max=800,value=650,step=20),

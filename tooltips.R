@@ -98,6 +98,12 @@ Explorer_widthOfAllArrows_tooltip <- "Scaling factor for width of arrows inside 
 Explorer_coloringDirection_label <- "coloring direction"
 Explorer_coloringDirection_tooltip <- "Choose direction(s) to color."
 
+Explorer_flowPointsCount_label <- "no. of flow points"
+Explorer_flowPointsCount_tooltip <- "" #TODO:
+
+Explorer_flowPointsDensity_label <- "flow points density"
+Explorer_flowPointsDensity_tooltip <- "" #TODO:
+
 Explorer_addPlot_label <- "add plot"
 Explorer_addPlot_tooltip <- "Add new plot for vector field and state space."
 

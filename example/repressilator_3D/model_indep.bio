@@ -11,7 +11,7 @@ EQ: x = k1*hillm(y,5,5,1,0) - deg_x*x				# Here, ODE for variable 'x' is defined
 EQ: y = k2*hillm(z,5,5,1,0) - deg_y*y				# Here, ODE for variable 'y' is defined (hillm is keyword for negative Hill function - for more look into manual)
 EQ: z = k3*hillm(x,5,5,1,0) - deg_z*z				# Here, ODE for variable 'z' is defined (hillm is keyword for negative Hill function - for more look into manual)
 
-VAR_POINTS: x: 2500, 10; y: 2500, 10; z: 2500, 10	# Here, settings for PWA approximation are defined (optional)
+VAR_POINTS: x: 1500, 10; y: 1500, 10; z: 1500, 10	# Here, settings for PWA approximation are defined (optional)
 
 THRES: x: 0, 15										# Here, explicit thresholds for variable 'x' are defined (at least 2 thresholds are needed as bounds)
 THRES: y: 0, 15										# Here, explicit thresholds for variable 'y' are defined (at least 2 thresholds are needed as bounds)
