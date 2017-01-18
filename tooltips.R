@@ -3,17 +3,20 @@ source("config.R")
 Tool_name <- "PITHYA - Parameter Investigation Tool for HYbrid Analysis"
 
 #PROGRESS NOTIFICATIONS - in server.R
-Starting_advice <- "Start with button 'generate approximation'.\n"
+Starting_advice <- "Start with button 'generate approximation'."
 
-Approximation_started <- "Approximation is started\n"
+Approximation_started <- "Approximation is started"
 Approximation_running <- "Model approximation is running..."
-Approximation_finished <- "Approximation is finished\n"
-Approximation_error <- "Some error occured during approximation!\n"
+Approximation_finished <- "Approximation is finished"
+Approximation_error <- "Some error occured during approximation!"
 
-Parameter_synthesis_started <- "Parameter synthesis has started\n"
-Parameter_synthesis_stopped <- "Process was stopped!\n"
+Parameter_synthesis_started <- "Parameter synthesis has started"
+Parameter_synthesis_stopped <- "Process was stopped!"
 
 Waiting_for_state_space <- "Waiting for transition-state space"
+
+Experiment_config_file_created <- "Experiment config file created"
+Combine_error <- "TODO TODO TODO"
 
 
 #EDITOR

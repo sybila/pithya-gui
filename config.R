@@ -11,3 +11,8 @@ options(scipen=999)
 
 # allow file uploads of up to 1GB
 options(shiny.maxRequestSize=1000*1024^2)
+
+defaultModel = "//repressilator_2D//model_indep.with_comments.bio"
+defaultProperty = "//repressilator_2D//properties.with_comments.ctl"
+
+corePath = "..//biodivine-ctl//build//install//biodivine-ctl//bin//"

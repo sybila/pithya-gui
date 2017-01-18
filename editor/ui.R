@@ -38,7 +38,7 @@ editorControlPanel <- function() {
                     checkboxInput("advanced", Editor_advancedSettings_label, FALSE)                          
                 ),
                 tooltip(tooltip = Editor_model_Browse_tooltip,
-                    fileInput("vf_file", Editor_model_Browse_label, accept=".bio")
+                    fileInput("model_file", Editor_model_Browse_label, accept=".bio")
                 )  
             )
         ),

@@ -3,7 +3,19 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
 
+# Separate tab servers
+source("editor/server.R")
+
 shinyServer(function(input,output,session) {
+
+mySession <- list(shiny=session, pithya=list(
+    approximatedModel = reactiveValues(file = NULL, outdated = TRUE),
+    synthesisResult = reactiveValues(file = NULL, outdated = TRUE),
+    sessionDir = tempdir(),
+    examplesDir = "example//"
+))
+
+editorServer(input, mySession, output)
 
 #=============== GLOBALS ===============================================
 session_random <- sample(1000^2,1)
@@ -79,42 +91,8 @@ abstraction_reactivation <- reactiveValues(counter=0)
 #=======================================================================
 
 parameter_synthesis_run <- function() {
-    cat(Parameter_synthesis_started)
-    cat(Parameter_synthesis_started, file=progressFileName)
-    modelTempName  <- paste0(files_path,"model.",session_random,".abst.bio")
-    writeLines(loaded_ss_file$filedata,modelTempName)
-    propTempName   <- paste0(files_path,"prop.",session_random,".ctl")
-    writeLines(loaded_prop_file$data,propTempName)
-    system2(paste0(new_programs_path,"combine"),c(modelTempName, propTempName), stdout=configFileName, stderr=progressFileName, wait=T)
-    file.remove(modelTempName,propTempName)
-    if(file.exists(configFileName) && length(readLines(configFileName)) > 0) {
-        cat("config file is created\n")
-        # cat("Config file is created\n",file=progressFileName,append=T)
-        updateButton(session,"process_run",style="default",disabled=F)
-        updateButton(session,"process_stop",style="danger",disabled=F)
-        system2(paste0(new_programs_path,"biodivine-ctl"), c(configFileName,">",resultFileName,"2>",progressFileName), wait=F)
-        # cat("Process has started\n",file=progressFileName)
-    } else cat("\nError: some error occured, because no config file was created!\n")
+    
 }
-observeEvent(input$process_run,{
-    if(!is.null(loaded_ss_file$filedata) && input$process_run != 0) {
-        parameter_synthesis_run()
-    }
-})
-
-observeEvent(input$process_stop,{
-    if(!is.null(loaded_ss_file$filedata) && input$process_stop != 0) {
-        if(file.exists(progressFileName) && !is.null(progressFile()) && length(progressFile()) > 0 && !T %in% grepl("^!!DONE!!$",progressFile())) {
-            pid <- gsub("PID: ","",grep("^PID: [0-9]+$",progressFile(),value=T))
-            command <- ifelse(.Platform$OS.type=="windows", paste0("taskkill /f /pid ",pid), paste0("kill -9 ",pid))
-            system(command,wait=T)
-            cat(Parameter_synthesis_stopped)
-            cat(Parameter_synthesis_stopped, file=progressFileName)
-            updateButton(session,"process_stop",style="default",disabled=T)
-            updateButton(session,"process_run",style="success",disabled=F)
-        }
-    }
-})
 
 output$progress_output <- renderPrint({
     progressFile()
@@ -129,14 +107,6 @@ output$progress_output <- renderPrint({
                 # js_string <- paste0('confirm("',missing_thr_message,'!");')
                 session$sendCustomMessage(type='missThres', list(value = js_string, data = missing_thr_list))
             }
-            if(T %in% grepl("^!!DONE!!$",progressFile())) {
-                updateButton(session,"process_stop",style="default",disabled=T)
-                js_string <- paste0('alert("Parameter synthesis done!");')
-                session$sendCustomMessage(type='paramSynthEnd', list(value = js_string))
-                updateButton(session,"add_param_plot",style="default",disabled=F)
-                reset_globals_param()
-            }
-            
             # if(length(progressFile()) > progressMaxLength)
             #     cat(paste0(progressFile()[(length(progressFile())-progressMaxLength+1):length(progressFile())],collapse="\n"))
             # else
@@ -183,51 +153,6 @@ observeEvent(input$missing_threshold_counter,{
     }
 })
 
-#=============== PROPERTY INPUT TAB ====================================
-#=======================================================================
-
-# reaction on event of loading .ctl file into tool putting a loaded model into text field
-# observeEvent(c(loaded_prop_file$data,input$reset_prop),{
-#     if(!is.null(loaded_prop_file$data)) {
-#         updateTextInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
-#     }
-# })
-
-
-observeEvent(input$prop_input_area,{
-    loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
-    if(!is.null(loaded_ss_file$filedata)) updateButton(session,"process_run",style="success",disabled=F)
-})
-# observeEvent(input$accept_prop_changes,{
-#     if(!is.null(input$prop_input_area) && input$prop_input_area != "")
-#         loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
-# })
-
-observeEvent(c(input$prop_file,input$reset_prop),{
-    if(!is.null(input$prop_file) && !is.null(input$prop_file$datapath)) {
-#         if(!is.null(loaded_prop_file$filename) && loaded_prop_file$filename != input$prop_file$datapath) {
-#             #session$reload()
-#             reset_globals()
-#         }
-        loaded_prop_file$filename <- input$prop_file$name
-        loaded_prop_file$data <- readLines(input$prop_file$datapath)
-    } else {
-        # initial example file (temporary)
-        loaded_prop_file$filename <- paste0(examples_dir,"//repressilator_2D//properties.with_comments.ctl")
-        loaded_prop_file$data <- readLines(loaded_prop_file$filename)
-    }
-    updateAceEditor(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
-    # updateTextAreaInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
-})
-
-output$save_prop_file <- downloadHandler(
-    filename = "property.ctl", #ifelse(!is.null(input$prop_file) && !is.null(input$prop_file$datapath), paste0(input$prop_file$datapath), "property.ctl"),
-    content = function(file) {
-        if(!is.null(loaded_prop_file$data)) writeLines(loaded_prop_file$data, file)
-        else                                writeLines("", file)
-    }
-)
-
 #=============== MODEL INPUT TAB =======================================
 #=======================================================================
 
@@ -272,99 +197,7 @@ reset_particular_global <- function(i) {
     print(gc())
 }
 
-# reaction on event of loading .bio file into tool putting a loaded model into text field
-# observeEvent(c(loaded_vf_file$filedata,input$reset_model),{
-#     if(!is.null(loaded_vf_file$filedata)) {
-#         updateTextInput(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
-#     }
-# })
-
-
-observeEvent(input$model_input_area,{
-    if(!identical(loaded_vf_file$filedata,strsplit(input$model_input_area,"\n",fixed=T)[[1]])) {
-        loaded_vf_file$filedata <- strsplit(input$model_input_area,"\n",fixed=T)[[1]]
-        updateButton(session,"generate_abstraction", style="success", disabled=F)
-    }
-})
-
-observeEvent(c(input$vf_file,input$reset_model),{
-    if(!is.null(input$vf_file) && !is.null(input$vf_file$datapath)) {
-        # if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename != input$vf_file$datapath) {
-        #     #session$reload()
-        #     reset_globals()
-        # }
-        loaded_vf_file$filename <- input$vf_file$name
-        filedata <- readLines(input$vf_file$datapath)
-    } else {
-        # initial example file (temporary)
-        cat(Starting_advice, file=progressFileName)
-        loaded_vf_file$filename <- paste0(examples_dir,"//repressilator_2D//model_indep.with_comments.bio")
-        filedata <- readLines(loaded_vf_file$filename)
-    }
-    updateAceEditor(session,"model_input_area",value = paste(filedata,collapse="\n"))
-    # updateButton(session,"generate_abstraction", style="success", disabled=F)
-    # updateTextAreaInput(session,"model_input_area",value = paste(loaded_vf_file$filedata,collapse="\n"))
-})
-
-output$save_model_file <- downloadHandler(
-    filename = "model.bio", #ifelse(!is.null(loaded_vf_file$filename), paste0(loaded_vf_file$filename), "model.bio"),
-    content = function(file) {
-        if(!is.null(loaded_vf_file$filedata)) writeLines(loaded_vf_file$filedata, file)
-        else                               writeLines("", file)
-    }
-)
-# output$save_current_model_file <- downloadHandler(
-#     filename = "model.bio", #ifelse(!is.null(preloading_vf_file()), paste0(preloading_vf_file()$filepath), "model.bio"),
-#     content = function(file) {
-#         if(!is.null(preloading_vf_file())) writeLines(preloading_vf_file()$filedata, file)
-#         else                               writeLines("", file)
-#     }
-# )
-
 #=======================================================================
-
-generate_abstraction_run <- function() {
-    cat(Approximation_started)
-    cat(Approximation_started, file=progressFileName)
-    
-    withProgress({
-        model_temp_name  <- paste0(files_path,"model.",session_random,".bio")
-        writeLines(loaded_vf_file$filedata,model_temp_name)
-        abstracted_model_temp_name <- paste0(files_path,"model.",session_random,".abst.bio")
-        system2(paste0(new_programs_path,"tractor"),c(model_temp_name,
-                                                      ifelse(input$fast_approximation,"true","false"),
-                                                      ifelse(input$thresholds_cut,"true","false")),
-                stdout = abstracted_model_temp_name,
-                stderr = progressFileName, wait=T)
-        # system2("java", c("-jar",paste0(java_programs_path,"tractor.jar"), model_temp_name, 
-        #                   ifelse(input$fast_approximation,"true","false"),
-        #                   ifelse(input$thresholds_cut,"true","false"),
-        #                   ">", abstracted_model_temp_name,
-        #                   "2>",progressFileName), wait=T)
-        file.remove(c(model_temp_name))
-        if(file.exists(abstracted_model_temp_name) && length(readLines(abstracted_model_temp_name)) > 0) {
-            loaded_ss_file$filename <- abstracted_model_temp_name
-            loaded_ss_file$filedata <- readLines(abstracted_model_temp_name)
-            file.remove(abstracted_model_temp_name)
-            cat(Approximation_finished)
-            cat(Approximation_finished, file=progressFileName,append=T)
-            updateButton(session,"generate_abstraction",style="default",disabled=F)
-            updateButton(session,"process_run",style="success",disabled=F)
-            updateButton(session,"add_vf_plot",style="default",disabled=F)
-            reset_globals()
-            reset_globals_param()     # for the case we would liek to reset result tab along with model explorer tab
-        } else {
-            cat(Approximation_error)
-            cat(Approximation_error, file=progressFileName,append=T)
-        }
-    }, message=Approximation_running, value=0.5)
-}
-observeEvent(input$generate_abstraction,{
-    if(input$generate_abstraction != 0) {
-        # loaded_ss_file$filedata <- readLines(paste0(examples_dir,"//model_2D_1P_400R.abst.bio"))
-        generate_abstraction_run()
-    }
-})
     
 loading_vf_file <- eventReactive(c(input$generate_abstraction,abstraction_reactivation$counter),{
     if(!is.null(loaded_vf_file$filedata) && input$generate_abstraction > 0) {
