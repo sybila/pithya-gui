@@ -98,10 +98,10 @@ Explorer_widthOfAllArrows_tooltip <- "Scaling factor for width of arrows inside 
 Explorer_coloringDirection_label <- "coloring direction"
 Explorer_coloringDirection_tooltip <- "Choose direction(s) to color."
 
-Explorer_flowPointsCount_label <- "no. of flow points"
-Explorer_flowPointsCount_tooltip <- "" #TODO:
+Explorer_flowPointsCount_label <- "no. of flow points" #"no. of trajectory points"
+Explorer_flowPointsCount_tooltip <- "" #TODO: "sets "
 
-Explorer_flowPointsDensity_label <- "flow points density"
+Explorer_flowPointsDensity_label <- "flow points density" #"trajectory point density"
 Explorer_flowPointsDensity_tooltip <- "" #TODO:
 
 Explorer_addPlot_label <- "add plot"
@@ -131,8 +131,8 @@ Explorer_VF_tooltip <- ""                                           #TODO: proba
 Explorer_VF_ApplyToAll_label <- "apply to all"
 Explorer_VF_ApplyToAll_tooltip <- "Apply this starting point to all vector field plots."
 
-Explorer_VF_ApplyToTSS_label <- "apply to SS"
-Explorer_VF_ApplyToTSS_tooltip <- "Apply this starting point to corresponding state space plot."
+Explorer_VF_ApplyToTSS_label <- "apply to TSS"
+Explorer_VF_ApplyToTSS_tooltip <- "Apply this starting point to corresponding transition-state space plot."
 
 Explorer_VF_ClearPlot_label <- "clear plot"
 Explorer_VF_ClearPlot_tooltip <- "Clear this plot."
@@ -149,18 +149,18 @@ Explorer_VF_ScaleSlider_tooltip <- ""
 Explorer_VF_HoverTextArea_label <- ""                               #TODO: probably remove
 Explorer_VF_HoverTextArea_tooltip <- ""
 
-Explorer_SS_label <- "state space:" #"state space of the model:"
+Explorer_SS_label <- "transition-state space:" #"transition-state space of the model:"
 Explorer_SS_tooltip <- ""                                           #TODO: probably remove
-Explorer_SS_error <- "Approximation has to be generated before showing state space"
+Explorer_SS_error <- "Approximation has to be generated before showing transition-state space"
 
 Explorer_SS_ApplyToAll_label <- "apply to all"
-Explorer_SS_ApplyToAll_tooltip <- "Apply this starting point to all state space plots."
+Explorer_SS_ApplyToAll_tooltip <- "Apply this starting point to all transition-state space plots."
 
 Explorer_SS_ClearPlot_label <- "clear plot"
 Explorer_SS_ClearPlot_tooltip <- "Clear this plot."
 
 Explorer_SS_Unzoom_label <- "unzoom"
-Explorer_SS_Unzoom_tooltip <- "Unzoom this state space plot."
+Explorer_SS_Unzoom_tooltip <- "Unzoom this transition-state space plot."
 
 Explorer_SS_ScaleSlider_label <- "discrete scale in "
 Explorer_SS_ScaleSlider_tooltip <- ""
