@@ -1,61 +1,12 @@
 # in linux install: r-base-dev
 
-if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
-if(!require(shinyBS,quietly = T)) {install.packages("shinyBS", dependencies=T,quiet = T); library(shinyBS,quietly = T)}
-if(!require(shinyAce,quietly = T)) {install.packages("shinyAce", dependencies=T,quiet = T); library(shinyAce,quietly = T)}
-if(!require(shinyjs,quietly = T)) {install.packages("shinyjs", dependencies=T,quiet = T); library(shinyjs,quietly = T)}
-if(!require(pracma,quietly = T)) {install.packages("pracma", dependencies=T,quiet = T); require(pracma,quietly = T)}
-if(!require(stringr,quietly = T)) {install.packages("stringr", dependencies=T,quiet = T); library(stringr,quietly = T)}
-if(!require(data.table,quietly = T)) {install.packages("data.table", dependencies=T,quiet = T); library(data.table,quietly = T)}
-if(!require(rjson,quietly = T)) {install.packages("rjson", dependencies=T,quiet = T); library(rjson,quietly = T)}
-#if(!require(Rcpp,quietly = T)) {install.packages("Rcpp",quiet = T); library(Rcpp,quietly = T)}
-#if(!require(httpuv,quietly = T)) {install.packages("httpuv",quiet = T); library(httpuv,quietly = T)}
-#if(!require(shinyjs,quietly = T)) {install.packages("shinyjs",quiet = T); library(shinyjs,quietly = T)}
-#if(!require(shinythemes,quietly=T)) install.packages("shinythemes",quiet=T); library(shinythemes,quietly=T)
-#if(!require(ggplot2,quietly = T)) install.packages("ggplot2",quiet = T); library(ggplot2,quietly = T)
+source("dependencies.R")    #load dependencies
 
 source("tooltips.R")
 source("global.R")
-#source("generator.R")
-
-
-# debounce <- function(expr, millis, env = parent.frame(), quoted = FALSE,
-#                      domain = getDefaultReactiveDomain()) {
-#     force(millis)
-#     f <- exprToFunction(expr, env, quoted)
-#     label <- sprintf("debounce(%s)", paste(deparse(body(f)), collapse = "\n"))
-#     v <- reactiveValues(
-#         trigger = NULL,
-#         when = NULL # the deadline for the timer to fire; NULL if not scheduled
-#     )
-#     # Responsible for tracking when f() changes.
-#     observeEvent(f(), {
-#         # The value changed. Start or reset the timer.
-#         v$when <- Sys.time() + millis/1000
-#     }, ignoreNULL = FALSE)
-#     # This observer is the timer. It rests until v$when elapses, then touches
-#     # v$trigger.
-#     observe({
-#         if (is.null(v$when))
-#             return()
-#         now <- Sys.time()
-#         if (now >= v$when) {
-#             v$trigger <- runif(1)
-#             v$when <- NULL
-#         } else invalidateLater((v$when - now) * 1000, domain)
-#     })
-#     # This is the actual reactive that is returned to the user. It returns the
-#     # value of f(), but only invalidates/updates when v$trigger is touched.
-#     eventReactive(v$trigger, {
-#         f()
-#     }, ignoreNULL = FALSE)
-# }
 
 options(scipen=999)
 options(shiny.maxRequestSize=1000*1024^2)
-#gcinfo(TRUE)   # for periodically showing garbage collection stats
-
-#jsResetCode <- "shinyjs.reset = function() {history.go(0);}"
 
 shinyServer(function(input,output,session) {
 
@@ -128,33 +79,6 @@ param_chosen        <- reactiveValues(data=NULL,max=1)
 
 abstraction_reactivation <- reactiveValues(counter=0)
 
-
-#=============== TEST TAB ==============================================
-
-# observeEvent(input$start_btn,{          # temporary
-#     if(input$start_btn != 0){
-#         #progress <<- shiny::Progress$new(session, min=1, max=30)
-#         system2("C://Program Files//R//R-3.1.2//bin//Rscript.exe",c("C://Users//User//skola//pracovny//R//test_of_pipe//cycle.R",">",progressFileName),stdout="",wait=F)
-#         #progress$set(message = "Runnnig...", detail = NULL)
-#         #on.exit(file.remove(progressFileName))
-#     }
-# })
-# 
-# 
-# output$text_area <- renderPrint({
-#     if(length(progressFile()) > 0) {
-#         progress$set(value = as.numeric(progressFile()[length(progressFile())]))
-#         if(length(progressFile()) > progressMaxLength)
-#             cat(paste0(progressFile()[(length(progressFile())-progressMaxLength+1):length(progressFile())],collapse="\n"))
-#         else
-#             cat(paste0(progressFile(),collapse="\n"))
-#         #on.exit(file.remove(progressFileName))
-#     }
-# #     if(length(progressFile() > 0))
-# #         for(i in 1:length(progressFile()))
-# #             cat(progressFile()[i],"\n")
-# },width=100)
-    
 
 #=============== PROCESS SETTINGS TAB ==================================
 #=======================================================================
@@ -446,119 +370,6 @@ observeEvent(input$generate_abstraction,{
         generate_abstraction_run()
     }
 })
-
-# observeEvent(input$state_space_file,{
-#     if(!is.null(input$state_space_file) && !is.null(input$state_space_file$datapath)) {
-#         loaded_ss_file$filedata <- readLines(input$state_space_file$datapath)
-#     } else {
-#         # initial example file (temporary)
-#         if(!is.null(loaded_vf_file$filename) && loaded_vf_file$filename == paste0(examples_dir,"//model_2D_1P_100R.bio"))
-#             loaded_ss_file$filedata <- paste0(examples_dir,"//model_2D_1P_400R.ss.json")
-#         else
-#             loaded_ss_file$filedata <- NULL
-#     }
-# })
-    
-
-#===================== MODEL EXPLORER ==================================    
-#=============== LOADING OF FILES ======================================
-#=======================================================================
-
-# output$model_help_text <- renderUI({
-#     if(stored_ss_files$current != 0) {
-#         helpText(paste0(Explorer_experiment_label, stored_vf_files$current," (",stored_vf_files$data[[stored_vf_files$current]]$timestamp,")"))
-#     }
-# })
-# 
-# manage_model_experiments <- observeEvent(c(loaded_ss_file$filedata),{
-#     filedata <- loaded_ss_file$filedata
-#     if(!is.null(filedata)) {
-#         
-#         # Here will be core of managing switching between experiments models
-#         if(stored_ss_files$max == 1 || !identical(filedata,stored_ss_files$data[[stored_ss_files$max-1]]$filedata)) {
-#             stored_ss_files$data[[stored_ss_files$max]] <- list(filedata=filedata, filepath=loaded_ss_file$filename, timestamp=Sys.time())
-#             stored_vf_files$data[[stored_vf_files$max]] <- list(filedata=loaded_vf_file$filedata, filepath=loaded_vf_file$filename, timestamp=Sys.time())
-#             # loaded_ss_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
-#             # if(stored_ss_files$max==1)  {
-#                 stored_ss_files$current <- stored_ss_files$max
-#                 stored_vf_files$current <- stored_vf_files$max
-#                 # updateButton(session,"model_del",style="default",disabled=F)
-#                 updateButton(session,"add_vf_plot",style="default",disabled=F)
-#                 # show("save_current_model_file")
-#             # } else    
-#             #     updateButton(session,"model_next",style="success",disabled=F)
-#             # stored_ss_files$max <- stored_ss_files$max + 1
-#             # stored_vf_files$max <- stored_vf_files$max + 1
-#         }
-#     }
-# })
-# manage_model_next <- observeEvent(input$model_next,{
-#     # reset_globals()
-#     stored_vf_current_params$data[[stored_vf_files$current]] <- current_param_sliders()
-#     stored_ss_files$current <- stored_ss_files$current + 1
-#     stored_vf_files$current <- stored_vf_files$current + 1
-#     updateButton(session,"model_prev",style="default",disabled=F)
-#     if(stored_ss_files$current+1 == stored_ss_files$max) {
-#         updateButton(session,"model_next",style="default",disabled=T)
-#     } else {
-#         # updateButton(session,"model_next",style="default")
-#     }
-# })
-# manage_model_prev <- observeEvent(input$model_prev,{
-#     # reset_globals()
-#     stored_vf_current_params$data[[stored_vf_files$current]] <- current_param_sliders()
-#     stored_ss_files$current <- stored_ss_files$current - 1
-#     stored_vf_files$current <- stored_vf_files$current - 1
-#     updateButton(session,"model_next",style="default",disabled=F)
-#     if(stored_ss_files$current == 1) {
-#         updateButton(session,"model_prev",style="default",disabled=T)
-#     } else {
-#         # updateButton(session,"model_prev",style="default")
-#     }
-# })
-# manage_model_del <- observeEvent(input$model_del,{
-#     if(stored_ss_files$current > 0) {
-#         reset_globals()
-#         stored_ss_files$max <- stored_ss_files$max - 1
-#         stored_ss_files$data[[stored_ss_files$current]] <- NULL
-#         stored_ss_parsed_data$data[[stored_ss_files$current]] <- NULL
-#         stored_vf_files$max <- stored_vf_files$max - 1
-#         stored_vf_files$data[[stored_vf_files$current]] <- NULL
-#         stored_vf_current_params$data[[stored_vf_files$current]] <- NULL
-#         stored_vf_parsed_data$data[[stored_vf_files$current]] <- NULL
-#         stored_vf_chosen$data[[stored_vf_files$current]] <- NULL
-#         if(stored_ss_files$current == stored_ss_files$max) {
-#             stored_ss_files$current <- stored_ss_files$current - 1
-#             stored_vf_files$current <- stored_vf_files$current - 1
-#             if(stored_ss_files$current == 0) {
-#                 updateButton(session,"model_del",style="default",disabled=T)
-#                 updateButton(session,"add_vf_plot",style="default",disabled=T)
-#                 hide("save_current_model_file")
-#             }
-#         }
-#         if(stored_ss_files$current == 1) {
-#             updateButton(session,"model_prev",style="default",disabled=T)
-#         }
-#         if(stored_ss_files$current+1 == stored_ss_files$max) {
-#             updateButton(session,"model_next",style="default",disabled=T)
-#         }
-#     }
-# })
-# 
-# 
-# preloading_vf_file <- eventReactive(c(stored_vf_files$current,input$generate_abstraction),{
-#     if(stored_vf_files$current != 0)
-#         return(stored_vf_files$data[[stored_vf_files$current]])
-#     else
-#         return(NULL)
-# })
-# 
-# preloading_ss_file <- eventReactive(c(stored_ss_files$current,input$generate_abstraction),{
-#     if(stored_ss_files$current != 0)
-#         return(stored_ss_files$data[[stored_ss_files$current]])
-#     else
-#         return(NULL)
-# })
     
 loading_vf_file <- eventReactive(c(input$generate_abstraction,abstraction_reactivation$counter),{
     if(!is.null(loaded_vf_file$filedata) && input$generate_abstraction > 0) {
@@ -783,36 +594,6 @@ output$param_sliders_bio <- renderUI({
 current_param_sliders <- reactive({
     lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",1,"_",i)]])
 })
-# update_param_sliders <- observe({
-#     if(!is.null(loading_vf_file())) {
-#         for(i in 1:length(loading_vf_file()$params)) {
-#             change <- input[[paste0("param_slider_vf_",i)]]
-#             updateSliderInput(session,paste0("num_param_slider_vf_",i),value=change)
-#             print("changing slider\n")
-#         }
-#     }
-# })
-# update_param_numerics <- observe({
-#     if(!is.null(loading_vf_file())) {
-#         for(i in 1:length(loading_vf_file()$params)) {
-#             change <- input[[paste0("num_param_slider_vf_",i)]]
-#             updateNumericInput(session,paste0("param_slider_vf_",i),value=change)
-#             print("changing numeric\n")
-#         }
-#     }
-# })
-# output$param_sliders <- renderUI({
-#     if(!is.null(loading_ss_file()) && !is.null(loading_ss_file()$params)) {
-#           lapply(0:(loading_ss_file()$params_num-1), function(i) {
-#             label <- paste0("parameter ",names(loading_vf_file()$params)[i+1])
-#             name <- paste0("param_slider_",i+1)
-#             values <- c(min(as.numeric(loading_ss_file()$params[[paste0("V",2*i+1)]]),na.rm=T),max(as.numeric(loading_ss_file()$params[[paste0("V",2*i+2)]]),na.rm=T))
-#             numericInput(name,label=label,min=values[1],max=values[2],value=((values[2]-values[1])*0.1),step=((values[2]-values[1])/1000))
-#             #sliderInput(name,label=label,min=values[1],max=values[2],value=c(values[1],values[2]),step=((values[2]-values[1])/1000))
-#         })
-#     }
-# })
-
 
 output$selector <- renderUI({
     if(!is.null(loading_vf_file())) {
@@ -854,15 +635,6 @@ output$selector <- renderUI({
     }
 })
 
-# observe({
-#     if(!is.null(loading_vf_file())) {
-#         for(i in vf_update()) {
-#             if(!is.null((input[[paste0("hide_vf_",i)]])))
-#                 if(input[[paste0("hide_vf_",i)]])   updateButton(session,paste0("hide_vf_",i), label="show")
-#                 else                                updateButton(session,paste0("hide_vf_",i), label="hide")
-#         }
-#     }
-# })
 # observer caring for hiding plot if some of selectors is invalidated
 observe({
     if(!is.null(loading_vf_file())) {
@@ -2195,86 +1967,6 @@ output$save_result_file <- downloadHandler(
     }
 )
 
-# output$result_help_text <- renderUI({
-#     if(stored_ps_files$current != 0) {
-#         helpText(paste0(Result_experiment_label, stored_ps_files$current," (",stored_ps_files$data[[stored_ps_files$current]]$timestamp,")"))
-#     }
-# })
-# 
-# manage_result_experiments <- observeEvent(loaded_ps_file$filedata,{
-#     filedata <- loaded_ps_file$filedata
-#     if(!is.null(filedata)) {
-#         
-#         if(stored_ps_files$max == 1 || !identical(filedata,stored_ps_files$data[[stored_ps_files$max-1]]$filedata)) {
-#             stored_ps_files$data[[stored_ps_files$max]] <- list(filedata=filedata, filepath=loaded_ps_file$filename, timestamp=Sys.time()) 
-#                                                                 # data=list(chosen_ps_formula=1, param_chosen=list(data=NULL), parsed_data=list()) )
-#             loaded_ps_file$filedata <- NULL   # on this depends a possibility of loading last experiment for ever
-#             if(stored_ps_files$max==1)  {
-#                 stored_ps_files$current <- stored_ps_files$max
-#                 updateButton(session,"result_del",style="default",disabled=F)
-#                 updateButton(session,"add_param_plot",style="default",disabled=F)
-#                 show("save_result_file")
-#             } else    
-#                 updateButton(session,"result_next",style="success",disabled=F)
-#             stored_ps_files$max <- stored_ps_files$max + 1
-#         }
-#     }
-# })
-# manage_result_next <- observeEvent(input$result_next,{
-#     # reset_globals_param()
-#     stored_ps_current_formula$data[[stored_ps_files$current]] <- chosen_ps_formulae_clean()
-#     stored_ps_files$current <- stored_ps_files$current + 1
-#     updateButton(session,"result_prev",style="default",disabled=F)
-#     if(stored_ps_files$current+1 == stored_ps_files$max) {
-#         updateButton(session,"result_next",style="default",disabled=T)
-#     } else {
-#         # updateButton(session,"result_next",style="default")
-#     }
-# })
-# manage_result_prev <- observeEvent(input$result_prev,{
-#     # reset_globals_param()
-#     stored_ps_current_formula$data[[stored_ps_files$current]] <- chosen_ps_formulae_clean()
-#     stored_ps_files$current <- stored_ps_files$current - 1
-#     updateButton(session,"result_next",style="default",disabled=F)
-#     if(stored_ps_files$current == 1) {
-#         updateButton(session,"result_prev",style="default",disabled=T)
-#     } else {
-#         # updateButton(session,"result_prev",style="default")
-#     }
-# })
-# manage_result_del <- observeEvent(input$result_del,{
-#     if(stored_ps_files$current > 0) {
-#         if(identical(input$ps_file$name, stored_ps_files$data[[stored_ps_files$current]]$filepath))
-#             updateButton(session,"reload_result_file",disabled=F)
-#         reset_globals_param()
-#         stored_ps_files$max <- stored_ps_files$max - 1
-#         stored_ps_files$data[[stored_ps_files$current]] <- NULL
-#         stored_ps_chosen$data[[stored_ps_files$current]] <- NULL
-#         # stored_ps_parsed_data$data[[stored_ps_files$current]] <- NULL
-#         stored_ps_current_formula$data[[stored_ps_files$current]] <- NULL
-#         if(stored_ps_files$current == stored_ps_files$max) {
-#             stored_ps_files$current <- stored_ps_files$current - 1
-#             if(stored_ps_files$current == 0) {
-#                 updateButton(session,"result_del",style="default",disabled=T)
-#                 updateButton(session,"add_param_plot",style="default",disabled=T)
-#                 hide("save_result_file")
-#             }
-#         }
-#         if(stored_ps_files$current == 1) {
-#             updateButton(session,"result_prev",style="default",disabled=T)
-#         }
-#         if(stored_ps_files$current+1 == stored_ps_files$max) {
-#             updateButton(session,"result_next",style="default",disabled=T)
-#         }
-#     }
-# })
-# 
-# preloading_ps_file <- eventReactive(c(stored_ps_files$current),{
-#     if(stored_ps_files$current != 0)
-#         return(stored_ps_files$data[[stored_ps_files$current]])
-#     else
-#         return(NULL)
-# })
 loading_ps_file <- reactive({
     if(!is.null(loaded_ps_file$filedata)) {
         # if(length(stored_ps_parsed_data$data) >= stored_ps_files$current && !is.null(stored_ps_parsed_data$data[[stored_ps_files$current]])) {
@@ -2552,102 +2244,7 @@ output$param_space_plots <- renderUI({
                               )
                           }
                        }),
-#                        if(input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names || input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names) {
-#                            lapply(1:length(list_of_all_names), function(t) {
-#                                if(!list_of_all_names[[t]] %in% c(input[[paste0("param_selector_x_",i)]],input[[paste0("param_selector_y_",i)]])) {
-#                                    if(list_of_all_names[[t]] %in% loading_ps_file()$var_names) {
-#                                        label <- paste0("discrete scale in ",list_of_all_names[[t]])
-#                                        name <- paste0("scale_slider_ps_",i,"_",t)
-#                                        values <- range(loading_ps_file()$thresholds[[ which(loading_ps_file()$var_names == list_of_all_names[[t]]) ]])
-#                                        fluidRow(
-#                                            column(12,
-#                                                   fluidRow(
-#                                                       column(1,
-#                                                          conditionalPanel(
-#                                                              condition = "input.advanced == true",
-#                                                              checkboxInput(paste0("scale_switch_ps_",i,"_",t), NULL, 
-#                                                                    ifelse(is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), T, input[[paste0("scale_switch_ps_",i,"_",t)]]))
-#                                                          )
-#                                                       ),
-#                                                       column(11,
-#                                                          helpText(label)
-#                                                       )
-#                                                   ),
-#                                                   conditionalPanel(
-#                                                       condition = paste0("input.scale_switch_ps_",i,"_",t," == true"),
-#                                                       sliderInput(name,label=NULL,min=values[1],max=values[2],step=0.001,
-#                                                                   value=ifelse(is.null(input[[name]]), values[1], input[[name]] ))
-#                                                   )
-#                                            )
-#                                        )
-#                                    } else {
-#                                        label <- paste0("discrete scale in ",list_of_all_names[[t]])
-#                                        name  <- paste0("scale_slider_ps_",i,"_",t)
-#                                        values <- param_ranges()[[t]]
-#                                        fluidRow(
-#                                            column(12,
-#                                                   fluidRow(
-#                                                       column(1,
-#                                                              conditionalPanel(
-#                                                                  condition = "input.advanced == true",
-#                                                                  checkboxInput(paste0("scale_switch_ps_",i,"_",t), NULL, 
-#                                                                        ifelse(is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), T, input[[paste0("scale_switch_ps_",i,"_",t)]]))
-#                                                              )
-#                                                       ),
-#                                                       column(11,
-#                                                              helpText(label)
-#                                                       )
-#                                                   ),
-#                                                   conditionalPanel(
-#                                                       condition = paste0("input.scale_switch_ps_",i,"_",t," == true"),
-#                                                       sliderInput(name,label=NULL,min=values[1],max=values[2],step=0.001,
-#                                                                   value=ifelse(is.null(input[[name]]), values[1], input[[name]] ))
-#                                                   )
-#                                            )
-#                                        )
-#                                        #
-#                                    }
-#                                }
-#                            })
-#                        } else {
-#                            lapply(1:length(list_of_param_names), function(t) {
-#                                if(!list_of_param_names[[t]] %in% c(input[[paste0("param_selector_x_",i)]],input[[paste0("param_selector_y_",i)]])) {
-#                                    label <- paste0("scale in ",list_of_param_names[[t]])
-#                                    name <- paste0("scale_slider_ps_",i,"_",t)
-#                                    values <- param_ranges()[[t]]
-#                                    #session$sendCustomMessage(type='scaleSliderHandler', list(name=name,
-#                                    #                                                          values=param_ranges_sat_for_formula()[[t]]) )
-#                                    fluidRow(
-#                                        column(12,
-#                                               fluidRow(
-#                                                   column(1,
-#                                                          conditionalPanel(
-#                                                              condition = "input.advanced == true",
-#                                                              checkboxInput(paste0("scale_switch_ps_",i,"_",t), NULL, 
-#                                                                    ifelse(is.null(input[[paste0("scale_switch_ps_",i,"_",t)]]), T, input[[paste0("scale_switch_ps_",i,"_",t)]]))
-#                                                          )
-#                                                   ),
-#                                                   column(11,
-#                                                          helpText(label)
-#                                                   )
-#                                               ),
-#                                               conditionalPanel(
-#                                                   condition = paste0("input.scale_switch_ps_",i,"_",t," == true"),
-#                                                   sliderInput(name,label=NULL,min=values[1],max=values[2],step=0.001,
-#                                                               value=ifelse(is.null(input[[name]]), values[1], input[[name]] ))
-#                                               )
-#                                        )
-#                                    )
-#                                    # another variant is to use double-ended sliders with dragRange - but this needs to differently manage click inside of a PS (it could be
-#                                    #    a range instead of a point in each dimension) and still use with a checkbox which instantly cancel slider's effect
-# #                                    sliderInput(name,label=label,min=values[1],max=values[2],step=1,
-# #                                                value=c(ifelse(is.null(input[[name]]), values[1],
-# #                                                             input[[name]][1]),
-# #                                                        ifelse(is.null(input[[name]]), values[2],
-# #                                                               input[[name]][2])))
-#                                }
-#                            })
-#                        },
+
                     tags$div(title=Result_PS_HoverTextArea_tooltip,
                              verbatimTextOutput(paste0("hover_text_ps_",i)))
                 ),
@@ -2817,23 +2414,6 @@ hover_over_ps_plots <- observe({
         })
     }
 })
-# output$hover_info <- renderUI({
-#     for (i in visible_ps_plots()) {
-#         #local({
-#             my_i <- i
-#             hover <- input[[paste0("ps_",my_i,"_hover")]]
-#             if(!is.null(hover)) {
-#                 style <- paste0("position:absolute; z-index:100; background-color: rgba(245, 245, 245, 0.85); ",
-#                                 "left:", 35, "%; top:", 35, "%;")
-#                 wellPanel(       
-#                     style = style,       
-#                     p(HTML(paste0("<b> x: </b>", round(hover$x,5), "<br/>",                     
-#                                   "<b> y: </b>", round(hover$y,5), "<br/>")))
-#                 )
-#             }
-#         #})
-#     }
-# })
 
 reset_advanced_settings <- observeEvent(input$advanced,{
     if(!is.null(loading_ps_file()) && !input$advanced) {
@@ -2974,24 +2554,6 @@ draw_param_ss <- function(name_x, name_y, plot_index, boundaries) {
                 }        # incremental intersection of ids in order to get right ids
             }
             states <- states[id %in% blue_ids]
-            
-            # if(is.na(param_space_clicked$old_point[[plot_index]]) || !identical(param_space_clicked$old_point[[plot_index]], point) ||
-            #        !identical(param_state_space$globals[[plot_index]],checkpoint) || !identical(param_ss_clicked$point[[plot_index]],param_ss_clicked$old_point[[plot_index]])) {
-            # 
-            #     ids <- loading_ps_file()$params$row_id    # all ids at first
-            #     for(x in 1:length(params)) {
-            #         name <- params[x]
-            #         ids <- intersect(ids, loading_ps_file()$params[get(paste0("V",x*2-1)) < point[[name]][2] & get(paste0("V",x*2)) >= point[[name]][2] |
-            #                                                        get(paste0("V",x*2-1)) <= point[[name]][1] & get(paste0("V",x*2)) > point[[name]][1] |
-            #                                                        get(paste0("V",x*2-1)) >= point[[name]][1] & get(paste0("V",x*2)) <= point[[name]][2], row_id])
-            #     }        # incremental intersection of param ids in order to get right ids
-            #     ids <- unique(loading_ps_file()$params[row_id %in% ids,id])
-            #     blue_ids <- loading_ps_file()$param_space[(param+1) %in% ids & formula==chosen_ps_formulae_clean(),state+1]
-            #     param_space_clicked$data[[plot_index]] <- states[id %in% blue_ids]
-            # }
-            # states <- param_space_clicked$data[[plot_index]]
-            # # this has to be at the end
-            # param_space_clicked$old_point[[plot_index]] <- point
             
             if(nrow(states) > 0) {
                 rect(states[[paste0("V",index_x*2-1)]], states[[paste0("V",index_y*2-1)]], states[[paste0("V",index_x*2)]], states[[paste0("V",index_y*2)]],
@@ -3929,83 +3491,7 @@ clicked_in_ps <- observe({
         }
     }
 })
-# clicked_in_ps <- observe({
-#     if(!is.null(loading_ps_file()) ) {
-#         params <- loading_ps_file()$param_names
-#         list_of_all_names <- c(loading_ps_file()$param_names, loading_ps_file()$var_names)
-#         for(i in visible_ps_plots()) {
-#             clicked_point <- input[[paste0("ps_",i,"_dblclick")]]
-#             if(!is.null(clicked_point)) isolate({
-#                 cat("clicked in ps ",i,": ",clicked_point$x,",",clicked_point$y,"\n")
-#                 if(input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names || input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names) {
-#                     # this part is for mixed Param-space plot (with 1 parameter and 1 variable)
-# #                     param_space_clicked$point[[i]] <- sapply(1:length(list_of_all_names), function(t) {
-# #                         if(list_of_all_names[t] == input[[paste0("param_selector_x_",i)]]) return(clicked_point$x)
-# #                         if(list_of_all_names[t] == input[[paste0("param_selector_y_",i)]]) return(clicked_point$y)
-# #                         if(list_of_all_names[t] %in% params) return(input[[paste0("scale_slider_ps_",i,"_",t)]])
-# #                         else return(input[[paste0("scale_slider_ps_",i,"_",t)]])
-# #                     })
-#                     param_space_clicked$point[[i]] <- lapply(1:length(list_of_all_names), function(t) {
-#                         if(list_of_all_names[t] == input[[paste0("param_selector_x_",i)]]) return(c(clicked_point$x, clicked_point$x))
-#                         if(list_of_all_names[t] == input[[paste0("param_selector_y_",i)]]) return(c(clicked_point$y, clicked_point$y))
-#                         if(list_of_all_names[t] %in% params) {
-#                             if(input[[paste0("scale_switch_ps_",i,"_",t) ]])    return(c(input[[paste0("scale_slider_ps_",i,"_",t)]],input[[paste0("scale_slider_ps_",i,"_",t)]]))
-#                             else                                                return(param_ranges()[[list_of_all_names[t] ]])
-#                         } else {
-#                             if(input[[paste0("scale_switch_ps_",i,"_",t) ]])    return(c(input[[paste0("scale_slider_ps_",i,"_",t)]],input[[paste0("scale_slider_ps_",i,"_",t)]]))
-#                             else                                                return(range(loading_ps_file()$thresholds[[list_of_all_names[t] ]]))
-#                         }
-#                     })
-#                     names(param_space_clicked$point[[i]]) <- list_of_all_names
-#                 } else {
-#                     # this part is for normal Param-space plot (with 2 parameters)
-# #                     param_space_clicked$point[[i]] <- sapply(1:length(params), function(t) {
-# #                         if(params[t] == input[[paste0("param_selector_x_",i)]]) return(clicked_point$x)
-# #                         if(params[t] == input[[paste0("param_selector_y_",i)]]) return(clicked_point$y)
-# #                         return(input[[paste0("scale_slider_ps_",i,"_",t)]])
-# #                     })
-#                     param_space_clicked$point[[i]] <- lapply(1:length(params), function(t) {
-#                         if(params[t] == input[[paste0("param_selector_x_",i)]]) return(c(clicked_point$x, clicked_point$x))
-#                         if(params[t] == input[[paste0("param_selector_y_",i)]]) return(c(clicked_point$y, clicked_point$y))
-#                         if(input[[paste0("scale_switch_ps_",i,"_",t) ]])    return(c(input[[paste0("scale_slider_ps_",i,"_",t)]],input[[paste0("scale_slider_ps_",i,"_",t)]]))
-#                         else                                                return(param_ranges()[[params[t] ]])
-#                     })
-#                     names(param_space_clicked$point[[i]]) <- params
-#                 }
-#             })
-# #             if(length(param_space_clicked$point) >= i && !is.null(param_space_clicked$point[[i]]) && !is.na(param_space_clicked$point[[i]])) {
-# #                 if(input[[paste0("param_selector_y_",i)]] %in% loading_ps_file()$var_names || input[[paste0("param_selector_x_",i)]] %in% loading_ps_file()$var_names) {
-# #                     for(t in 1:length(list_of_all_names)) {
-# #                         if(!list_of_all_names[t] %in% c(input[[paste0("param_selector_x_",i)]],input[[paste0("param_selector_y_",i)]]) ) {
-# #                             if(list_of_all_names[t] %in% params) {
-# #                                 if(!is.null(input[[paste0("scale_switch_ps_",i,"_",t) ]]) && input[[paste0("scale_switch_ps_",i,"_",t) ]])
-# #                                     param_space_clicked$point[[i]] <- (c(input[[paste0("scale_slider_ps_",i,"_",t)]],input[[paste0("scale_slider_ps_",i,"_",t)]]))
-# #                                 else
-# #                                     param_space_clicked$point[[i]] <- (param_ranges()[[list_of_all_names[t] ]])
-# #                             } else {
-# #                                 if(!is.null(input[[paste0("scale_switch_ps_",i,"_",t) ]]) && input[[paste0("scale_switch_ps_",i,"_",t) ]])
-# #                                     param_space_clicked$point[[i]] <- (c(input[[paste0("scale_slider_ps_",i,"_",t)]],input[[paste0("scale_slider_ps_",i,"_",t)]]))
-# #                                 else
-# #                                     param_space_clicked$point[[i]] <- (range(loading_ps_file()$thresholds[[list_of_all_names[t] ]]))
-# #                             }
-# #                         }
-# #                     }
-# #                     names(param_space_clicked$point[[i]]) <- list_of_all_names
-# #                 } else {
-# #                     for(t in 1:length(params) ) {
-# #                         if(!params[t] %in% c(input[[paste0("param_selector_x_",i)]],input[[paste0("param_selector_y_",i)]]) ) {
-# #                             if(!is.null(input[[paste0("scale_switch_ps_",i,"_",t) ]]) && input[[paste0("scale_switch_ps_",i,"_",t) ]])
-# #                                 param_space_clicked$point[[i]] <- (c(input[[paste0("scale_slider_ps_",i,"_",t)]],input[[paste0("scale_slider_ps_",i,"_",t)]]))
-# #                             else
-# #                                 param_space_clicked$point[[i]] <- (param_ranges()[[params[t] ]])
-# #                         }
-# #                     }
-# #                     names(param_space_clicked$point[[i]]) <- params
-# #                 }
-# #             }
-#         }
-#     }
-# })
+
 erase_in_ps <- observe({
     if(!is.null(loading_ps_file()) ) {
         for(i in visible_ps_plots()) {
@@ -4116,26 +3602,9 @@ satisfiable_param_space_for_formula <- reactive({
     } else return(NULL)
 })
 
-# param_ranges_sat_for_formula <- reactive({
-#     if(!is.null(loading_ps_file()) && nrow(loading_ps_file()$param_space) != 0) {
-#         n <- length(loading_ps_file()$param_names)
-#         sat <- satisfiable_param_space_for_formula()
-#         list <- lapply(1:n,function(i) sort(unique(unlist(sat[,.(get(paste0("V",i*2-1)),get(paste0("V",i*2)))]))))
-#         names(list) <- loading_ps_file()$param_names
-#         return(list)
-#     } else return(NULL)
-# })
 
 param_ranges <- reactive({
     if(!is.null(loading_ps_file())) {
-        # if(loading_ps_file()$type == "smt") {
-        #     return(list(deg_x=c(0,1),k1=c(0,2)))    # TODO: temporary
-        # } else {
-        #     n <- length(loading_ps_file()$param_names)
-        #     list <- lapply(1:n,function(i) range(loading_ps_file()$params[,.(get(paste0("V",i*2-1)),get(paste0("V",i*2)))]))
-        #     names(list) <- loading_ps_file()$param_names
-        #     return(list)
-        # }
         return(loading_ps_file()$param_bounds)
     } else return(NULL)
 })
