@@ -1,12 +1,10 @@
 # in linux install: r-base-dev
 
-source("dependencies.R")    #load dependencies
+source("dependencies.R")    # load dependencies
+source("config.R")          # global configuration
 
 source("tooltips.R")
 source("global.R")
-
-options(scipen=999)
-options(shiny.maxRequestSize=1000*1024^2)
 
 shinyServer(function(input,output,session) {
 

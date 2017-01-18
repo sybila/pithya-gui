@@ -1,12 +1,8 @@
-if(!require(shiny,quietly = T)) {install.packages("shiny", dependencies=T,quiet = T); library(shiny,quietly = T)}
-if(!require(shinyBS,quietly = T)) {install.packages("shinyBS", dependencies=T,quiet = T); library(shinyBS,quietly = T)}
-if(!require(shinyAce,quietly = T)) {install.packages("shinyAce", dependencies=T,quiet = T); library(shinyAce,quietly = T)}
-if(!require(shinyjs,quietly = T)) {install.packages("shinyjs", dependencies=T,quiet = T); library(shinyjs,quietly = T)}
-require(parallel) # it is needed because of function for determination of available CPU cores
-#if(!require(shinythemes,quietly=T)) install.packages("shinythemes",quiet=T); library(shinythemes,quietly=T)
-#require(shiny)
+source("dependencies.R")    # load dependencies
+source("config.R")          # global configuration
+source("tooltips.R")        # texts
 
-source("tooltips.R")
+source("global.R")
 
 
 ## LOOK AT SHINY.OPTIONS
@@ -47,7 +43,128 @@ Shiny.addCustomMessageHandler('missThres', function(message) {
 })
 "
 
-source("global.R")
+# Icons
+icons <- list(
+    remove = icon("remove", lib = "glyphicon"),
+    bug = icon("bug")
+)
+
+# Utility functions
+tooltip <- function(tooltip, ...) {
+    tags$div(title=tooltip, ...) 
+}
+
+advanced <- function(...) {
+    conditionalPanel(condition = "input.advanced == true", ...)
+}
+
+# Editor tab
+editorControlPanel <- function() {
+
+    # Model controls panel - load, save and run approximation
+    modelControls <- fluidPage(
+        column(4,
+            verticalLayout(
+                tooltip(tooltip = Editor_advancedSettings_tooltip,
+                    checkboxInput("advanced", Editor_advancedSettings_label, FALSE)                          
+                ),
+                tooltip(tooltip = Editor_model_Browse_tooltip,
+                    fileInput("vf_file", Editor_model_Browse_label, accept=".bio")
+                )  
+            )
+        ),
+        column(4,
+            verticalLayout(
+                tooltip(tooltip = Editor_model_resetChangesInModel_tooltip,
+                    actionButton("reset_model", Editor_model_resetChangesInModel_label, icon=icons$remove)
+                ),
+                tooltip(tooltip = Editor_model_saveModel_tooltip,
+                    downloadButton("save_model_file", Editor_model_saveModel_label)
+                )                               
+           )
+        ),
+        column(4,
+            conditionalPanel(condition = "input.advanced == true",
+                tooltip(tooltip = Editor_cutTresholds_tooltip,
+                    checkboxInput("thresholds_cut", Editor_cutTresholds_label,F)
+                ),
+                tooltip(tooltip = Editor_fastApproximation_tooltip,
+                    checkboxInput("fast_approximation", Editor_fastApproximation_label,F)
+                )
+            ),
+            tooltip(tooltip = Editor_generateApproximation_tooltip,
+                bsButton("generate_abstraction", Editor_generateApproximation_label, disabled=T)
+            )
+        )
+    )    
+
+    # Property control panel - load and save
+    propertyControls <- fluidPage(
+        column(6, 
+            tooltip(tooltip = Editor_property_Browse_tooltip,
+                fileInput("prop_file", Editor_property_Browse_label, accept=".ctl")
+            )
+        ),
+        column(6,
+            verticalLayout(
+                tooltip(tooltip = Editor_property_resetChangesInProperties_tooltip,
+                    actionButton("reset_prop", Editor_property_resetChangesInProperties_label, icon=icons$remove)
+                ),
+                tooltip(tooltip = Editor_property_saveProperties_tooltip,
+                    downloadButton("save_prop_file", Editor_property_saveProperties_label)
+                )
+            )
+        )
+    )
+
+    # Synthesis control panel - start and stop
+    synthesisControls <- wellPanel(
+        conditionalPanel(condition = "input.advanced == true",
+            tooltip(tooltip = Editor_numberOfThreads_tooltip,
+                numericInput("threads_number", Editor_numberOfThreads_label, 1, 1, detectCores(), 1)
+            )
+        ),
+        tooltip(tooltip = Editor_runParameterSynthesis_tooltip,
+            bsButton("process_run", Editor_runParameterSynthesis_label, disabled=T)
+        ),
+        tooltip(tooltip = Editor_stopParameterSynthesis_tooltip,
+            bsButton("process_stop", Editor_stopParameterSynthesis_label, disabled=T)
+        )
+    )
+
+    # And put it all together
+    fluidPage(
+        column(6, wellPanel(modelControls)),
+        column(4, wellPanel(propertyControls)),
+        column(2, synthesisControls)
+    )
+}
+
+editorTab <- function() {
+    tabPanel(Editor_label, icon=icons$bug,
+        tooltip(tooltip = Editor_tooltip,
+            editorControlPanel(),
+            tooltip(tooltip = Editor_progressBar_tooltip,
+                helpText(Editor_progressBar_label),
+                verbatimTextOutput("progress_output")
+            ),
+            fluidPage(
+                column(6, 
+                    tooltip(tooltip = Editor_modelTextEditor_tooltip,
+                        helpText(Editor_modelTextEditor_label),
+                        aceEditor("model_input_area","","plain_text","textmate",debounce=100)
+                    )
+                ),
+                column(6,
+                    tooltip(tooltip = Editor_propertyTextEditor_tooltip,
+                        helpText(Editor_propertyTextEditor_label),
+                        aceEditor("prop_input_area","","plain_text","textmate",debounce=100)
+                    )
+                )
+            )
+        )
+    )
+}
 
 shinyUI(
     fluidPage(
@@ -57,103 +174,7 @@ shinyUI(
         titlePanel(Tool_name),
         tags$hr(),
         tabsetPanel(id = "dimensions",
-                
-tabPanel(Editor_label, icon=icon("bug"), # fa-leaf fa-bug
-    tags$div(title=Editor_tooltip,
-    fluidPage(
-        column(6,
-            wellPanel(
-                fluidPage(
-                    column(4,
-                        tags$div(title=Editor_advancedSettings_tooltip,
-                                 checkboxInput("advanced", Editor_advancedSettings_label, F)),
-                        tags$div(title=Editor_model_Browse_tooltip,
-                                 fileInput("vf_file", Editor_model_Browse_label, accept=".bio"))
-                        # ,tags$div(title="Select input state space (with '.ss.json' extension) for further analysis.",
-                        #     fileInput("state_space_file","choose '.abst.bio' file",accept=".bio"))
-                    ),
-                    column(4,
-                           verticalLayout(
-                               # tags$div(title="This button accepts all changes made in model editor so they could be passed on to further analysis.",
-                               #          actionButton("accept_model_changes","check syntax of model",icon=icon("ok",lib = "glyphicon"))),
-                               tags$div(title=Editor_model_resetChangesInModel_tooltip,
-                                        actionButton("reset_model", Editor_model_resetChangesInModel_label, icon=icon("remove",lib = "glyphicon"))),
-                               tags$div(title=Editor_model_saveModel_tooltip,
-                                        downloadButton("save_model_file", Editor_model_saveModel_label)
-#                                         ,textInput("save_model_file_name", NULL, "model.bio", "100%", "model.bio")
-                               )
-                           )
-                    ),
-                    column(4,
-                        # wellPanel(
-                            conditionalPanel(
-                                condition = "input.advanced == true",
-                                tags$div(title=Editor_cutTresholds_tooltip,
-                                    checkboxInput("thresholds_cut", Editor_cutTresholds_label,F)),
-                                tags$div(title=Editor_fastApproximation_tooltip,
-                                    checkboxInput("fast_approximation", Editor_fastApproximation_label,F))
-                            ),
-                            tags$div(title=Editor_generateApproximation_tooltip,
-                                 bsButton("generate_abstraction", Editor_generateApproximation_label, disabled=T))
-                        # )
-                    )
-                )
-            )
-        ),
-#         tags$script(tags$html("<hr width='2' size='500' color='red'>")),
-        column(4,
-            wellPanel(
-                fluidPage(
-                    column(6,
-                           tags$div(title=Editor_property_Browse_tooltip,
-                                    fileInput("prop_file", Editor_property_Browse_label, accept=".ctl"))
-                    ),
-                    column(6,
-                           # tags$div(title="This button accepts all changes made in editor so they could be passed on to further analysis.",
-                           #          actionButton("accept_prop_changes","check syntax of properties",icon=icon("ok",lib = "glyphicon"))),
-                           tags$div(title=Editor_property_resetChangesInProperties_tooltip,
-                                    actionButton("reset_prop", Editor_property_resetChangesInProperties_label, icon=icon("remove",lib = "glyphicon"))),
-                           tags$div(title=Editor_property_saveProperties_tooltip,
-                                    downloadButton("save_prop_file", Editor_property_saveProperties_label))
-                    )
-                )
-            )
-        ),
-        column(2,
-               wellPanel(
-                   conditionalPanel(
-                       condition = "input.advanced == true",
-                       tags$div(title=Editor_numberOfThreads_tooltip,
-                                numericInput("threads_number", Editor_numberOfThreads_label, 1,#detectCores(), 
-                                             1, detectCores(), 1))
-                   ),
-                   tags$div(title=Editor_runParameterSynthesis_tooltip,
-                            bsButton("process_run", Editor_runParameterSynthesis_label, disabled=T)),
-                   tags$div(title=Editor_stopParameterSynthesis_tooltip,
-                            bsButton("process_stop", Editor_stopParameterSynthesis_label, disabled=T))
-               )
-        )
-    ),
-    # bsModal("missing_threshold","neco","",size="small",wellPanel(
-    #     actionButton("yes_button", "Ok"),
-    #     actionButton("no_button", "Cancel"))
-    # ),
-    tags$div(title=Editor_progressBar_tooltip,
-             helpText(Editor_progressBar_label),
-             verbatimTextOutput("progress_output")),
-    fluidPage(
-        column(6,
-               tags$div(title=Editor_modelTextEditor_tooltip,
-                        helpText(Editor_modelTextEditor_label),
-                        aceEditor("model_input_area","","plain_text","textmate",debounce=100))
-        ),
-        column(6,
-               tags$div(title=Editor_propertyTextEditor_tooltip,
-                        helpText(Editor_propertyTextEditor_label),
-                        aceEditor("prop_input_area","","plain_text","textmate",debounce=100))
-        )
-    ))
-),
+        editorTab(),
 
 # tabPanel("property editor",icon=icon("gears"), # fa-eye fa-bolt fa-gears fa-key fa-heartbeat fa-fire fa-history fa-stethoscope
 #          tags$div(title="'Property editor' allows the user load, edit or save properties of interest. One property is automatically loaded as example.",
