@@ -1,7 +1,5 @@
-source("dependencies.R")    # load dependencies
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
-source("global.R")
 
 # Other parts of the UI
 source("editor/ui.R")

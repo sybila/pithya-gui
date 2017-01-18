@@ -1,8 +1,4 @@
-source("dependencies.R")    # load dependencies
 source("config.R")          # global configuration
-source("tooltips.R")        # texts
-source("global.R")
-
 
 # Icons
 icons <- list(

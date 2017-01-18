@@ -1,10 +1,7 @@
 # in linux install: r-base-dev
 
-source("dependencies.R")    # load dependencies
 source("config.R")          # global configuration
-
-source("tooltips.R")
-source("global.R")
+source("tooltips.R")        # texts
 
 shinyServer(function(input,output,session) {
 

@@ -1,3 +1,5 @@
+source("config.R")
+
 Tool_name <- "PITHYA - Parameter Investigation Tool for HYbrid Analysis"
 
 #PROGRESS NOTIFICATIONS - in server.R
