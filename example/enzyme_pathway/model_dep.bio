@@ -1,19 +1,50 @@
 #####################################################################################
-# degradation of substrate SUB into product PROD via INT1 and INT2 intermediates    # 
+# synthetic biology example							    #
+# modelled process: degradation of substrate SUB into product PROD 		    #
+#  	   	    via INT1 and INT2 intermediates,				    #
+#		    chain of three catalytic reactions				    # 
 #####################################################################################
 
-VARS: SUB, INT1, INT2, PROD 																# Here, variables are defined (usually genes or proteins)
-CONSTS: k_cat_SUB_INT1,1.05; k_K_INT1,0.751; k_cat_INT2,14.37; Km_SUB,1.79; Km_INT2,0.09	# Here, constants used in ODEs are defined (optional)
-PARAMS: E1,0,0.02; E2,0,0.02; E3,0,0.02														# Here, parameters of the model are defined
+# model variables declaration
+# SUB ... substrate concentration
+# INT1,INT2 ... concentration of intermediate products
+# PROD ... concentration of final product 
+#
+VARS: SUB, INT1, INT2, PROD 					
 
-EQ: SUB = -k_cat_SUB_INT1*E1*hillp(SUB,Km_SUB,1,0,1) 										# Here, ODE for variable 'SUB' is defined (hillp is keyword for positive Hill function - for more look into manual)
-EQ: INT1 = k_cat_SUB_INT1*E1*hillp(SUB,Km_SUB,1,0,1) - k_K_INT1*E2*hillp(INT1,1,1,0,1) 		# Here, ODE for variable 'INT1' is defined (hillp is keyword for positive Hill function - for more look into manual)
-EQ: INT2 = k_K_INT1*E2*hillp(INT1,1,1,0,1) - k_cat_INT2*E3*hillp(INT2,Km_INT2,1,0,1) 		# Here, ODE for variable 'INT2' is defined (hillp is keyword for positive Hill function - for more look into manual)
-EQ: PROD = k_cat_INT2*E3*hillp(INT2,Km_INT2,1,0,1) 											# Here, ODE for variable 'PROD' is defined (hillp is keyword for positive Hill function - for more look into manual)
+# constants declaration
+# k_cat_SUB_INT1 ... substrate turnover frequency controlled by enzyme E1
+# k_cat_INT2     ... substrate turnover frequency controlled by enzyme E3
+# k_K_INT1	 ... intermediate product turnover frequency controlled by enzyme E2
+# Km_SUB, Km_INT2 .. Michalelis constant for substrate and intermediate product
+#
+CONSTS: k_cat_SUB_INT1,1.05; k_K_INT1,0.751; k_cat_INT2,14.37; Km_SUB,1.79; Km_INT2,0.09
 
-VAR_POINTS: SUB:500,5; INT1:500,5; INT2:500,5 												# Here, settings for PWA approximation are defined (optional)
+# parameters declaration
+# E1,E2,E3 ... constant enzymes concentration
+# for each parameter min_value,max_value must be given
+#
+PARAMS: E1,0,0.02; E2,0,0.02; E3,0,0.02
 
-THRES: SUB:  0, 0.01, 0.5, 1, 1.5, 1.9, 2 													# Here, explicit thresholds for variable 'SUB' are defined (at least 2 thresholds are needed as bounds)
-THRES: INT1:  0, 0.5, 1, 1.5, 2 															# Here, explicit thresholds for variable 'INT1' are defined (at least 2 thresholds are needed as bounds)
-THRES: INT2:  0, 0.5, 2 																	# Here, explicit thresholds for variable 'INT2' are defined (at least 2 thresholds are needed as bounds)
-THRES: PROD:  0, 0.01, 0.25, 0.5, 0.75, 1, 1.5, 1.9, 2 										# Here, explicit thresholds for variable 'PROD' are defined (at least 2 thresholds are needed as bounds)
+# non-linear differential equations defining rate of change of model variables
+# hillp() represents positive Hill function with steepness coefficient 1 
+# it is equivalent with Michaelis-Menten enzyme kinetic function
+#
+EQ: SUB = -k_cat_SUB_INT1*E1*hillp(SUB,Km_SUB,1,0,1) 	
+EQ: INT1 = k_cat_SUB_INT1*E1*hillp(SUB,Km_SUB,1,0,1) - k_K_INT1*E2*hillp(INT1,1,1,0,1) 	
+EQ: INT2 = k_K_INT1*E2*hillp(INT1,1,1,0,1) - k_cat_INT2*E3*hillp(INT2,Km_INT2,1,0,1) 
+EQ: PROD = k_cat_INT2*E3*hillp(INT2,Km_INT2,1,0,1) 									
+
+# piece-wise multi-affine approximation settings (optional)
+# variable:breaking points precision,number of piece-wise affine segments
+# 
+VAR_POINTS: SUB:500,5; INT1:500,5; INT2:500,5 	
+
+# rectangular abstraction discretising thresholds
+# points in variables domains where the continuous state space is discretised
+# at least two thresholds must be given for each variable (minimal and maximal value)
+#
+THRES: SUB:  0, 0.01, 0.5, 1, 1.5, 1.9, 2 							
+THRES: INT1:  0, 0.5, 1, 1.5, 2 										
+THRES: INT2:  0, 0.5, 2 											
+THRES: PROD:  0, 0.01, 0.25, 0.5, 0.75, 1, 1.5, 1.9, 2 								
