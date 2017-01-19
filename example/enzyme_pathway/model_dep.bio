@@ -3,6 +3,7 @@
 # modelled process: degradation of substrate SUB into product PROD 		    #
 #  	   	    via INT1 and INT2 intermediates,				    #
 #		    chain of three catalytic reactions				    # 
+# goal: synthesis of algebraically dependent parameters				    # 
 #####################################################################################
 
 # model variables declaration
