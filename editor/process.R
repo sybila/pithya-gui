@@ -1,7 +1,8 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
+source("util.R")
 
-# process = reactiveValue(running = config, port = num, observer = observer, notification = fileReader, onSuccess = function, onError = funciton, onKill = function)
+# process = reactiveValue(running = config, port = num, observer = observer, onSuccess = function, onError = funciton, onKill = function)
 # config = list(command, args, stdout, stderr)
 
 safeDestroyObserver <- function(observer) {
@@ -32,8 +33,7 @@ killRemoteProcess <- function(session, process) {
 		}, finally = {
 			process$running <- NULL
 			safeDestroyObserver(process$observer)
-			process$observer <- NULL
-			process$notification <- NULL	
+			process$observer <- NULL	
 			# If successful, call the kill callback
 			process$onKill()	
 		})
@@ -46,21 +46,20 @@ startRemoteProcess <- function(session, process, config) {
 	if (!is.null(process$running)) {
 		# There is already another running process that needs to be stopped first.
 		# Note: This should not happen. Make sure you disable the process start button while process is running.
-		killRemoteProcess(process)
+		killRemoteProcess(session, process)
 	}
 
 	debug(paste0("[startRemoteProcess] starting ", config$command))
 
 	process$running <- config
 
+	# TODO we don't delete notification files anywhere
 	notificationFile <- tempfile(pattern = "notificationFile_", fileext = ".txt", tmpdir = session$pithya$sessionDir)	
 	file.create(notificationFile)
 
-	process$notification <- reactiveFileReader(intervalMillis = 100, session$shiny, notificationFile, readLines)
-	process$observer <- observe({
-		notification <- process$notification()	
+	process$observer <- myReactiveFileReader(intervalMillis = 100, session$shiny, notificationFile, function(notification) {
 		if (length(notification) > 0) {
-			debug(paste0("[notificationObserver] notification received", notification[1]))
+			debug(paste0("[notificationObserver] notification received: ", notification[1]))
 
 			process$running <- NULL
 			safeDestroyObserver(process$observer)
@@ -74,7 +73,7 @@ startRemoteProcess <- function(session, process, config) {
 				process$onError(notification[-1])
 			}	
 		}
-	})
+	})	
 
 	processArgs <- c(process$port, notificationFile, config$args)		
 	debug(paste(c("[startRemoteProcess] execute: ", config$command, processArgs), collapse = " "))	

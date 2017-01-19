@@ -21,7 +21,6 @@ editorServer <- function(input, session, output) {
 		running = NULL,
 		port = 9999,
 		observer = NULL,
-		notification = NULL,
 		resultFile = NULL,
 		inputFile = NULL,
 		notificationID = NULL,
@@ -41,7 +40,7 @@ editorServer <- function(input, session, output) {
         	}        	
 		},
 		onError = function(e) {
-			debug(paste0("[approximationProcess] error", e))
+			debug(paste0("[approximationProcess] error ", e))
 			approximationProcess$finalize(FALSE)
 			showModal(modalDialog(title = Approximation_error, e))
 		},
@@ -72,7 +71,6 @@ editorServer <- function(input, session, output) {
 		running = NULL,
 		port = 9998,
 		observer = NULL,
-		notification = NULL,
 		propertyFile = NULL,
 		resultFile = NULL,
 		notificationID = NULL,
@@ -85,7 +83,7 @@ editorServer <- function(input, session, output) {
 			showNotification("Parameter synthesis finished")
 		},
 		onError = function(e) {
-			debug(paste0("[snyhtesisProcess] error", e))
+			debug(paste0("[synhtesisProcess] error ", e))
 			synthesisProcess$finalize(FALSE)
 			if (grepl("Missing thresholds: .*", e)) {
 				# We have missing thresholds!
@@ -200,7 +198,7 @@ editorServer <- function(input, session, output) {
 
 		if (!is.null(approximationProcess$running)) {
 			# Should not happen, but just to be sure...
-			killRemoteProcess(approximationProcess)
+			killRemoteProcess(session, approximationProcess)
 		}
 
 		approximationProcess$inputFile <- tempfile(pattern = "approximationInput", fileext = ".bio", tmpdir = sessionDir)
@@ -232,7 +230,7 @@ editorServer <- function(input, session, output) {
 		printProgress(Parameter_synthesis_started)
 
 		if (!is.null(synthesisProcess$running)) {
-			killRemoteProcess(synthesisProcess)
+			killRemoteProcess(session, synthesisProcess)
 		}
 
 		# TODO some safety checks about model file, would ya?

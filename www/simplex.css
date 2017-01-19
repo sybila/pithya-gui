@@ -5608,6 +5608,7 @@ button.close {
   outline: 0;
 }
 .modal-backdrop {
+  display: none;
   position: absolute;
   top: 0;
   right: 0;
