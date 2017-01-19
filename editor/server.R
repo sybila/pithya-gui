@@ -23,7 +23,7 @@ editorServer <- function(input, session, output) {
 		observer = NULL,
 		resultFile = NULL,
 		inputFile = NULL,
-		notificationID = NULL,
+		notificationID = NULL,		
 		onSuccess = function() {
 			debug("[approximationProcess] success")
 			output <- approximationProcess$resultFile
@@ -74,6 +74,7 @@ editorServer <- function(input, session, output) {
 		propertyFile = NULL,
 		resultFile = NULL,
 		notificationID = NULL,
+		missingThresholds = NULL,
 		onSuccess = function() {
 			debug("[synthesisProcess] success")	
 
@@ -86,8 +87,21 @@ editorServer <- function(input, session, output) {
 			debug(paste0("[synhtesisProcess] error ", e))
 			synthesisProcess$finalize(FALSE)
 			if (grepl("Missing thresholds: .*", e)) {
+				thresholds <- sub("Missing thresholds: ", e)
+				thresholds <- strsplit(thresholds, split = "; ", fixed = TRUE)
+				thresholds <- lapply(thresholds, function(t) {
+					list(name = sub(": .+", "", t), thresholds = strsplit(sub(".+: ", "", t), split = ", ", fixed = FALSE))
+				})
+				synthesisProcess$missingThresholds <- thresholds[[1]]
 				# We have missing thresholds!
 				showNotification("Missing thresholds")
+				showModal(modalDialog(title = "Missing thresholds!",
+					"Property thresholds are missing in the model. Click `Add` to add them to the model and recompute approximation.", 
+					footer = tagList(
+						modalButton("Cancel"),
+						actionButton("add_thresholds", "Add")
+					)
+				))
 			} else {
 				showModal(modalDialog(title = "Snyhesis error!", e))
 			}
@@ -221,6 +235,25 @@ editorServer <- function(input, session, output) {
 	observeEvent(input$approximation_kill, {
 		debug("[killApproximation] kill requested")	
 		killRemoteProcess(session, approximationProcess)
+	})
+
+	observeEvent(input$add_thresholds, {
+		t <- synthesisProcess$missingThresholds
+		if (!is.null(t)) {
+			model <- input$model_input_area	
+			for (i in 1:length(t$name)) {
+				name <- t$name[i]
+				newThresholds <- t$thresholds[i]
+				threhsoldLine <- grep(paste0("THRES:.+", name, ": "), model, value = TRUE)
+				if (length(threhsoldLine) > 0) {
+					# TODO handle line comments
+					originalThresholds <- strsplit(sub(paste0(".+", name, ": "), "", threhsoldLine), ", ", fixed = FALSE)
+					combined <- sort(as.numeric(unlist(c(newThresholds, originalThresholds))))
+					sub(threhsoldLine, paste0("THRES: ", name, ": ", paste(combined, collapse = ", ")), model)
+				}
+			}
+			updateAceEditor(session, "model_input_area", value = paste(model, collapse="\n"))
+		}		
 	})
 
 	## Parameter synthesis runner
