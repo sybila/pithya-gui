@@ -16,3 +16,8 @@ defaultModel = "//repressilator_2D//model_indep.with_comments.bio"
 defaultProperty = "//repressilator_2D//properties.with_comments.ctl"
 
 corePath = "..//biodivine-ctl//build//install//biodivine-ctl//bin//"
+
+shinyAppPort = "9999"
+
+# TODO change this on release version
+debug <- function(item) { print(item) }

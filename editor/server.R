@@ -1,5 +1,6 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
+source("editor/process.R")	# remote process inerface
 
 # Setup all reactive dependencies in the editor tab.
 
@@ -7,41 +8,150 @@ editorServer <- function(input, session, output) {
 
 	sessionDir <- session$pithya$sessionDir
 	progressFile <- tempfile(pattern = "progress", fileext = ".txt", tmpdir = sessionDir)
+	file.create(progressFile)
 	progressReader <- reactiveFileReader(intervalMillis = 100, session$shiny, progressFile, readLines)
 
 	printProgress <- function(line) {
 		print(line)
-		writeLines(line, progressFile)
+		write(paste0(line, "\n"), progressFile, append = T)
 	}
 
-	## Basic reactive interactions between the elements
 
+	approximationProcess <- reactiveValues(
+		running = NULL,
+		port = 9999,
+		observer = NULL,
+		notification = NULL,
+		resultFile = NULL,
+		inputFile = NULL,
+		notificationID = NULL,
+		onSuccess = function() {
+			debug("[approximationProcess] success")
+			output <- approximationProcess$resultFile
+			if (file.exists(output) && length(readLines(output)) > 0) {
+        		# Approximation success
+        		session$pithya$approximatedModel$file <- output
+        		session$pithya$approximatedModel$outdated <- FALSE	        		        	
+        		printProgress(Approximation_finished)
+        		approximationProcess$finalize(TRUE)
+        		showNotification(Approximation_finished)
+        	} else {
+        		printProgress(Approximation_error)
+        		approximationProcess$onError("Missing result")
+        	}        	
+		},
+		onError = function(e) {
+			debug(paste0("[approximationProcess] error", e))
+			approximationProcess$finalize(FALSE)
+			showModal(modalDialog(title = Approximation_error, e))
+		},
+		onKill = function() {
+			debug("[approximationProcess] killed")
+			approximationProcess$finalize(FALSE)
+		},
+		finalize = function(success) {
+			# remove input file
+			if (!is.null(approximationProcess$inputFile)) {
+				file.remove(approximationProcess$inputFile)
+				approximationProcess$inputFile <- NULL
+			}
+			# hide progress notification			
+			if (!is.null(approximationProcess$notificationID)) {
+				removeNotification(approximationProcess$notificationID)
+				approximationProcess$notificationID <- NULL
+			}
+			# remove result if not successfule
+			if (!success && !is.null(approximationProcess$resultFile)) {
+				file.remove(approximationProcess$resultFile)			
+				approximationProcess$resultFile <- NULL
+			}						
+		}
+	)
+
+	synthesisProcess <- reactiveValues(
+		running = NULL,
+		port = 9998,
+		observer = NULL,
+		notification = NULL,
+		propertyFile = NULL,
+		resultFile = NULL,
+		notificationID = NULL,
+		onSuccess = function() {
+			debug("[synthesisProcess] success")	
+
+			session$pithya$synthesisResult$file <- synthesisProcess$resultFile
+			session$pithya$synthesisResult$outdated <- FALSE			
+			synthesisProcess$finalize(TRUE)
+			showNotification("Parameter synthesis finished")
+		},
+		onError = function(e) {
+			debug(paste0("[snyhtesisProcess] error", e))
+			synthesisProcess$finalize(FALSE)
+			if (grepl("Missing thresholds: .*", e)) {
+				# We have missing thresholds!
+				showNotification("Missing thresholds")
+			} else {
+				showModal(modalDialog(title = "Snyhesis error!", e))
+			}
+		},
+		onKill = function() {
+			debug("[synthesisProcess] killed")
+			synthesisProcess$finalize(FALSE)
+		},
+		finalize = function(success) {
+			# remove property file
+			if (!is.null(synthesisProcess$propertyFile)) {
+				file.remove(synthesisProcess$propertyFile)
+				synthesisProcess$propertyFile <- NULL
+			}
+			# hide progress notification
+			if (!is.null(synthesisProcess$notificationID)) {
+				removeNotification(synthesisProcess$notificationID)
+				approximationProcess$notificationID <- NULL
+			}
+			# remove result if not successful
+			if (!success && !is.null(synthesisProcess$resultFile)) {
+				file.remove(synthesisProcess$resultFile)
+				synthesisProcess$resultFile <- NULL
+			}
+		}
+	)
+
+	## Basic reactive interactions between the elements
 
 	## These two observers have to be set up BEFORE the file upload observers, so that the 
 	## default examples are properly observed 
 
-	# Enable approximation button after model text area changes
+	# Enable approximation button when process is not running and result is outdated
+	observeEvent(c(session$pithya$approximatedModel$outdated, approximationProcess$running), {
+		enabled <- is.null(approximationProcess$running) && session$pithya$approximatedModel$outdated
+		updateButton(session$shiny, "generate_abstraction", style = "success", disabled = !enabled)
+	})
+	
+	# Enable synthesis button when process is not running and model is ready and result is outdated
+	observeEvent(c(input$prop_input_area, session$pithya$synthesisResult$outdated, session$pithya$approximatedModel$outdated), {
+		# TODO check if the properties are identical to the last synthesised one
+		enabled <- is.null(synthesisProcess$running) && session$pithya$synthesisResult$outdated	&& !session$pithya$approximatedModel$outdated
+		updateButton(session$shiny, "process_run", style = "success", disabled = !enabled)
+	})
+
+	# Invalidate approximated model when input changes
 	observeEvent(input$model_input_area, {
-		# TODO check if the model is identical to the last approximated one
-		updateButton(session$shiny, "generate_abstraction", style = "success", disabled = FALSE)
+		# TODO check if the model is identical to the last approximated one		
 		session$pithya$approximatedModel$outdated = TRUE
 		session$pithya$synthesisResult$outdated = TRUE
 	})
-	
-	# Update synthesis button status when property file or approximated model changes
-	observeEvent(c(input$prop_input_area, session$pithya$approximatedModel$outdated), {
-		# TODO check if the properties are identical to the last synthesised one
-		model <- session$pithya$approximatedModel
-		# Enable synthesis button assuming the approximated model is computed (not null) and not outdated
-		updateButton(session$shiny, "process_run", style = "success", disabled = is.null(model$file) || model$outdated)
-		session$pithya$synthesisResult$outdated = TRUE
+
+	# Invalidate synthesis result when property changes
+	observeEvent(input$prop_input_area, {
+		session$pithya$synthesisResult$outdated = TRUE	
 	})
 
 	# Load model file into the text editor after upload or reset
 	observeEvent(c(input$model_file, input$reset_model), {
 		if (is.null(input$model_file) || is.null(input$model_file$datapath)) {
 			# load example model TODO: remove in final version
-			cat(Starting_advice, file = progressFile)
+			printProgress(Starting_advice)
 			data <- readLines(paste0(session$pithya$examplesDir, defaultModel))
 		} else {
 			data <- readLines(input$model_file$datapath)
@@ -80,141 +190,70 @@ editorServer <- function(input, session, output) {
 
 	## Model approximation runner
 
+	# TODO enable full progress indicator
+	# TODO make sure tractor prints nothing to the stdout when error occurs
+	# TODO dont forget to enable model explorer after this
+		
 	observeEvent(input$generate_abstraction, {
+		debug("[generateApproximation] start")
 		printProgress(Approximation_started)
-		updateButton(session$shiny, "generate_abstraction", style = "success", disabled = TRUE)
 
-		# TODO enable full progress indicator
-		# TODO make tractor work with standard input instead of argument
-		# TODO make sure tractor prints nothing to the stdout when error occurs
-		# TODO dont forget to enable model explorer after this
-		withProgress(message = Approximation_running, value = 0.5, {
-			inputModel <- tempfile(pattern = "approximationInput", fileext = ".bio", tmpdir = sessionDir)
-			outputModel <- tempfile(pattern = "approximationOutput", fileext = ".bio", tmpdir = sessionDir)
-			writeLines(input$model_input_area, inputModel)
+		if (!is.null(approximationProcess$running)) {
+			# Should not happen, but just to be sure...
+			killRemoteProcess(approximationProcess)
+		}
 
-			system2(
-				command = paste0(corePath, "tractor"),
-				args = c(inputModel, ifelse(input$fast_approximation,"true","false"), ifelse(input$thresholds_cut,"true","false")),
-                stdout = outputModel,
-                stderr = progressFile, 
-            	wait = TRUE
-        	)
+		approximationProcess$inputFile <- tempfile(pattern = "approximationInput", fileext = ".bio", tmpdir = sessionDir)
+		approximationProcess$resultFile <- tempfile(pattern = "approximationOutput", fileext = ".bio", tmpdir = sessionDir)
+		writeLines(input$model_input_area, approximationProcess$inputFile)
 
-	        file.remove(inputModel)
-	        if (file.exists(outputModel) && length(readLines(outputModel)) > 0) {
-	        	# Approximation success
-	        	session$pithya$approximatedModel$file <- outputModel
-	        	session$pithya$approximatedModel$outdated <- FALSE	        		        	
-	        	printProgress(Approximation_finished)
-	        } else {
-	        	printProgress(Approximation_error)
-	        }
-		})
+		approximationProcess$notificationID <- showNotification(
+			tagList("Approximation running", actionButton("approximation_kill", "Cancel")), 
+			duration = NULL, closeButton = FALSE
+		)
+
+		startRemoteProcess(session, approximationProcess, list(
+			command = paste0(corePath, "tractor"), 
+			args = c(approximationProcess$inputFile, ifelse(input$fast_approximation,"true","false"), ifelse(input$thresholds_cut,"true","false")),
+			stdout = approximationProcess$resultFile,
+			stderr = progressFile
+		))		
+	})
+
+	observeEvent(input$approximation_kill, {
+		debug("[killApproximation] kill requested")	
+		killRemoteProcess(session, approximationProcess)
 	})
 
 	## Parameter synthesis runner
 
-	synthesisProcess <- reactiveValues(pid = NULL, result = NULL)
-
 	observeEvent(input$process_run, {
-		file.remove(progressFile)	#clear progress
+		debug("[performSynthesis] start")	
 		printProgress(Parameter_synthesis_started)
-		updateButton(session$shiny, "process_run", style = "success", disabled = TRUE)
+
+		if (!is.null(synthesisProcess$running)) {
+			killRemoteProcess(synthesisProcess)
+		}
 
 		# TODO some safety checks about model file, would ya?
 
 		# Run combine to check syntax and semantics
-		model <- session$pithya$approximatedModel$file
-		property <- tempfile(pattern = "property", fileext = ".ctl", tmpdir = sessionDir)
-		config <- tempfile(pattern = "config", fileext = ".json", tmpdir = sessionDir)
-		writeLines(input$prop_input_area, property)
+		synthesisProcess$propertyFile <- tempfile(pattern = "property", fileext = ".ctl", tmpdir = sessionDir)
+		synthesisProcess$resultFile <- tempfile(pattern = "synthesisResult", fileext = ".ctl", tmpdir = sessionDir)
+		writeLines(input$prop_input_area, synthesisProcess$propertyFile)
 
-    	system2(
-    		command = paste0(corePath, "combine"),
-    		args = c(model, property), 
-    		stdout = config, 
-    		stderr = progressFile, 
-    		wait = T
-		)
+		synthesisProcess$notificationID = showNotification(
+			tagList("Parameter synthesis running", actionButton("synthesis_kill", "Cancel")), 
+			duration = NULL, closeButton = FALSE)
 
-    	file.remove(property)
-    	
-    	if(file.exists(config) && length(readLines(config)) > 0) {
-    		printProgress(Experiment_config_file_created)
+		# TODO thread count
+		startRemoteProcess(session, synthesisProcess, list(
+			command = paste0(corePath, "biodivine-ctl"),
+			args = c(session$pithya$approximatedModel$file, synthesisProcess$propertyFile),
+			stdout = synthesisProcess$resultFile,
+			stderr = progressFile
+		))
 
-    		result <- tempfile(pattern = "synthesisResult", fileext = ".json", tmpdir = sessionDir)
-    		synthesisProcess$result <- result
-
-        	system2(
-        		command = paste0(corePath, "biodivine-ctl"), 
-        		args = c(config),
-        		stdout = result,
-        		stderr = progressFile,
-        		wait = T
-    		)
-
-  			# Here, we don't know if the execution was successful, only that it is finished
-
-  			synthesisProcess$pid <- NULL
-
-  			# TODO update process run button to correct state. Somehow.
-  			# TODO delete result file if process failed
-        
-    	} else {
-    		printProgress(Combine_error)
-    	}
-	})
-
-	# TODO Verify that errors won't cause problems
-	# TODO What if I rerun the process?
-
-	# Update process ID when progress changes
-	observe({
-		#Check PID
-		pid <- gsub("PID: ","",grep("^PID: [0-9]+$", progressReader(), value = TRUE))
-		if (length(pid) > 0 && !is.null(synthesisProcess$result)) {
-			synthesisProcess$pid <- pid
-		} else {
-			synthesisProcess$pid <- NULL
-		}
-	})
-
-	# Publish successful results
-	observe({		
-		#Check Done
-		if(T %in% grepl("^!!DONE!!$", progressReader()) && !is.null(synthesisProcess$result)) {
-			session$pithya$synthesisResult$file <- synthesisProcess$result
-			session$pithya$synthesisResult$outdated <- FALSE
-			synthesisProcess$result <- NULL
-			synthesisProcess$pid <- NULL
-
-			# TODO add this to texts
-
-			js_string <- paste0('alert("Parameter synthesis done!");')
-	        session$shiny$sendCustomMessage(type='paramSynthEnd', list(value = js_string))
-	    }
-	})
-
-	# Update process kill buntton when PID changes
-	observeEvent(synthesisProcess$pid, {
-		updateButton(session$shiny, "process_stop", style = "danger", disabled = is.null(synthesisProcess$pid))
-	})
-
-	# Kill synthesis process and remove result file (other clean up is performed elsewhere)
-	observeEvent(input$process_stop, {
-		pid <- synthesisProcess$pid
-		result <- synthesisProcess$result
-		if (!is.null(pid)) {
-			synthesisProcess$result <- NULL
-			printProgress(pid)
-			command <- ifelse(.Platform$OS.type=="windows", paste0("taskkill /f /pid ",pid), paste0("kill -9 ",pid))
-			system(command,wait = TRUE)
-			printProgress(Parameter_synthesis_stopped)
-			if (!is.null(result)) {
-				file.remove(result)				
-			}
-		}
 	})
 
 }

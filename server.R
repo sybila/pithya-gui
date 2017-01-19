@@ -40,7 +40,7 @@ file.create(configFileName)
 
 session$onSessionEnded(function() {
     for(i in c(progressFileName,resultFileName,configFileName)) if(file.exists(i)) file.remove(i)
-    stopApp() # very important for VM so the user will run everytime new and clean instance of the app
+    #stopApp() # very important for VM so the user will run everytime new and clean instance of the app
 })
 
 hide("save_current_model_file")
