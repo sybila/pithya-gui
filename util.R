@@ -69,3 +69,18 @@ myReactiveFileReader <- function(intervalMillis, session, path, action) {
     invalidateLater(intervalMillis, session)
   })
 }
+
+
+createCounter <- function(value) {
+  function() {
+    value <<- value + 1
+  }
+}
+
+unwrapOr <- function(nullable, value) {
+  if (is.null(nullable)) {
+    value
+  } else {
+    nullable
+  }
+}

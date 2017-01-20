@@ -1,14 +1,17 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
+source("explorer/plot.R")
 
 explorerServer <- function(input, session, output) {
+
+	plots <- reactiveValues()
 
 	# Show parameter numberic inputs when model is loaded
 	output$param_sliders_bio <- renderUI({
 		model <- session$pithya$approximatedModel$model
 		if (!is.null(model)) {	
 			lapply(1:length(model$paramNames), function(pIndex) {
-				debug("[param_sliders_bio] render bio sliders")
+				debug("[param_sliders_bio] render bio slider")
 				min <- model$paramRanges[[pIndex]]$min
 				max <- model$paramRanges[[pIndex]]$max
 				tooltip(tooltip = Explorer_parameter_tooltip,
@@ -23,8 +26,45 @@ explorerServer <- function(input, session, output) {
 			})
 		} else {
 			debug("[param_sliders_bio] remove bio sliders")			
-			"Model missing. Compute approximation first"
+			"Model missing. Compute approximation first."
 		}
 	})
+
+	# TODO move add button out of the dynamic output so that it has to update only on one place
+
+	# Remove graphs (always - what if variables changed?) when model changes and enable button
+	observeEvent(session$pithya$approximatedModel$model, {		
+		enabled <- !is.null(session$pithya$approximatedModel$model)
+		debug("[explorer] model changed. explorer enabled: ", enabled)
+		# remove graphs
+		lapply(isolate(reactiveValuesToList(plots)), function(plot) {
+			plot$destroy()
+			plots[[plot$outputId]] <- NULL	
+		})
+		updateButton(session$shiny, "add_vf_plot", disabled = !enabled)
+	})
+
+	observeEvent(input$add_vf_plot, {
+		debug("[explorer] new plot")
+		plot <- createPlot(session$pithya$plotId(), input, session, output, function(outputId) {
+			plots[[outputId]]$destroy()
+			plots[[outputId]] <- NULL	
+		})
+		plots[[plot$outputId]] <- plot
+	})	
+
+	output$plots <- renderUI({
+		debug("[explorer] render plots")
+		# We have to sort them by numeric ID
+		sortedIds <- sort(unlist(lapply(reactiveValuesToList(plots), function(x) x$id)))
+		tagList(			
+			lapply(sortedIds, function(id) {
+				uiOutput(plotOutputId(id))	
+			}),
+			tooltip(tooltip = Explorer_addPlot_tooltip,
+                bsButton("add_vf_plot", Explorer_addPlot_label, icon=icon("picture",lib="glyphicon"), disabled = is.null(session$pithya$approximatedModel$model))
+            )
+        )
+	})	
 
 }

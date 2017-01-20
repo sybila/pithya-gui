@@ -1,6 +1,5 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
-source("util.R")
 
 # process = reactiveValue(running = config, port = num, observer = observer, onSuccess = function, onError = funciton, onKill = function)
 # config = list(command, args, stdout, stderr)

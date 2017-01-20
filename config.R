@@ -5,6 +5,7 @@ if (!require("pacman")) install.packages("pacman", quiet = F)
 pacman::p_load(methods, shiny, shinyBS, shinyAce, shinyjs, pracma, stringr, data.table, rjson, parallel)
 
 source("global.R")
+source("util.R")
 
 # disable scientific notation when printing numbers
 options(scipen=999)	

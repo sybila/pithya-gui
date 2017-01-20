@@ -12,11 +12,13 @@ source("explorer/server.R")
 
 shinyServer(function(input,output,session) {
 
+debug("Reset")
 mySession <- list(shiny=session, pithya=list(
     approximatedModel = reactiveValues(file = NULL, model = NULL, outdated = TRUE),
     synthesisResult = reactiveValues(file = NULL, outdated = TRUE),
     sessionDir = tempdir(),
-    examplesDir = "example//"
+    examplesDir = "example//",
+    plotId = createCounter(1)
 ))
 
 # Parse .bio model when approximation changes
@@ -169,46 +171,6 @@ current_param_sliders <- reactive({
     lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",1,"_",i)]])
 })
 
-output$selector <- renderUI({
-    if(!is.null(loading_vf_file())) {
-        variables <- loading_vf_file()$vars
-        lapply(vf_update(), function(i) {
-            idx <- paste0("vf_selector_x_",i)
-            labelx <- paste0(Explorer_horizontal_label)
-            choicesx <- list_of_names
-            selectedx <- ifelse(!is.null(input[[paste0("vf_selector_x_",i)]]), input[[paste0("vf_selector_x_",i)]], #empty_sign)
-                                variables[[1]])
-            
-            idy <- paste0("vf_selector_y_",i)
-            labely <- paste0(Explorer_vertical_label)
-            choicesy <- list_of_names
-            selectedy <- ifelse(!is.null(input[[paste0("vf_selector_y_",i)]]), input[[paste0("vf_selector_y_",i)]], #empty_sign)
-                                ifelse(length(variables) > 1, variables[[2]], variables[[1]]))
-            
-            fluidRow(
-#                     column(2,
-#                            helpText(paste0("Plot no. ",i))
-#                     ),
-                column(5,
-                       tags$div(title=Explorer_horizontal_tooltip,
-                                selectInput(idx, labelx, choicesx, selectedx))
-                ),
-                column(5,
-                       tags$div(title=Explorer_vertical_tooltip,
-                                selectInput(idy, labely, choicesy, selectedy))
-                ),
-                column(2,
-                       tags$div(title=Explorer_cancel_tooltip,
-                                bsButton(paste0("cancel_vf_",i), Explorer_cancel_label)),
-                       tags$div(title=Explorer_hide_tooltip,
-                                checkboxInput(paste0("hide_vf_",i), Explorer_hide_label, ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],F)))
-                       # bsButton(paste0("hide_vf_",i), type="toggle", "hide", value=ifelse(!is.null(input[[paste0("hide_vf_",i)]]),input[[paste0("hide_vf_",i)]],F))
-                )
-            )
-        })
-    }
-})
-
 # observer caring for hiding plot if some of selectors is invalidated
 observe({
     if(!is.null(loading_vf_file())) {
@@ -247,6 +209,7 @@ observe({
 })
 # observer providing new selector(s) and cancel button and hide checkbox after 'add plot' button is clicked
 observeEvent(input$add_vf_plot,{
+    if (FALSE) {
     if(!is.null(loading_vf_file())) {
         # very important initialisation of unzoom button click counters
         vf_brushed$click_counter[[vf_chosen$max]] <- -1
@@ -267,6 +230,7 @@ observeEvent(input$add_vf_plot,{
         vf_chosen$data <- c(vf_update(),vf_chosen$max)
         vf_chosen$max  <- vf_chosen$max + 1
     }
+    }
 })
 vf_update <- reactive({
     # if(length(stored_vf_chosen$data) < stored_vf_files$current) return(list())
@@ -286,102 +250,6 @@ visible_vf_plots <- reactive({
         }
         return(local_result)
     } else return(NULL)
-})
-
-
-output$plots <- renderUI({
-    if(!is.null(loading_vf_file())) {
-        one_line <- lapply(visible_vf_plots(), function(i) {
-            fluidRow(
-                column(2,
-                       tags$div(title=Explorer_VF_ApplyToAll_tooltip,
-                                actionButton(paste0("apply_plot_vf_",i),Explorer_VF_ApplyToAll_label)),
-                       if(!is.null(loading_ss_file())) {
-                           tags$div(title=Explorer_VF_ApplyToTSS_tooltip,
-                                    actionButton(paste0("apply_to_tss_vf_",i),Explorer_VF_ApplyToTSS_label))
-                       },
-                       tags$div(title=Explorer_VF_ClearPlot_tooltip,
-                                actionButton(paste0("clear_plot_vf_",i),Explorer_VF_ClearPlot_label)),
-                       tags$div(title=Explorer_VF_Unzoom_tooltip,
-                                actionButton(paste0("unzoom_plot_vf_",i),Explorer_VF_Unzoom_label)),
-                       if(!is.null(loading_ss_file())) {
-                           conditionalPanel(
-                               condition = "input.advanced == true",
-                               tags$div(title=Explorer_VF_UsePWAmodel_tooltip,
-                                        checkboxInput(paste0("abst_vf_",i), Explorer_VF_UsePWAmodel_label, 
-                                                      ifelse(!is.null(input[[paste0("abst_vf_",i)]]), input[[paste0("abst_vf_",i)]], F)))
-                           )
-                       },
-                       lapply(1:length(loading_vf_file()$vars), function(t) {
-                           name <- loading_vf_file()$vars[[t]]
-                           if(!name %in% c(input[[paste0("vf_selector_x_",i)]],input[[paste0("vf_selector_y_",i)]])) {
-                               label <- paste0(Explorer_VF_ScaleSlider_label, loading_vf_file()$vars[[t]])
-                               wname <- paste0("scale_slider_vf_",i,"_",t)
-                               if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]])
-                                   values <- loading_ss_file()$ranges[[name]]
-                               else
-                                   values <- loading_vf_file()$ranges[[name]]
-                               tags$div(title=Explorer_VF_ScaleSlider_tooltip,
-                                        sliderInput(wname,label=label,min=values[1],max=values[2],step=zoom_granul,
-                                           value=ifelse(is.null(input[[wname]]),values[1],input[[wname]])))
-                           }
-                       }),
-                       tags$div(title=Explorer_VF_HoverTextArea_tooltip,
-                                verbatimTextOutput(paste0("hover_text_vf_",i)))
-                ),
-                column(4,
-                       helpText(Explorer_VF_label),
-                       imageOutput(paste0("plot_vf_",i),"auto","auto",click=paste0("vf_",i,"_click"),dblclick=paste0("vf_",i,"_dblclick"),
-                                   brush=brushOpts(id=paste0("vf_",i,"_brush"),delayType="debounce",delay=brush_delay_limit,resetOnNew=T),
-                                   hover=hoverOpts(id=paste0("vf_",i,"_hover"),delayType="debounce",delay=hover_delay_limit))
-                ),
-                column(4,
-                       if(!is.null(loading_ss_file()))
-                           helpText(Explorer_SS_label)
-                       else
-                           h3(Explorer_SS_error),
-                       if(!is.null(loading_ss_file()))
-                           imageOutput(paste0("plot_ss_",i),"auto","auto",click=paste0("ss_",i,"_click"),dblclick=paste0("ss_",i,"_dblclick"),
-                                       hover=hoverOpts(id=paste0("ss_",i,"_hover"),delayType="debounce",delay=hover_delay_limit),
-                                       brush=brushOpts(id=paste0("ss_",i,"_brush"),delayType="debounce",delay=brush_delay_limit,resetOnNew=T))
-                ),
-                column(2,
-                       if(!is.null(loading_ss_file())) {
-                           tags$div(title=Explorer_SS_ApplyToAll_tooltip,
-                                    actionButton(paste0("apply_plot_ss_",i),Explorer_SS_ApplyToAll_label))
-                       },
-                       if(!is.null(loading_ss_file())) {
-                           tags$div(title=Explorer_SS_ClearPlot_tooltip,
-                                    actionButton(paste0("clear_plot_ss_",i),Explorer_SS_ClearPlot_label))
-                       },
-                       if(!is.null(loading_ss_file())) {
-                           tags$div(title=Explorer_SS_Unzoom_tooltip,
-                                    actionButton(paste0("unzoom_plot_ss_",i),Explorer_SS_Unzoom_label))
-                       },
-                       if(!is.null(loading_ss_file())) {
-                           lapply(1:length(loading_ss_file()$var_names), function(t) {
-                               if(!loading_ss_file()$var_names[[t]] %in% c(input[[paste0("vf_selector_x_",i)]],input[[paste0("vf_selector_y_",i)]])) {
-                                   label <- paste0(Explorer_SS_ScaleSlider_label, loading_ss_file()$var_names[[t]])
-                                   wname <- paste0("scale_slider_ss_",i,"_",t)
-                                   # values <- c(1,ifelse(max(loading_ss_file()$thr[[t]]) > loading_vf_file()$ranges[[t]][2],
-                                   #                      length(loading_ss_file()$thr[[t]][which(loading_ss_file()$thr[[t]] <= loading_vf_file()$ranges[[t]][2])]),
-                                   #                      length(loading_ss_file()$thr[[t]])-1))
-                                   values <- c(1, length(loading_ss_file()$thr[[t]])-1)
-                                   tags$div(title=Explorer_SS_ScaleSlider_tooltip,
-                                            sliderInput(wname,label=label,min=values[1],max=values[2],step=1,
-                                               value=ifelse(is.null(input[[wname]]),values[1],input[[wname]])))
-                               }
-                           })
-                       },
-                       if(!is.null(loading_ss_file())) {
-                           tags$div(title=Explorer_SS_HoverTextArea_tooltip,
-                                    verbatimTextOutput(paste0("hover_text_ss_",i)))
-                       }
-                )
-            )
-        })
-        do.call(tagList, one_line)
-    }
 })
 
 #=============== SETTING OF INTERNAL FUNCTIONS =========================
