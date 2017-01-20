@@ -22,3 +22,6 @@ shinyAppPort = "9999"
 
 # TODO change this on release version
 debug <- function(...) { print(paste0(...)) }
+
+# UI settings
+scale_granularity <- 0.01

@@ -1,6 +1,8 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
+source("ui_global.R")       
 source("explorer/ui.R")
+
 
 plotOutputId <- function(id) { paste0("plot_output_", id) }
 
@@ -48,7 +50,9 @@ createPlot <- function(id, input, session, output, onRemove = function(outputId)
 	plot$hoverState <- paste0("plot_hover_state_", id)
 
 
-	plot$dimensions <- session$pithya$approximatedModel$model$varNames
+	plot$model <- session$pithya$approximatedModel$model
+	plot$vectorDimensionSliders <- sapply(plot$model$varNames, function(d) paste0("plot_slider_vector_", d, "_", id))
+	plot$stateDimensionSliders <- sapply(plot$model$varNames, function(d) paste0("plot_slider_state_", d, "_", id))
 	
 	# Render plot UI
 	output[[plot$plotOutput]] <- renderUI({
@@ -56,21 +60,66 @@ createPlot <- function(id, input, session, output, onRemove = function(outputId)
 		explorerPlot(plot)
 	})
 
+	# Dimensions without the currently selected. 
+	# Debounced for 500ms to ensure selector adjustment is done.
+	# TODO can we write our own filter instead of debounce?
+	# TODO make a new debounce that can be actually destroyed...
+	missingDimensions <- reactive({
+			dim <- plot$model$varNames
+			dim <- dim[!dim==input[[plot$xDimSelect]]]	
+			missing <- dim[!dim==input[[plot$yDimSelect]]]
+			if (length(missing) > 0) {
+				debug("[plot] new dimension sliders: ", paste0(missing, collapse = ", "))
+			}
+			missing
+	}) %>% debounce(200)
+
+	# Render vector dimension sliders based on missing dimensions
+	output[[plot$scaleVector]] <- renderUI({					
+		lapply(missingDimensions(), function(dim) {
+			#debug("[plot] render vector dimension slider: ", dim)
+			index <- match(dim, plot$model$varNames)
+			range <- plot$model$varRanges[[index]]
+			tooltip(tooltip = Explorer_VF_ScaleSlider_tooltip,
+                sliderInput(plot$vectorDimensionSliders[index],
+                	label = paste0(Explorer_VF_ScaleSlider_label, plot$model$varNames[index]),
+                	min = range$min, max = range$max, 
+                	value = unwrapOr(input[[plot$vectorDimensionSliders[index]]], range$min), step = scale_granularity
+            	)
+			)
+		})
+	})
+
+	# Render state dimension sliders based on missing dimensions
+	output[[plot$scaleState]] <- renderUI({
+		lapply(missingDimensions(), function(dim) {
+			#debug("[plot] render state dimension slider: ", dim)
+			index <- match(dim, plot$model$varNames)
+			tooltip(tooltip = Explorer_SS_ScaleSlider_tooltip,
+				sliderInput(plot$stateDimensionSliders[index],
+					label = paste0(Explorer_SS_ScaleSlider_label, plot$model$varNames[index]),
+					min = 1, max = length(plot$model$varThresholds[[index]]) - 1, 
+					value = unwrapOr(input[[plot$stateDimensionSliders[index]]],1), step = 1
+				)
+			)
+		})		
+	})
+
 	# Update slider input to ensure only different values can be selected
 	dimensionSelectUpdate <- observeEvent(c(input[[plot$xDimSelect]], input[[plot$yDimSelect]]), {
 		debug("[plot] update dimension selectors")	
-		if (length(plot$dimensions) == 1) {
-			updateSelectInput(session$shiny, plot$xDimSelect, choices = plot$dimensions, selected = plot$dimensions[1])
+		if (length(plot$model$varNames) == 1) {
+			updateSelectInput(session$shiny, plot$xDimSelect, choices = plot$model$varNames, selected = plot$model$varNames[1])
 			updateSelectInput(session$shiny, plot$yDimSelect, choices = list("none"), selected = "none")
 		} else {
 			xSelected <- input[[plot$xDimSelect]]
 			ySelected <- input[[plot$yDimSelect]]			
-			d <- plot$dimensions			
+			d <- plot$model$varNames			
 			yOptions <- d[!d==xSelected]
 			if (!(ySelected %in% yOptions)) {
 				ySelected <- yOptions[1]
 			}
-			updateSelectInput(session$shiny, plot$xDimSelect, choices = plot$dimensions, selected = xSelected)
+			updateSelectInput(session$shiny, plot$xDimSelect, choices = plot$model$varNames, selected = xSelected)
 			updateSelectInput(session$shiny, plot$yDimSelect, choices = yOptions, selected = ySelected)
 		}
 	})

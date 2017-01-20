@@ -54,15 +54,16 @@ explorerControlPanel <- function() {
 }
 
 explorerPlot <- function(p) {
+	oneVar <- length(p$model$varNames) == 1
 	tagList(
 		# Plot header
 		fluidRow(
 			column(1, paste0("Plot ", p$id)),				
 			column(2, tooltip(tooltip = Explorer_horizontal_tooltip,
-                selectInput(p$xDimSelect, Explorer_horizontal_label, p$dimensions)
+                selectInput(p$xDimSelect, Explorer_horizontal_label, choices = p$model$varNames, selected = p$model$varNames[1])
             )),
             column(2, tooltip(tooltip = Explorer_vertical_tooltip,
-                selectInput(p$yDimSelect, Explorer_vertical_label, p$dimensions)
+                selectInput(p$yDimSelect, Explorer_vertical_label, choices = p$model$varNames, selected = if (oneVar) { NULL } else { p$model$varNames[2] })
             )),
             column(2, tooltip(tooltip = Explorer_cancel_tooltip,
             	actionButton(p$removePlot, "Remove")
