@@ -38,19 +38,21 @@ explorerServer <- function(input, session, output) {
 		debug("[explorer] model changed. explorer enabled: ", enabled)
 		# remove graphs
 		lapply(isolate(reactiveValuesToList(plots)), function(plot) {
-			plot$destroy()
-			plots[[plot$outputId]] <- NULL	
+			if (!is.null(plot)) {	# TODO this seems to be happenning with the very last removed plot
+				plot$destroy()
+				plots[[plot$plotOutput]] <- NULL	
+			}
 		})
 		updateButton(session$shiny, "add_vf_plot", disabled = !enabled)
 	})
 
 	observeEvent(input$add_vf_plot, {
 		debug("[explorer] new plot")
-		plot <- createPlot(session$pithya$plotId(), input, session, output, function(outputId) {
-			plots[[outputId]]$destroy()
-			plots[[outputId]] <- NULL	
+		plot <- createPlot(session$pithya$plotId(), input, session, output, function(plotOutput) {
+			plots[[plotOutput]]$destroy()
+			plots[[plotOutput]] <- NULL	
 		})
-		plots[[plot$outputId]] <- plot
+		plots[[plot$plotOutput]] <- plot
 	})	
 
 	output$plots <- renderUI({

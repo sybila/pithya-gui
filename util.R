@@ -60,7 +60,6 @@ myReactiveFileReader <- function(intervalMillis, session, path, action) {
   #rv <- reactiveValues(cookie = checkFunc())
   cookie <- checkFunc()
   observe({
-    print("poll")
     latest <- checkFunc()
     if (latest != cookie) {
       cookie <- latest
