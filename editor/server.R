@@ -87,16 +87,16 @@ editorServer <- function(input, session, output) {
 			debug(paste0("[synhtesisProcess] error ", e))
 			synthesisProcess$finalize(FALSE)
 			if (grepl("Missing thresholds: .*", e)) {
-				thresholds <- sub("Missing thresholds: ", e)
-				thresholds <- strsplit(thresholds, split = "; ", fixed = TRUE)
+				# Note: This message has a fixed syntax and therefore this matching should not fail!
+				thresholdList <- sub("Missing thresholds: ", "", e)
+				thresholds <- strsplit(thresholdList, split = "; ", fixed = TRUE)
 				thresholds <- lapply(thresholds, function(t) {
 					list(name = sub(": .+", "", t), thresholds = strsplit(sub(".+: ", "", t), split = ", ", fixed = FALSE))
 				})
 				synthesisProcess$missingThresholds <- thresholds[[1]]
 				# We have missing thresholds!
-				showNotification("Missing thresholds")
 				showModal(modalDialog(title = "Missing thresholds!",
-					"Property thresholds are missing in the model. Click `Add` to add them to the model and recompute approximation.", 
+					paste0("Variable thresholds ", thresholdList, " are missing in the model. Click `Add` to add them to the model and recompute approximation."), 
 					footer = tagList(
 						modalButton("Cancel"),
 						actionButton("add_thresholds", "Add")
@@ -205,8 +205,9 @@ editorServer <- function(input, session, output) {
 	# TODO enable full progress indicator
 	# TODO make sure tractor prints nothing to the stdout when error occurs
 	# TODO dont forget to enable model explorer after this
-		
-	observeEvent(input$generate_abstraction, {
+
+	# We need this as an extra function because it's called after thresholds are generated
+	generateApproximation <- function() {
 		debug("[generateApproximation] start")
 		printProgress(Approximation_started)
 
@@ -230,6 +231,10 @@ editorServer <- function(input, session, output) {
 			stdout = approximationProcess$resultFile,
 			stderr = progressFile
 		))		
+	}
+		
+	observeEvent(input$generate_abstraction, {
+		generateApproximation()
 	})
 
 	observeEvent(input$approximation_kill, {
@@ -238,22 +243,44 @@ editorServer <- function(input, session, output) {
 	})
 
 	observeEvent(input$add_thresholds, {
-		t <- synthesisProcess$missingThresholds
-		if (!is.null(t)) {
-			model <- input$model_input_area	
-			for (i in 1:length(t$name)) {
-				name <- t$name[i]
-				newThresholds <- t$thresholds[i]
-				threhsoldLine <- grep(paste0("THRES:.+", name, ": "), model, value = TRUE)
-				if (length(threhsoldLine) > 0) {
-					# TODO handle line comments
-					originalThresholds <- strsplit(sub(paste0(".+", name, ": "), "", threhsoldLine), ", ", fixed = FALSE)
-					combined <- sort(as.numeric(unlist(c(newThresholds, originalThresholds))))
-					sub(threhsoldLine, paste0("THRES: ", name, ": ", paste(combined, collapse = ", ")), model)
+		tryCatch({
+			removeModal()
+			t <- synthesisProcess$missingThresholds			
+			if (!is.null(t)) {				
+				debug("[addThresholds] adding:", paste0(t, collapse = " "))
+				model <- input$model_input_area
+				# current model without comments (we can't match anyhting in the comments)
+				modelClean <- str_replace_all(model, "(#|//).*\n", "\n")
+				debug(modelClean)
+				for (i in 1:length(t$name)) {
+					name <- t$name[i]
+					newThresholds <- t$thresholds[i]
+					headerPattern <- paste0("THRES:[ \t]+", name,":[ \t]+")
+					linePattern <- paste0(headerPattern, "([-0-9,. \t]+)")
+					debug("[addThresholds] line pattern: ", linePattern)
+					match <- str_match(modelClean, linePattern)
+					if (length(match) >= 2) {
+						# trim ensures that whitespace around the match is preserved after we replace it
+						originalMatch <- str_trim(match[1])
+						originalThresholdString <- match[2]
+						originalThresholds <- strsplit(originalThresholdString, ",", fixed = TRUE)
+						debug("[addThresholds] extracted original thresholds: ", paste0(originalThresholds, collapse = ", "))
+						combined <- unique(sort(as.numeric(unlist(c(newThresholds, originalThresholds)))))
+						debug("[addThresholds] final thresholds: ", paste0(combined, collapse = ", "))
+						model <- sub(originalMatch, paste0("THRES: ", name, ": ", paste(combined, collapse = ", ")), model)
+					}												
 				}
+				updateAceEditor(session$shiny, "model_input_area", value = model)
+				showNotification("Thresholds added successfully")
+				generateApproximation()
 			}
-			updateAceEditor(session, "model_input_area", value = paste(model, collapse="\n"))
-		}		
+			synthesisProcess$missingThresholds <- NULL
+		}, error = function(e) {
+			debug("[addThresholds] error: ", e)	
+			showModal(modalDialog(title = "Error while adding thresholds",
+				"Pithya could not add missing thresholds to the model file. Make sure there are not syntax errors and try again or add the thresholds manually."
+			))
+		})
 	})
 
 	## Parameter synthesis runner
