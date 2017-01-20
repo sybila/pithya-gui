@@ -8,6 +8,7 @@ source("bio.R")             # .bio file parser and utilities
 
 # Separate tab servers
 source("editor/server.R")
+source("explorer/server.R")
 
 shinyServer(function(input,output,session) {
 
@@ -18,6 +19,7 @@ mySession <- list(shiny=session, pithya=list(
     examplesDir = "example//"
 ))
 
+# Parse .bio model when approximation changes
 observeEvent(mySession$pithya$approximatedModel$file, {
     file <- mySession$pithya$approximatedModel$file
     if (!is.null(file)) {
@@ -26,11 +28,15 @@ observeEvent(mySession$pithya$approximatedModel$file, {
         }, error = function(e) {
             debug("[.bio parser] parsing error: ", e)
             showNotification("[INTERNAL ERROR] Model parsing failed")
+            mySession$pithya$approximatedModel$file <- NULL
         })        
+    } else {
+        mySession$pithya$approximatedModel$file <- NULL
     }
 })
 
 editorServer(input, mySession, output)
+explorerServer(input, mySession, output)
 
 #=============== GLOBALS ===============================================
 session_random <- sample(1000^2,1)
@@ -159,29 +165,6 @@ loading_ss_file <- eventReactive(c(input$generate_abstraction,abstraction_reacti
 #=============== SETTING OF WIDGETS =======================================
 #==========================================================================
 
-output$param_sliders_bio <- renderUI({
-    if(!is.null(loading_vf_file()) && !is.null(loading_vf_file()$params)) {
-        
-        lapply(1:length(loading_vf_file()$params), function(i) {
-            label <- paste0(Explorer_parameter_label,names(loading_vf_file()$params)[i])
-            name <- paste0("param_slider_vf_",1,"_",i)
-            values <- c(min(as.numeric(loading_vf_file()$params[[i]])),max(as.numeric(loading_vf_file()$params[[i]])))
-            selected_value <- ((values[2]-values[1])*0.1)
-            # selected_value <- ifelse(!is.null(input[[name]]), current_param_sliders()[[i]], ((values[2]-values[1])*0.1))
-            # selected_value <- ifelse(length(stored_vf_current_params$data) < stored_vf_files$current || isempty(stored_vf_current_params$data[[stored_vf_files$current]]), 
-            #                          (values[2]-values[1])*0.1,
-            #                          stored_vf_current_params$data[[stored_vf_files$current]][[i]])
-            
-            fluidRow(
-                column(12,
-                       tags$div(title=Explorer_parameter_tooltip,
-                                numericInput(name,label=label,min=values[1],max=values[2],value=selected_value,step=((values[2]-values[1])/1000)))
-            #,sliderInput(paste0("num_",name),NULL,min=values[1],max=values[2],value=((values[2]-values[1])*0.1),step=((values[2]-values[1])/1000))
-                )
-            )
-        })
-    }
-})
 current_param_sliders <- reactive({
     lapply(1:length(loading_vf_file()$params), function(i) input[[paste0("param_slider_vf_",1,"_",i)]])
 })
