@@ -1,17 +1,32 @@
 ##################################################################################
-# This is an example of expected mass-flow during degradation of substrate into  #
-# product while intermediates don't exceed defined level of concentration        #
-# Warning: numeric thresholds used in properties should be defined also in model #
-#          if not, tool will do completion automatically                         #
+# Properties representing desired constraints on the metabolic mass flow.        #
+##################################################################################
+# 1. Substrate SUB is required to entirely convert into the product PROD.	 #
+# 2. Intermediates cannot exceed certain concentration levels during 		 #
+#    the conversion.								 #
 ##################################################################################
 
-st = SUB > 1.9			# Atomic proposition with explicitly defined threshold
-et = SUB < 0.01			# Atomic proposition with explicitly defined threshold
-sg = PROD < 0.01		# Atomic proposition with explicitly defined threshold
-eg = PROD > 1.9			# Atomic proposition with explicitly defined threshold
-bd = INT1 < 0.5			# Atomic proposition with explicitly defined threshold
-be = INT2 < 0.5			# Atomic proposition with explicitly defined threshold
+# atomic propositions declaration
+#
+st = SUB > 1.9			
+et = SUB < 0.01			
+sg = PROD < 0.01		
+eg = PROD > 1.9			
+bd = INT1 < 0.5			
+be = INT2 < 0.5		
+###
+# Warning: thresholds used in atomic propositions should be defined also in the model.    
+#          If not, the tool will do their addition automatically.
 
-:?p0 = ((st AU (AF (AG et))) && (sg AU (AF (AG eg))))						# Property standing for fluent mass-flow from substrate into product
-:?p1 = ((st AU (AF (AG et))) && (sg AU (AF (AG eg))) && (AG bd))			# Property standing for fluent mass-flow from substrate into product while INT1 doesn't exceed concentration of 0.5
-:?p2 = ((st AU (AF (AG et))) && (sg AU (AF (AG eg))) && (AG bd) && (AG be))	# Property standing for fluent mass-flow from substrate into product while both intermediates don't exceed concentration of 0.5
+# CTL properties declaration
+#
+# Complete and fluent mass conversion of substrate into product. 
+:?p0 = ((st AU (AF (AG et))) && (sg AU (AF (AG eg))))		
+
+# Complete and fluent mass conversion of substrate into product while additionally 
+# requiring the intermediate INT1 not to exceed concentration 0.5. 				
+:?p1 = ((st AU (AF (AG et))) && (sg AU (AF (AG eg))) && (AG bd))			
+
+# Complete and fluent mass conversion of substrate into product while additionally 
+# requiring each of the intermediates INT1 and INT2 not to exceed concentration 0.5. 	
+:?p2 = ((st AU (AF (AG et))) && (sg AU (AF (AG eg))) && (AG bd) && (AG be))

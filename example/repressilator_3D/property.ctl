@@ -1,4 +1,4 @@
-﻿##################################################################################
+##################################################################################
 # This is an example of intersting property for model of 3D repressilator        #
 # Warning: numeric thresholds used in properties should be defined also in model #
 #          if not, tool will do completion automatically                         #

@@ -35,13 +35,13 @@ Editor_model_saveModel_tooltip <- "Save model description as .bio file."
 Editor_property_controlPanel_label <- "Properties editor control panel:"
 
 Editor_property_Browse_label <- ""
-Editor_property_Browse_tooltip <- "Load .bio file for properties."
+Editor_property_Browse_tooltip <- "Load .ctl file for properties."
 
 Editor_property_resetChangesInProperties_label <- "reset changes in properties"
 Editor_property_resetChangesInProperties_tooltip <- ""
 
 Editor_property_saveProperties_label <- "save properties"
-Editor_property_saveProperties_tooltip <- "Save properties description as file."
+Editor_property_saveProperties_tooltip <- "Save properties description as .ctl file."
 
 Editor_cutTresholds_label <- "cut tresholds"
 Editor_cutTresholds_tooltip <- "During The-PWA-approximation of special functions used inside the model new thresholds are generated and some of them could exceed explicit ones. Check to not allow exceeding thresholds.
@@ -77,17 +77,17 @@ Editor_stopParameterSynthesis_tooltip <- "Stops parameter synthesis."
 Explorer_label <- "Explore" # "Explore & Show" "Explorer" "Model Explorer"
 Explorer_tooltip <- ""
 
-Explorer_nextExperiment_label <- "next"
-Explorer_nextExperiment_tooltip <- ""
+#Explorer_nextExperiment_label <- "next"
+#Explorer_nextExperiment_tooltip <- ""
 
-Explorer_previousExperiment_label <- "previous"
-Explorer_previousExperiment_tooltip <- ""
+#Explorer_previousExperiment_label <- "previous"
+#Explorer_previousExperiment_tooltip <- ""
 
-Explorer_deleteExperiment_label <- "delete"
-Explorer_deleteExperiment_tooltip <- ""
+#Explorer_deleteExperiment_label <- "delete"
+#Explorer_deleteExperiment_tooltip <- ""
 
-Explorer_saveExperimentModel_label <- "save current model"
-Explorer_saveExperimentModel_tooltip <- "This button saves model description in *.bio format of current experiment."
+#Explorer_saveExperimentModel_label <- "save current model"
+#Explorer_saveExperimentModel_tooltip <- "This button saves model description in *.bio format of current experiment."
 
 Explorer_countOfDirectionArrows_label <- "count of direction arrows"
 Explorer_countOfDirectionArrows_tooltip <- "Total number of direction arrows per dimension inside vector field(s)."
@@ -99,19 +99,21 @@ Explorer_coloringThreshold_label <- "coloring threshold"
 Explorer_coloringThreshold_tooltip <- "Maximal magnitude of vector to be considered neutral (vector with black colour)." # "Maximal magnitude of neutral vector."
 
 Explorer_widthOfAllArrows_label <- "width of all arrows"
-Explorer_widthOfAllArrows_tooltip <- "Scaling factor for width of arrows inside vector field(s) and state space(s)."
+Explorer_widthOfAllArrows_tooltip <- "Scaling factor for width of arrows inside vector field(s) and transition-state space(s)."
 
 Explorer_coloringDirection_label <- "coloring direction"
 Explorer_coloringDirection_tooltip <- "Choose direction(s) to color."
 
-Explorer_flowPointsCount_label <- "no. of trajectory points"
-Explorer_flowPointsCount_tooltip <- "" #TODO:
+Explorer_flowPointsCount_label <- "no. of trajectory points" 
+#"no. of trajectory points"
+Explorer_flowPointsCount_tooltip <- "" #TODO: "sets "
 
-Explorer_flowPointsDensity_label <- "trajectory points scalling factor"
+Explorer_flowPointsDensity_label <- "trajectory points scalling factor" 
+#"trajectory point density"
 Explorer_flowPointsDensity_tooltip <- "" #TODO:
 
 Explorer_addPlot_label <- "add plot"
-Explorer_addPlot_tooltip <- "Add new plot for vector field and state space."
+Explorer_addPlot_tooltip <- "Add new plot for vector field and transition-state space."
 
 #WARNING: these are used in server.R
 Explorer_experiment_label <- "Experiment no. "
@@ -137,8 +139,8 @@ Explorer_VF_tooltip <- ""                                           #TODO: proba
 Explorer_VF_ApplyToAll_label <- "apply to all"
 Explorer_VF_ApplyToAll_tooltip <- "Apply this starting point to all vector field plots."
 
-Explorer_VF_ApplyToTSS_label <- "apply to SS"
-Explorer_VF_ApplyToTSS_tooltip <- "Apply this starting point to corresponding state space plot."
+Explorer_VF_ApplyToTSS_label <- "apply to TSS"
+Explorer_VF_ApplyToTSS_tooltip <- "Apply this starting point to corresponding transition-state space plot."
 
 Explorer_VF_ClearPlot_label <- "clear plot"
 Explorer_VF_ClearPlot_tooltip <- "Clear this plot."
@@ -146,62 +148,60 @@ Explorer_VF_ClearPlot_tooltip <- "Clear this plot."
 Explorer_VF_Unzoom_label <- "unzoom"
 Explorer_VF_Unzoom_tooltip <- "Unzoom this vector field plot."
 
+#HIDDEN - advanced settings
 Explorer_VF_UsePWAmodel_label <- "use PWA model"
 Explorer_VF_UsePWAmodel_tooltip <- "" #TODO
 
-Explorer_VF_ScaleSlider_label <- "continues scale in "
-Explorer_VF_ScaleSlider_tooltip <- "" 
+#HIDDEN - for more at least 3 VARS model
+Explorer_VF_ScaleSlider_label <- "continues scale in " #TODO
+Explorer_VF_ScaleSlider_tooltip <- "" #TODO
 
-Explorer_VF_HoverTextArea_label <- ""                               #TODO: probably remove
-Explorer_VF_HoverTextArea_tooltip <- ""
+Explorer_VF_HoverTextArea_label <- "" #TODO: probably remove
+Explorer_VF_HoverTextArea_tooltip <- "" #TODO
 
-Explorer_SS_label <- "state space:" #"state space of the model:"
-Explorer_SS_tooltip <- ""                                           #TODO: probably remove
-Explorer_SS_error <- "Approximation has to be generated before showing state space"
+Explorer_SS_label <- "transition-state space:" #"transition-state space of the model:"
+Explorer_SS_tooltip <- "" #TODO: probably remove
+Explorer_SS_error <- "Approximation has to be generated before showing transition-state space"
 
-Explorer_SS_ApplyToAll_label <- "apply to all"
-Explorer_SS_ApplyToAll_tooltip <- "Apply this starting point to all state space plots."
+Explorer_SS_ApplyToAll_label <- "apply to all" #TODO
+Explorer_SS_ApplyToAll_tooltip <- "Apply this starting point to all transition-state space plots."
 
 Explorer_SS_ClearPlot_label <- "clear plot"
 Explorer_SS_ClearPlot_tooltip <- "Clear this plot."
 
 Explorer_SS_Unzoom_label <- "unzoom"
-Explorer_SS_Unzoom_tooltip <- "Unzoom this state space plot."
+Explorer_SS_Unzoom_tooltip <- "Unzoom this transition-state space plot."
 
-Explorer_SS_ScaleSlider_label <- "discrete scale in "
+Explorer_SS_ScaleSlider_label <- "discrete scale in " #TODO
 Explorer_SS_ScaleSlider_tooltip <- ""
 
-Explorer_SS_HoverTextArea_label <- ""                               #TODO: probably remove
+Explorer_SS_HoverTextArea_label <- "" #TODO: probably remove
 Explorer_SS_HoverTextArea_tooltip <- ""
 #WARNING: these are used in server.R - END
 
-#Explorer_SS__label <- ""
-#Explorer_SS__tooltip <- ""
-
-#Explorer__label <- ""
-#Explorer__tooltip <- ""
 
 #RESULT
 Result_label <- "Result" # "Result Explorer" 
 Result_tooltip <- ""
 
-Result_nextExperiment_label <- "next"
-Result_nextExperiment_tooltip <- ""
+#Result_nextExperiment_label <- "next"
+#Result_nextExperiment_tooltip <- ""
 
-Result_previousExperiment_label <- "previous"
-Result_previousExperiment_tooltip <- ""
+#Result_previousExperiment_label <- "previous"
+#Result_previousExperiment_tooltip <- ""
 
-Result_deleteExperiment_label <- "delete"
-Result_deleteExperiment_tooltip <- ""
+#Result_deleteExperiment_label <- "delete"
+#Result_deleteExperiment_tooltip <- ""
 
 Result_Browse_label <- "" # "choose result '.json' file"
-Result_Browse_tooltip <- "Load parameter synthesis result file."
+Result_Browse_tooltip <- "Load parameter synthesis result .json file."
 
+#TODO FIND
 Result_BrowseReload_label <- "reload"
 Result_BrowseReload_tooltip <- ""
 
 Result_saveResults_label <- "save results"
-Result_saveResults_tooltip <- "Save parameter synthesis results as file."
+Result_saveResults_tooltip <- "Save parameter synthesis results as .json file."
 
 Result_showParametersCoverage_label <- "show parameters coverage"
 Result_showParametersCoverage_tooltip <- "Scaling factor for density of shown rectangles in parameter space."
@@ -209,14 +209,14 @@ Result_showParametersCoverage_tooltip <- "Scaling factor for density of shown re
 Result_greyShadeDegree_label <- "colour shade degree"
 Result_greyShadeDegree_tooltip <- "Scaling factor in the range <0,1> for shade of colour representing parameters."
 
-Result_parameterDensity_label <- "density"
+Result_parameterDensity_label <- "density" #TODO
 Result_parameterDensity_tooltip <- "Scaling factor in the range <10,150> for density of shown rectangles in parameter space."
 
 Result_addPlot_label <- "add plot"
 Result_addPlot_tooltip <- "Add new plot for parameter space and satisfying state space."
 
 #WARNING: these are in server.R
-Result_experiment_label <- "Experiment no. "
+#Result_experiment_label <- "Experiment no. "
 
 Result_chooseFormulaOfInterest_label <- "choose formula:"
 Result_chooseFormulaOfInterest_tooltip <- "Choose formula to check."
@@ -240,14 +240,15 @@ Result_PS_label <- "parameter space of the model"
 Result_PSmixed_label <- "parameter-variable dependency plot:"
 Result_PS_tooltip <- ""                     #TODO: probably remove
 
-Result_PS_DeselectClick_label <- "deselect click"
-Result_PS_DeselectClick_tooltip <- ""
+Result_PS_DeselectClick_label <- "clear plot"
+Result_PS_DeselectClick_tooltip <- "Clear this plot" #TODO #this plot #parameter space plot #bud alebo 
 
 Result_PS_Unzoom_label <- "unzoom"
-Result_PS_Unzoom_tooltip <- "Unzoom this vector field plot."
+Result_PS_Unzoom_tooltip <- "Unzoom this plot." #TODO #this plot #parameter space plot #bud alebo 
 
 Result_PS_ScaleSlider_label <- "scale in "
 Result_PS_ScaleSlider_tooltip <- "" #TODO
+#TODO FIND
 Result_PS_ScaleSwitch_tooltip <- ""
 
 Result_PS_HoverTextArea_label <- ""         #TODO: probably remove
@@ -256,8 +257,8 @@ Result_PS_HoverTextArea_tooltip <- ""
 Result_SS_label <- "satisfying state space:" # "state space of the model:"  "... and corresponding transition-state space"
 Result_SS_tooltip <- ""                     #TODO: probably remove
 
-Result_SS_DeselectAll_label <- "deselect all"
-Result_SS_DeselectAll_tooltip <- "" #TODO
+Result_SS_DeselectAll_label <- "clear plot"
+Result_SS_DeselectAll_tooltip <- "Clear this plot" #TODO
 
 Result_SS_Unzoom_label <- "unzoom"
 Result_SS_Unzoom_tooltip <- "Unzoom this state space plot."
