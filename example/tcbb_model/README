@@ -1,0 +1,15 @@
+##############################################################################################
+# systems biology example								     #
+# modelled process: biological switch in mammalian cells affecting cell-cycle arrest in      #
+#  	   	    G1/S phase transition, 	   	 	   	      	     	     #
+#		    high concentration of E2F1 is observed in cancer cells		     #
+# goal: investigate stability/bistability for specific parameters 			     #
+##############################################################################################
+
+Model files:
+  model_indep.bio -- variant with a single uncertain parameter
+  model_dep.bio   -- variant with two uncertain parameters algebraically dependent
+
+Property files:
+  properties.ctl -- basic CTL properties targetting reachability and (bi)stability
+  complex_property.ctl -- advanced HUCTL properties precisely targetting bistability
