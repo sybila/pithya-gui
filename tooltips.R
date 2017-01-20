@@ -18,6 +18,8 @@ Waiting_for_state_space <- "Waiting for transition-state space"
 Editor_label <- "Edit & Check" # "Edit & Run" "Editor" "Model Editor"
 Editor_tooltip <- "" # "'Model editor' allows the user load, edit or save input model. Simple model is automatically loaded as example."
 
+Editor_model_controlPanel_label <- "Model editor control panel:"
+
 Editor_advancedSettings_label <- "advanced settings"
 Editor_advancedSettings_tooltip <- "show/hide advanced settings"
 
@@ -29,6 +31,8 @@ Editor_model_resetChangesInModel_tooltip <- ""
 
 Editor_model_saveModel_label <- "save model"
 Editor_model_saveModel_tooltip <- "Save model description as .bio file."
+
+Editor_property_controlPanel_label <- "Properties editor control panel:"
 
 Editor_property_Browse_label <- ""
 Editor_property_Browse_tooltip <- "Load .bio file for properties."
@@ -42,6 +46,8 @@ Editor_property_saveProperties_tooltip <- "Save properties description as file."
 Editor_cutTresholds_label <- "cut tresholds"
 Editor_cutTresholds_tooltip <- "During The-PWA-approximation of special functions used inside the model new thresholds are generated and some of them could exceed explicit ones. Check to not allow exceeding thresholds.
 "
+
+Editor_process_controlPanel_label <- "Parameter synthesis control part:"
 
 Editor_fastApproximation_label <- "fast approximation"
 Editor_fastApproximation_tooltip <- "" # "Two versions of The-PWA-approximation are available. Slower one - more precise and computationally more demanding - and fast one - much faster but also less precise."
@@ -98,10 +104,10 @@ Explorer_widthOfAllArrows_tooltip <- "Scaling factor for width of arrows inside 
 Explorer_coloringDirection_label <- "coloring direction"
 Explorer_coloringDirection_tooltip <- "Choose direction(s) to color."
 
-Explorer_flowPointsCount_label <- "no. of flow points"
+Explorer_flowPointsCount_label <- "no. of trajectory points"
 Explorer_flowPointsCount_tooltip <- "" #TODO:
 
-Explorer_flowPointsDensity_label <- "flow points density"
+Explorer_flowPointsDensity_label <- "trajectory points scalling factor"
 Explorer_flowPointsDensity_tooltip <- "" #TODO:
 
 Explorer_addPlot_label <- "add plot"

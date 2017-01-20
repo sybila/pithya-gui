@@ -276,8 +276,16 @@ observeEvent(input$missing_threshold_counter,{
 
 
 observeEvent(input$prop_input_area,{
-    loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
-    if(!is.null(loaded_ss_file$filedata)) updateButton(session,"process_run",style="success",disabled=F)
+    if(!identical(loaded_prop_file$data,strsplit(input$prop_input_area,"\n",fixed=T)[[1]])) {
+        loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
+        if(length(loaded_prop_file$data) > 0 && sum(nchar(loaded_prop_file$data)) > 0 &&
+           !is.null(loaded_ss_file$filedata) && sum(nchar(loaded_ss_file$filedata)) > 0)
+            updateButton(session,"process_run", style="success", disabled=F)
+        else
+            updateButton(session,"process_run", style="default", disabled=T)
+    }
+    # loaded_prop_file$data <- strsplit(input$prop_input_area,"\n",fixed=T)[[1]]
+    # if(!is.null(loaded_ss_file$filedata)) updateButton(session,"process_run",style="success",disabled=F)
 })
 # observeEvent(input$accept_prop_changes,{
 #     if(!is.null(input$prop_input_area) && input$prop_input_area != "")
@@ -291,13 +299,15 @@ observeEvent(c(input$prop_file,input$reset_prop),{
 #             reset_globals()
 #         }
         loaded_prop_file$filename <- input$prop_file$name
-        loaded_prop_file$data <- readLines(input$prop_file$datapath)
+        filedata <- readLines(input$prop_file$datapath)
     } else {
         # initial example file (temporary)
-        loaded_prop_file$filename <- paste0(examples_dir,"//repressilator_2D//properties.with_comments.ctl")
-        loaded_prop_file$data <- readLines(loaded_prop_file$filename)
+        loaded_prop_file$filename <- ""
+        filedata <- ""
+        # loaded_prop_file$filename <- paste0(examples_dir,"//repressilator_2D//properties.with_comments.ctl")
+        # loaded_prop_file$data <- readLines(loaded_prop_file$filename)
     }
-    updateAceEditor(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
+    updateAceEditor(session,"prop_input_area",value = paste(filedata,collapse="\n"))
     # updateTextAreaInput(session,"prop_input_area",value = paste(loaded_prop_file$data,collapse="\n"))
 })
 
@@ -364,7 +374,12 @@ reset_particular_global <- function(i) {
 observeEvent(input$model_input_area,{
     if(!identical(loaded_vf_file$filedata,strsplit(input$model_input_area,"\n",fixed=T)[[1]])) {
         loaded_vf_file$filedata <- strsplit(input$model_input_area,"\n",fixed=T)[[1]]
-        updateButton(session,"generate_abstraction", style="success", disabled=F)
+        if(length(loaded_vf_file$filedata) > 0 && sum(nchar(loaded_vf_file$filedata)) > 0)
+            updateButton(session,"generate_abstraction", style="success", disabled=F)
+        else {
+            updateButton(session,"generate_abstraction", style="default", disabled=T)
+            updateButton(session,"process_run", style="default", disabled=T)
+        }
     }
 })
 
@@ -379,8 +394,10 @@ observeEvent(c(input$vf_file,input$reset_model),{
     } else {
         # initial example file (temporary)
         cat(Starting_advice, file=progressFileName)
-        loaded_vf_file$filename <- paste0(examples_dir,"//repressilator_2D//model_indep.with_comments.bio")
-        filedata <- readLines(loaded_vf_file$filename)
+        # loaded_vf_file$filename <- paste0(examples_dir,"//repressilator_2D//model_indep.with_comments.bio")
+        # filedata <- readLines(loaded_vf_file$filename)
+        loaded_vf_file$filename <- ""
+        filedata <- ""
     }
     updateAceEditor(session,"model_input_area",value = paste(filedata,collapse="\n"))
     # updateButton(session,"generate_abstraction", style="success", disabled=F)
@@ -430,7 +447,9 @@ generate_abstraction_run <- function() {
             cat(Approximation_finished)
             cat(Approximation_finished, file=progressFileName,append=T)
             updateButton(session,"generate_abstraction",style="default",disabled=F)
-            updateButton(session,"process_run",style="success",disabled=F)
+            if(length(loaded_prop_file$data) > 0 && sum(nchar(loaded_prop_file$data)) > 0 &&
+               !is.null(loaded_ss_file$filedata) && sum(nchar(loaded_ss_file$filedata)) > 0)
+                updateButton(session,"process_run",style="success",disabled=F)
             updateButton(session,"add_vf_plot",style="default",disabled=F)
             reset_globals()
             reset_globals_param()     # for the case we would liek to reset result tab along with model explorer tab
@@ -438,7 +457,7 @@ generate_abstraction_run <- function() {
             cat(Approximation_error)
             cat(Approximation_error, file=progressFileName,append=T)
         }
-    }, message=Approximation_running, value=0.5)
+    }, message=Approximation_running, value=1)
 }
 observeEvent(input$generate_abstraction,{
     if(input$generate_abstraction != 0) {
@@ -1260,7 +1279,10 @@ apply_to_all_in_state_space <- observe({
 
 set_num_of_flow_points <- reactive({
     # return(num_of_flow_points)
-    return(input$flow_points_count)
+    if(is.null(input$flow_points_count) || is.na(input$flow_points_count))
+        return(0)
+    else
+        return(input$flow_points_count)
 })
 
 set_flow_points_density <- reactive({

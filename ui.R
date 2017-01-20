@@ -55,6 +55,8 @@ shinyUI(
         tags$head(tags$script(HTML(JS.parameterSynthesisFinished))),
         tags$head(tags$script(HTML(JS.missingThreshold))),
         titlePanel(Tool_name),
+        tags$div(title=Editor_advancedSettings_tooltip,
+                 checkboxInput("advanced", Editor_advancedSettings_label, F)),
         tags$hr(),
         tabsetPanel(id = "dimensions",
                 
@@ -62,11 +64,10 @@ tabPanel(Editor_label, icon=icon("bug"), # fa-leaf fa-bug
     tags$div(title=Editor_tooltip,
     fluidPage(
         column(6,
+            helpText(Editor_model_controlPanel_label),
             wellPanel(
                 fluidPage(
                     column(4,
-                        tags$div(title=Editor_advancedSettings_tooltip,
-                                 checkboxInput("advanced", Editor_advancedSettings_label, F)),
                         tags$div(title=Editor_model_Browse_tooltip,
                                  fileInput("vf_file", Editor_model_Browse_label, accept=".bio"))
                         # ,tags$div(title="Select input state space (with '.ss.json' extension) for further analysis.",
@@ -102,6 +103,7 @@ tabPanel(Editor_label, icon=icon("bug"), # fa-leaf fa-bug
         ),
 #         tags$script(tags$html("<hr width='2' size='500' color='red'>")),
         column(4,
+            helpText(Editor_property_controlPanel_label),
             wellPanel(
                 fluidPage(
                     column(6,
@@ -120,12 +122,13 @@ tabPanel(Editor_label, icon=icon("bug"), # fa-leaf fa-bug
             )
         ),
         column(2,
+               helpText(Editor_process_controlPanel_label),
                wellPanel(
                    conditionalPanel(
                        condition = "input.advanced == true",
                        tags$div(title=Editor_numberOfThreads_tooltip,
-                                numericInput("threads_number", Editor_numberOfThreads_label, 1,#detectCores(), 
-                                             1, detectCores(), 1))
+                                sliderInput("threads_number", Editor_numberOfThreads_label, value=detectCores(), 
+                                             min=1, max=detectCores(), step=1))
                    ),
                    tags$div(title=Editor_runParameterSynthesis_tooltip,
                             bsButton("process_run", Editor_runParameterSynthesis_label, disabled=T)),
@@ -237,10 +240,13 @@ tabPanel(Explorer_label, icon=icon("move",lib = "glyphicon"),
                         radioButtons("colVariant",Explorer_coloringDirection_label,list(both="both",none="none",horizontal="horizontal",vertical="vertical"),"both",inline=T))
             ),
             column(2,
-                   tags$div(title=Explorer_flowPointsCount_tooltip,
-                            numericInput("flow_points_count",Explorer_flowPointsCount_label,min=50,max=NA,step=50,value=500)),
-                   tags$div(title=Explorer_flowPointsDensity_tooltip,
-                            sliderInput("flow_points_density",Explorer_flowPointsDensity_label,0.01,10,step=0.01,value=1))
+                   conditionalPanel(
+                       condition = "input.advanced == true",
+                       tags$div(title=Explorer_flowPointsCount_tooltip,
+                                numericInput("flow_points_count",Explorer_flowPointsCount_label,min=50,max=NA,step=50,value=500)),
+                       tags$div(title=Explorer_flowPointsDensity_tooltip,
+                                sliderInput("flow_points_density",Explorer_flowPointsDensity_label,0.01,10,step=0.01,value=1))
+                   )
 #                   ,uiOutput("param_sliders")
             ),
             column(2,
