@@ -1,9 +1,9 @@
 ##############################################################################################
-# synthetic biology example								     #
+# systems biology example								     #
 # modelled process: biological switch in mammalian cells affecting cell-cycle arrest in      #
 #  	   	    G1/S phase transition, 	   	 	   	      	     	     #
 #		    high concentration of E2F1 is observed in cancer cells		     #
-# goal: investigate bistability for specific parameters                     		     #
+# goal: investigate bistability for specific algebraically dependent parameters 	     #
 ##############################################################################################
 
 # model variables declaration

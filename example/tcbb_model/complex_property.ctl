@@ -2,12 +2,13 @@
 # Advanced properties of G1/S transition switch.				 #
 ##################################################################################
 # 1. Identify all stable states of the system.					 #
-# 2. E2F1 protein is required to reach the high or low concentration mode.       #
-# 3. E2F1 protein is required to be able to reach both modes (bistability).      #
+# 2. Two different stable states exists in the system (bistability).             #
 ##################################################################################
 # Warning: The declared formulae lead to computationally hard tasks,		 #
 #  	   high-performance hardware is required!			         # 
 ##################################################################################
+
+# HUCTL properties declaration
 
 # Identifying all stable states.
 # An expressive general HUCTL formula independent of atomic propositions.

@@ -21,10 +21,10 @@ low  = E2F1 < 3
 # Property requiring the concentration of E2F1 to never exceed 3. 
 :?stay_low = AG low
 
-# Property requiring the concentration of E2F1 to never drop below 3.							
+# Property requiring the concentration of E2F1 to never drop below 3.					
 :?stay_high = AG high
 
-# Property requiring the concentration of E2F1 to eventually exceed 3.						
+# Property requiring the concentration of E2F1 to eventually exceed 3.					
 :?reach_high = EF high
 
 # Property requiring the concentration of E2F1 to eventually drop below 3.	
@@ -37,6 +37,7 @@ low  = E2F1 < 3
 :?reach_and_stay_high = EF(AG high)						
 
 # Property requiring the concentration of E2F1 to eventually drop below 3 and remain there
-# or to eventually exceed 3 and remain there (the so-called bistable switch, states satisfying 
+# and to eventually exceed 3 and remain there (the so-called bistable switch, states satisfying 
 # this give the cell the ability to decide by fine-tuning the initial concentration of E2F1).
+# The property holds in a state where both situations are reachable.
 :?bistability = reach_and_stay_high && reach_and_stay_low
