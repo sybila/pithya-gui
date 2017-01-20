@@ -207,7 +207,7 @@ editorServer <- function(input, session, output) {
 	# TODO dont forget to enable model explorer after this
 
 	# We need this as an extra function because it's called after thresholds are generated
-	generateApproximation <- function() {
+	generateApproximation <- function(modelData) {
 		debug("[generateApproximation] start")
 		printProgress(Approximation_started)
 
@@ -218,7 +218,7 @@ editorServer <- function(input, session, output) {
 
 		approximationProcess$inputFile <- tempfile(pattern = "approximationInput", fileext = ".bio", tmpdir = sessionDir)
 		approximationProcess$resultFile <- tempfile(pattern = "approximationOutput", fileext = ".bio", tmpdir = sessionDir)
-		writeLines(input$model_input_area, approximationProcess$inputFile)
+		writeLines(modelData, approximationProcess$inputFile)
 
 		approximationProcess$notificationID <- showNotification(
 			tagList("Approximation running", actionButton("approximation_kill", "Cancel")), 
@@ -234,7 +234,7 @@ editorServer <- function(input, session, output) {
 	}
 		
 	observeEvent(input$generate_abstraction, {
-		generateApproximation()
+		generateApproximation(input$model_input_area)
 	})
 
 	observeEvent(input$approximation_kill, {
@@ -272,7 +272,8 @@ editorServer <- function(input, session, output) {
 				}
 				updateAceEditor(session$shiny, "model_input_area", value = model)
 				showNotification("Thresholds added successfully")
-				generateApproximation()
+				# We need to pass model directly because the editor is not updated yet
+				generateApproximation(model)
 			}
 			synthesisProcess$missingThresholds <- NULL
 		}, error = function(e) {

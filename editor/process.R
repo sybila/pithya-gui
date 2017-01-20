@@ -70,7 +70,7 @@ startRemoteProcess <- function(session, process, config) {
 			} else if (grepl("^Killed$", notification[1])) {
 				# do nothing, handled by kill function
 			} else if (grepl("^Error$", notification[1])) {
-				process$onError(notification[-1])
+				process$onError(notification[length(notification)])
 			}	
 		}
 	})	

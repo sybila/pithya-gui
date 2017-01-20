@@ -3,17 +3,32 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
 
+# Utility files
+source("bio.R")             # .bio file parser and utilities
+
 # Separate tab servers
 source("editor/server.R")
 
 shinyServer(function(input,output,session) {
 
 mySession <- list(shiny=session, pithya=list(
-    approximatedModel = reactiveValues(file = NULL, outdated = TRUE),
+    approximatedModel = reactiveValues(file = NULL, model = NULL, outdated = TRUE),
     synthesisResult = reactiveValues(file = NULL, outdated = TRUE),
     sessionDir = tempdir(),
     examplesDir = "example//"
 ))
+
+observeEvent(mySession$pithya$approximatedModel$file, {
+    file <- mySession$pithya$approximatedModel$file
+    if (!is.null(file)) {
+        tryCatch({
+            mySession$pithya$approximatedModel$model <- parseBioFile(file)
+        }, error = function(e) {
+            debug("[.bio parser] parsing error: ", e)
+            showNotification("[INTERNAL ERROR] Model parsing failed")
+        })        
+    }
+})
 
 editorServer(input, mySession, output)
 
@@ -133,197 +148,12 @@ reset_particular_global <- function(i) {
 #=======================================================================
     
 loading_vf_file <- eventReactive(c(input$generate_abstraction,abstraction_reactivation$counter),{
-    if(!is.null(loaded_vf_file$filedata) && input$generate_abstraction > 0) {
-        # if(length(stored_vf_parsed_data$data) >= stored_vf_files$current && !is.null(stored_vf_parsed_data$data[[stored_vf_files$current]])) {
-        #     return(stored_vf_parsed_data$data[[stored_vf_files$current]])
-        # }
-        if(length(loaded_vf_file$filedata) != 0) {
-            biofile <- loaded_vf_file$filedata
-            biofile <- gsub("#.*","",gsub("//.*","",biofile))
-    
-            # VARIABLES
-            # result is vector of VAR NAMES
-            var_line <- biofile[which(str_detect(biofile,"^VARS:"))]
-            if(length(var_line) > 0) {
-                var_names <- as.list(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",var_line)),",")[[1]] ) )
-                names(var_names) <- var_names
-            } else return(NULL)
-            
-            # CONSTANTS
-            # result is named list of CONST VALUEs
-            const_line <- biofile[which(str_detect(biofile,"^CONSTS:"))]
-            if(length(const_line) > 0) {
-                #consts <- str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),",") 
-                consts <- lapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),","),function(x) x[2] )
-                names(consts) <- sapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",const_line)),";")[[1]]),","),function(x) x[1] )
-            } else consts <- NULL
-            
-            # PARAMETERS
-            # result is names list of pairs PARAM FIRST VALUE and PARAM SECOND VALUE
-            param_line <- biofile[which(str_detect(biofile,"^PARAMS:"))]
-            if(length(param_line) > 0) {
-                #params <- str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),",") 
-                params <- lapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) c(x[2],x[3]) )
-                names(params) <- sapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) x[1] )
-            } else params <- NULL
-            
-            # THRESHOLDS
-            # result is names list of THRES VALUEs
-            thr_lines <- gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^THRES:"))]))
-            if(length(thr_lines) > 0 && length(thr_lines) == length(var_names)) {
-                thres <- sapply(str_split(thr_lines,":"),function(x) str_split(x[3],",") )
-                names(thres) <- sapply(str_split(thr_lines,":"),function(x) x[2] )
-            } else return(NULL)
-            
-            # EQUATIONS
-            # result is named list of EQUATIONs
-            eq_lines <- gsub("^.*:","",gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^EQ:"))])))
-            if(length(eq_lines) > 0 && length(eq_lines) == length(var_names)) {
-                eqs <- lapply(str_split(eq_lines,"="),function(x) x[2] )
-                names(eqs) <- sapply(str_split(eq_lines,"="),function(x) x[1] )
-                
-                for(e in 1:length(eqs)) {
-                    eq <- eqs[[e]]
-                    names <- strsplit(eq,"[-+*,() \t]+")[[1]]
-                    signs <- strsplit(eq,"[^-+*,() \t]+")[[1]]
-                    
-                    names <- sapply(names,function(x) ifelse(!is.null(var_names[[x]]) || !is.null(consts[[x]]) || !is.null(params[[x]]), paste0("ip$",x), x))
-                    
-                    new_eq <- ""
-                    if(names[1] == "") {
-                        if(length(names) == length(signs)) {
-                            for(i in 1:length(names)) new_eq <- paste0(new_eq,names[i],signs[i])
-                        } else {
-                            new_eq <- names[1]
-                            for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,signs[i],names[i+1])
-                        }
-                    } else {
-                        if(length(names) == length(signs)) {
-                            for(i in 1:length(names)) new_eq <- paste0(new_eq,signs[i],names[i])
-                        } else {
-                            new_eq <- signs[1]
-                            for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,names[i],signs[i+1])
-                        }
-                    }
-                    eqs[[e]] <- paste0("function(ip) ",new_eq)
-                }
-            } else return(NULL)
-            
-            ranges <- lapply(thres, function(x) range(as.numeric(x)))
-            names(ranges) <- var_names
-            
-            # setting of GLOBALS
-            list_of_names <<- as.list(c(var_names, "Choose"=empty_sign))
-            funcs <<- list()
-            for(x in unlist(var_names)) {
-                funcs[[x]] <<- parse(text=eqs[[x]])
-            }
-            
-            return(list(
-                vars=var_names, 
-                consts=consts, 
-                params=params, 
-                thres=thres, 
-                eqs=eqs, 
-                ranges=ranges
-            ))
-            # return(stored_vf_parsed_data$data[[stored_vf_files$current]])
-        } else return(NULL)
-    } else return(NULL)
+    NULL
 })
 
 
 loading_ss_file <- eventReactive(c(input$generate_abstraction,abstraction_reactivation$counter),{
-    if(!is.null(loaded_ss_file$filedata) && input$generate_abstraction > 0) {
-        # if(length(stored_ss_parsed_data$data) >= stored_ss_files$current && !is.null(stored_ss_parsed_data$data[[stored_ss_files$current]])) {
-        #     return(stored_ss_parsed_data$data[[stored_ss_files$current]])
-        # }
-        if(length(loaded_ss_file$filedata) != 0) {
-            biofile <- loaded_ss_file$filedata
-            
-            # VARIABLES
-            # result is vector of VAR NAMES
-            var_line <- biofile[which(str_detect(biofile,"^VARS:"))]
-            if(length(var_line) > 0) {
-                var_names <- as.list(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",var_line)),",")[[1]] ) )
-                names(var_names) <- var_names
-            } else return(NULL)
-            
-            # PARAMETERS
-            # result is names list of pairs PARAM FIRST VALUE and PARAM SECOND VALUE
-            param_line <- biofile[which(str_detect(biofile,"^PARAMS:"))]
-            if(length(param_line) > 0) {
-                #params <- str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),",") 
-                params <- lapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) c(as.numeric(x[2]),as.numeric(x[3])))
-                names(params) <- sapply(str_split(gsub("[{}]","_",str_split(gsub("[ \t]","",gsub("^.*:","",param_line)),";")[[1]]),","),function(x) x[1] )
-            } else params <- NULL
-            
-            # THRESHOLDS
-            # result is names list of THRES VALUEs
-            thr_lines <- gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^THRES:"))]))
-            if(length(thr_lines) > 0 && length(thr_lines) == length(var_names)) {
-                thres <- sapply(str_split(thr_lines,":"),function(x) str_split(x[3],",") )
-                thres <- lapply(thres,as.numeric)
-                names(thres) <- sapply(str_split(thr_lines,":"),function(x) x[2] )
-            } else return(NULL)
-            
-            # EQUATIONS
-            # result is named list of EQUATIONs
-            eq_lines <- gsub("^.*:","",gsub("[{}]","_",gsub("[ \t]","",biofile[which(str_detect(biofile,"^EQ:"))])))
-            if(length(eq_lines) > 0 && length(eq_lines) == length(var_names)) {
-                eqs <- lapply(str_split(eq_lines,"="),function(x) x[2] )
-                names(eqs) <- sapply(str_split(eq_lines,"="),function(x) x[1] )
-                
-                for(e in 1:length(eqs)) {
-                    eq <- eqs[[e]]
-                    names <- strsplit(eq,"[-+*,() \t]+")[[1]]
-                    signs <- strsplit(eq,"[^-+*,() \t]+")[[1]]
-                    
-                    names <- sapply(names,function(x) ifelse(!is.null(var_names[[x]]) || !is.null(params[[x]]), paste0("ip$",x), x))
-                    
-                    new_eq <- ""
-                    if(names[1] == "") {
-                        if(length(names) == length(signs)) {
-                            for(i in 1:length(names)) new_eq <- paste0(new_eq,names[i],signs[i])
-                        } else {
-                            new_eq <- names[1]
-                            for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,signs[i],names[i+1])
-                        }
-                    } else {
-                        if(length(names) == length(signs)) {
-                            for(i in 1:length(names)) new_eq <- paste0(new_eq,signs[i],names[i])
-                        } else {
-                            new_eq <- signs[1]
-                            for(i in 1:min(length(signs),length(names))) new_eq <- paste0(new_eq,names[i],signs[i+1])
-                        }
-                    }
-                    # change of format 'Approx(x)([1,2],..,[3,4])' into 'Approx(x,list(c(1,2),..,c(3,4))'
-                    new_eq <- gsub("\\]\\)","\\)\\)\\)",gsub("\\],\\[","\\),c\\(",gsub("\\)\\(\\[",",list\\(c\\(",new_eq)))
-                    eqs[[e]] <- paste0("function(ip) ",new_eq)
-                }
-            } else return(NULL)
-            
-            ranges <- lapply(thres, function(x) range(as.numeric(x)))
-            names(ranges) <- var_names
-            
-            # setting of GLOBALS
-            funcs_abst <<- list()
-            for(x in unlist(var_names)) {
-                funcs_abst[[x]] <<- parse(text=eqs[[x]])
-            }
-            
-            return(list(
-                var_names=var_names, 
-                params_num=length(params), 
-                param_names=names(params), 
-                params=params, 
-                thr=thres, 
-                eqs=eqs, 
-                ranges=ranges
-            ))
-            # return(stored_ss_parsed_data$data[[stored_ss_files$current]])
-        } else return(NULL)
-    } else return(NULL)
+    NULL
 })
 
 #=============== SETTING OF WIDGETS =======================================
