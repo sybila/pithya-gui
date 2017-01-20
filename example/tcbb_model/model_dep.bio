@@ -1,15 +1,17 @@
 ##############################################################################################
-# This is minimal model of logic switch in mammals affecting cell-cycle arrest in G1/S phase #
-# It is well known for having bistable behaviour for specific parameters                     #
+# synthetic biology example								     #
+# modelled process: biological switch in mammalian cells affecting cell-cycle arrest in      #
+  	   	    G1/S phase transition						     #
+# goal: investigate bistability for specific parameters                     		     #
 ##############################################################################################
 
-# Here, variables are defined (usually genes or proteins)
+# model variables declaration
 VARS: pRB, E2F1
 
-# Here, parameters of the model are defined
+# parameters declaration
 PARAMS: y_pRB,0.001,1; k1,0.1,10
 
-# Here, constants used in ODEs are defined (optional)
+# constants declaration
 CONSTS: y_E2F1,0.1; a,0.04; kp,0.05; k2,1
 
 # Here, settings for PWA approximation are defined (optional)
