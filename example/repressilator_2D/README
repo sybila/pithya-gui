@@ -1,0 +1,13 @@
+#####################################################################################
+# genetic synthetic biology example files                                           #
+# modelled process: repressilator of 2 genes with mutual negative feedback          #
+#                   		       	     	                                    #
+# goal: investigate bistable behaviour for specific parameters 		            #
+#####################################################################################
+
+Model files:
+  model_indep.bio -- variant with two algebraically independent uncertain parameters
+  model_dep.bio   -- variant with two uncertain parameters algebraically dependent
+
+Property files:
+  properties.ctl -- basic CTL properties targetting reachability and (bi)stability
