@@ -1,27 +1,47 @@
 ##############################################################################################
 # synthetic biology example								     #
 # modelled process: biological switch in mammalian cells affecting cell-cycle arrest in      #
-  	   	    G1/S phase transition						     #
+#  	   	    G1/S phase transition, 	   	 	   	      	     	     #
+#		    high concentration of E2F1 is observed in cancer cells		     #
 # goal: investigate bistability for specific parameters                     		     #
 ##############################################################################################
 
 # model variables declaration
+# pRB ... tumor suppresor protein concentration
+# E2F1 .. retinoblastoma protein concentration
+#
 VARS: pRB, E2F1
 
 # parameters declaration
+# y_pRB .. pRB degradation coefficient
+# k1 ..... pRB production coefficient
+#
 PARAMS: y_pRB,0.001,1; k1,0.1,10
 
 # constants declaration
+# y_E2F1 .. E2F1 degradation coefficient
+# kp ...... E2F1 spontaneous production coefficient
+# k2 ...... E2F1 modulated production coefficient
+# a ....... E2F1 inhibition coefficient
+# 
 CONSTS: y_E2F1,0.1; a,0.04; kp,0.05; k2,1
 
-# Here, settings for PWA approximation are defined (optional)
+# piece-wise multi-affine approximation settings (optional)
+# variable:breaking points precision,number of piece-wise affine segments
+# 
 VAR_POINTS: pRB: 1500, 20; E2F1: 1500, 20
 
-# Here, ODEs for variables are defined (Hillm is keyword for negative Hill function and Hillp for positive Hill function - for more look into manual)
+# non-linear differential equations defining rate of change of model variables
+# hillp() represents positive Hill function modelling activation
+# hillm() represents negative Hill function modelling inhibition
+#
 EQ: pRB = k1*Hillp(E2F1,0.5,1,0,1)*Hillm(pRB,0.5,1,1,0) - y_pRB*pRB
 EQ: E2F1 = kp + k2*a*a*0.0625*Hillm(E2F1,4,2,1,0)*Hillm(pRB,5,1,1,0) + k2*Hillp(E2F1,4,2,0,1)*Hillm(pRB,5,1,1,0) - y_E2F1*E2F1
 
-# Here, explicit thresholds for variables are defined (at least 2 thresholds foe each variable are needed as bounds)
+# rectangular abstraction discretising thresholds
+# points in variables domains where the continuous state space is discretised
+# at least two thresholds must be given for each variable (minimal and maximal value)
+#
 THRES: pRB:  0, 15
 THRES: E2F1: 0, 3, 15
 
