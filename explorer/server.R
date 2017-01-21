@@ -1,12 +1,30 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
-source("explorer/plot.R")
+source("explorer/plotRow.R")
 
 explorerServer <- function(input, session, output) {
 
-	plots <- reactiveValues()
+	plotRows <- reactiveValues()
 
-	# Show parameter numberic inputs when model is loaded
+	# Current params value list
+	params <- function(model) {
+		lapply(1:length(model$paramNames), function(p) {
+			unwrapOr(isolate(input[[paste0("param_slider_", p)]]), model$paramRanges[[p]]$min)
+		})
+	}
+
+	# Update the parametrised models based on parameter values
+	paramsChanged <- function() {
+		let(session$pithya$approximatedModel$model, function(model) {
+			params <- params(model)
+			# Notify plots
+			for (row in isolate(reactiveValuesToList(plotRows))) {
+				row$vector$state$params <- params
+			}
+		})
+	}
+
+	# Show parameter numeric inputs when model is loaded
 	output$param_sliders_bio <- renderUI({
 		model <- session$pithya$approximatedModel$model
 		if (!is.null(model)) {	
@@ -14,9 +32,14 @@ explorerServer <- function(input, session, output) {
 				debug("[param_sliders_bio] render bio slider")
 				min <- model$paramRanges[[pIndex]]$min
 				max <- model$paramRanges[[pIndex]]$max
+				id <- paste0("param_slider_", pIndex)
+				observeEvent(input[[id]], {
+					# TODO clean up
+					paramsChanged()	
+				})
 				tooltip(tooltip = Explorer_parameter_tooltip,
 					numericInput(
-						inputId = paste0("param_slider_", pIndex),
+						inputId = id,
 						label = paste0(Explorer_parameter_label, model$paramNames[pIndex]),
 						min = min, max = max,
 						value = (0.1 * (max - min)),
@@ -30,42 +53,39 @@ explorerServer <- function(input, session, output) {
 		}
 	})
 
-	# TODO move add button out of the dynamic output so that it has to update only on one place
-
 	# Remove graphs (always - what if variables changed?) when model changes and enable button
 	observeEvent(session$pithya$approximatedModel$model, {		
 		enabled <- !is.null(session$pithya$approximatedModel$model)
 		debug("[explorer] model changed. explorer enabled: ", enabled)
 		# remove graphs
-		lapply(isolate(reactiveValuesToList(plots)), function(plot) {
-			if (!is.null(plot)) {	# TODO this seems to be happenning with the very last removed plot
-				plot$destroy()
-				plots[[plot$plotOutput]] <- NULL	
+		lapply(isolate(reactiveValuesToList(plotRows)), function(row) {			
+			if (!is.null(row)) {	# TODO this seems to be happenning with the very last removed plot
+				row$destroy()
+				plotRows[[row$outRow]] <- NULL	
 			}
 		})
-		updateButton(session$shiny, "add_vf_plot", disabled = !enabled)
+		updateButton(session$shiny, "add_plot_row", disabled = !enabled)
 	})
 
-	observeEvent(input$add_vf_plot, {
-		debug("[explorer] new plot")
-		plot <- createPlot(session$pithya$plotId(), input, session, output, function(plotOutput) {
-			plots[[plotOutput]]$destroy()
-			plots[[plotOutput]] <- NULL	
-		})
-		plots[[plot$plotOutput]] <- plot
+	observeEvent(input$add_plot_row, {
+		debug("[explorer] new plot row")
+		let(session$pithya$approximatedModel$model, function(model) {
+			row <- createPlotRow(session$pithya$nextId(), model, params(model), input, session, output, onRemove = function(row) {
+				row$destroy()
+				plotRows[[row$outRow]] <- NULL
+			})
+			plotRows[[row$outRow]] <- row			
+		})			
 	})	
 
 	output$plots <- renderUI({
 		debug("[explorer] render plots")
 		# We have to sort them by numeric ID
-		sortedIds <- sort(unlist(lapply(reactiveValuesToList(plots), function(x) x$id)))
+		sortedIds <- sort(unlist(lapply(reactiveValuesToList(plotRows), function(x) x$id)))
 		tagList(			
 			lapply(sortedIds, function(id) {
-				uiOutput(plotOutputId(id))	
-			}),
-			tooltip(tooltip = Explorer_addPlot_tooltip,
-                bsButton("add_vf_plot", Explorer_addPlot_label, icon=icon("picture",lib="glyphicon"), disabled = is.null(session$pithya$approximatedModel$model))
-            )
+				uiOutput(paste0("row_output_", id))
+			})
         )
 	})	
 

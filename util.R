@@ -87,3 +87,11 @@ unwrapOr <- function(nullable, value) {
 printInterval <- function(a, b) {
   paste0("[", round(a, digits = 3), ", ", round(b, digits = 3), "]")
 }
+
+let <- function(value, action) {
+  if (is.null(value)) {
+    NULL
+  } else {
+    action(value)
+  }
+}

@@ -92,8 +92,8 @@ parseBioLines <- function(lines) {
 		paramNames = paramNames,
 		paramRanges = paramRanges	
 	)
-	debug("[.bio parser] Finished parsing. Model representation will follow.")
-	debug(model)
+	debug("[.bio parser] Parse successful.")
+	#debug(model)
 
 	model
 }

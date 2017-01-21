@@ -19,7 +19,7 @@ mySession <- list(shiny=session, pithya=list(
     synthesisResult = reactiveValues(file = NULL, outdated = TRUE),
     sessionDir = tempdir(),
     examplesDir = "example//",
-    plotId = createCounter(1)
+    nextId = createCounter(1)
 ))
 
 # Parse .bio model when approximation changes

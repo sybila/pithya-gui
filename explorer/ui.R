@@ -8,7 +8,10 @@ explorerTab <- function() {
 			fluidPage(theme = "simplex.css",
 				explorerControlPanel(),
 				tags$hr(),
-        		uiOutput("plots")
+        		uiOutput("plots"),
+                tooltip(tooltip = Explorer_addPlot_tooltip,
+                    bsButton("add_plot_row", Explorer_addPlot_label, icon=icon("picture",lib="glyphicon"), disabled = TRUE)
+                )
 			)
 		)
 	)
@@ -53,84 +56,48 @@ explorerControlPanel <- function() {
 	)
 }
 
-explorerPlot <- function(p) {
-	oneVar <- length(p$model$varNames) == 1
+plotRow <- function(r) {
+	oneVar <- length(r$model$varNames) == 1
 	tagList(
 		# Plot header
 		fluidRow(
-			column(1, paste0("Plot ", p$id)),				
+			column(1, paste0("Row ", r$id)),				
 			column(2, tooltip(tooltip = Explorer_horizontal_tooltip,
-                selectInput(p$xDimSelect, Explorer_horizontal_label, choices = p$model$varNames, selected = p$model$varNames[1])
+                selectInput(r$xDimSelect, Explorer_horizontal_label, choices = r$model$varNames, selected = r$model$varNames[1])
             )),
             column(2, tooltip(tooltip = Explorer_vertical_tooltip,
-                selectInput(p$yDimSelect, Explorer_vertical_label, choices = p$model$varNames, selected = if (oneVar) { NULL } else { p$model$varNames[2] })
+                selectInput(r$yDimSelect, Explorer_vertical_label, choices = r$model$varNames, selected = if (oneVar) { NULL } else { r$model$varNames[2] })
             )),
             column(2, tooltip(tooltip = Explorer_cancel_tooltip,
-            	actionButton(p$removePlot, "Remove")
+            	actionButton(r$remove, "Remove")
         	)),
         	column(2, tooltip(tooltip = Explorer_hide_tooltip,
-                checkboxInput(p$hidePlot, Explorer_hide_label)
+                checkboxInput(r$hide, Explorer_hide_label)
             ))
 		),
 		fluidRow(
 			# Vector field controls
             column(2,
             	tooltip(tooltip = Explorer_VF_ApplyToAll_tooltip,
-            		actionButton(p$applyVectorToAll, Explorer_VF_ApplyToAll_label)
+            		actionButton(r$applyVectorToAll, Explorer_VF_ApplyToAll_label)
         		),
         		tooltip(tooltip = Explorer_VF_ApplyToTSS_tooltip,
-        			actionButton(p$applyVectorToState, Explorer_VF_ApplyToTSS_label)
+        			actionButton(r$applyVectorToState, Explorer_VF_ApplyToTSS_label)
     			),
-    			tooltip(tooltip = Explorer_VF_ClearPlot_tooltip,
-        			actionButton(p$clearVector, Explorer_VF_ClearPlot_label)
-    			),
-    			tooltip(tooltip = Explorer_VF_Unzoom_tooltip,
-    				actionButton(p$unzoomVector, Explorer_VF_Unzoom_label)
-				),
-    			advanced(tooltip(tooltip = Explorer_VF_UsePWAmodel_tooltip,
-					checkboxInput(p$usePWMA, Explorer_VF_UsePWAmodel_label)
-				)),
-                uiOutput(p$scaleVector),
-                tooltip(tooltip = Explorer_VF_HoverTextArea_tooltip,
-                	verbatimTextOutput(p$exactVector)
-            	)                       
+                r$vector$renderUnselectButton(),
+                r$vector$renderUnzoomButton(),
+                # TODO add pwma switch
+    			#advanced(tooltip(tooltip = Explorer_VF_UsePWAmodel_tooltip,
+				#	checkboxInput(p$usePWMA, Explorer_VF_UsePWAmodel_label)
+				#)),
+                r$vector$renderSliders(),
+                r$vector$renderExact(tooltip = Explorer_VF_HoverTextArea_tooltip)      
             ),
             # Vector field
             column(4,
                 	helpText(Explorer_VF_label),
-                	imageOutput(p$plotVector, "auto", "auto", 
-                   		click = p$clickVector,
-                   		dblclick = p$doubleClickVector,
-                        brush = brushOpts(id = p$brushVector, resetOnNew = TRUE),
-                        hover = p$hoverVector
-                    )
-            ),
-            # State space
-            column(4,
-            		helpText(Explorer_SS_label),
-            		imageOutput(p$plotState, "auto", "auto",
-            			click = p$clickState,
-            			dblclick = p$doubleClickState,
-            			brush = p$brushState,
-            			hover = p$hoverState
-        			)                       
-            ),
-            # State space controls
-            column(2,
-            	tooltip(tooltip = Explorer_SS_ApplyToAll_tooltip,
-					actionButton(p$applyStateToAll, Explorer_SS_ApplyToAll_label)
-        		),
-        		tooltip(tooltip = Explorer_SS_ClearPlot_tooltip,
-					actionButton(p$clearState, Explorer_SS_ClearPlot_label)
-        		),
-        		tooltip(tooltip = Explorer_SS_Unzoom_tooltip,
-					actionButton(p$unzoomState, Explorer_SS_Unzoom_label)
-        		),
-        		uiOutput(p$scaleState),
-        		tooltip(tooltip = Explorer_SS_HoverTextArea_tooltip,
-        			verbatimTextOutput(p$exactState)
-    			)                       
-            )
+                    r$vector$renderImage()                	
+            )            
         )		
 	)		
 }
