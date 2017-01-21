@@ -14,7 +14,8 @@ shinyServer(function(input,output,session) {
 
 debug("Reset")
 mySession <- list(shiny=session, pithya=list(
-    approximatedModel = reactiveValues(file = NULL, model = NULL, outdated = TRUE),
+    # TODO remove sample file
+    approximatedModel = reactiveValues(file = "sampleAbstraction.bio", model = parseBioFile("sampleAbstraction.bio"), outdated = FALSE),
     synthesisResult = reactiveValues(file = NULL, outdated = TRUE),
     sessionDir = tempdir(),
     examplesDir = "example//",
@@ -257,43 +258,10 @@ visible_vf_plots <- reactive({
 
 # observers providing zooming and unzooming of vector-field plots
 zoom_vf_ranges <- observe({
-    #arrows_number <- input$arrows_number
-    if(!is.null(loading_vf_file()) ) {
-        for(i in visible_vf_plots()) {
-            if(!is.null(input[[paste0("vf_",i,"_brush")]])) isolate({
-                brush <- input[[paste0("vf_",i,"_brush")]]
-                cat("brush in vf ",i,": ",brush$xmin,",",brush$xmax,",",brush$ymin,",",brush$ymax,"\n")
-                vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) {
-                    if(x == input[[paste0("vf_selector_x_",i)]]) return(c(brush$xmin, brush$xmax))
-                    if(x == input[[paste0("vf_selector_y_",i)]]) return(c(brush$ymin, brush$ymax))
-                    # return(loading_vf_file()$ranges[[x]])
-                    
-                    # if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) return(loading_ss_file()$ranges[[x]])
-                    # else return(loading_vf_file()$ranges[[x]])
-                    
-                    return(loading_ss_file()$ranges[[x]])
-                })
-            })
-        }
-    }
+    
 })
 unzoom_vf_ranges <- observe({
-    #arrows_number <- input$arrows_number
-    if(!is.null(loading_vf_file()) ) {
-        for(i in visible_vf_plots()) {
-            button <- input[[paste0("unzoom_plot_vf_",i)]]
-            if(!is.null(button) && (button > vf_brushed$click_counter[[i]])) isolate({
-                # vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) loading_vf_file()$ranges[[x]] )
-                vf_brushed$data[[i]] <- lapply(loading_vf_file()$vars, function(x) {
-                    # if(!is.null(input[[paste0("abst_vf_",i)]]) && input[[paste0("abst_vf_",i)]]) loading_ss_file()$ranges[[x]]
-                    # else loading_vf_file()$ranges[[x]]
-                    
-                    return(loading_ss_file()$ranges[[x]])
-                })
-                vf_brushed$click_counter[[i]] <- button
-            })
-        }
-    }
+    
 })
 
 # observers providing zooming and unzooming of state-space plots
@@ -364,37 +332,10 @@ change_height <- reactive({
 
 
 clicked_in_vf <- observe({
-    if(!is.null(loading_vf_file()) ) {
-        variables <- loading_vf_file()$vars
-        for(i in visible_vf_plots()) {
-            clicked_point <- input[[paste0("vf_",i,"_dblclick")]]
-            if(!is.null(clicked_point) ) isolate({
-                cat("drawing curve in vf ",i,": ",clicked_point$x,",",clicked_point$y,"\n")
-                vector_field_clicked$point[[i]] <- sapply(1:length(variables), function(t) {
-                    if(input[[paste0("vf_selector_x_",i)]] != input[[paste0("vf_selector_y_",i)]]) {
-                        if(variables[t] == input[[paste0("vf_selector_x_",i)]]) return(clicked_point$x)
-                        if(variables[t] == input[[paste0("vf_selector_y_",i)]]) return(clicked_point$y)
-                        return(input[[paste0("scale_slider_vf_",i,"_",t)]])
-                    } else {
-                        if(variables[t] == input[[paste0("vf_selector_x_",i)]]) return(clicked_point$x)
-                        return(input[[paste0("scale_slider_vf_",i,"_",t)]])
-                    }
-                })
-                names(vector_field_clicked$point[[i]]) <- variables
-            })
-        }
-    }
+    
 })
 erase_in_vector_field <- observe({
-    if(!is.null(loading_vf_file()) ) {
-        for(i in visible_vf_plots()) {
-            button <- input[[paste0("clear_plot_vf_",i)]]
-            if(!is.null(button) && (button > vector_field_clicked$click_counter[[i]])) isolate({
-                vector_field_clicked$point[[i]] <- NA
-                vector_field_clicked$click_counter[[i]] <- button
-            })
-        }
-    }
+    
 })
 apply_to_all_in_vf <- observe({
     if(!is.null(loading_vf_file()) ) {
@@ -487,42 +428,10 @@ set_flow_points_density <- reactive({
 # velmi podobne spracovat aj downloadHandlery
 
 draw_vf_plots <- observe({
-    if(!is.null(loading_vf_file())) {
-        for (i in visible_vf_plots()) {
-            local({
-                my_i <- i
-                plotname <- paste0("plot_vf_",my_i)
-                output[[plotname]] <- renderPlot({
-                    draw_vector_field_crossroad(isolate(input[[paste0("vf_selector_x_",my_i)]]), isolate(input[[paste0("vf_selector_y_",my_i)]]), my_i, vf_brushed$data[[my_i]])
-                },height=change_height() )
-            })
-        }
-    }
+    
 })
 hover_over_vf_plots <- observe({
-    if(!is.null(loading_vf_file())) {
-        for (i in visible_vf_plots()) {
-            local({
-                my_i <- i
-                hover <- input[[paste0("vf_",my_i,"_hover")]]
-                list_of_all_names <- loading_vf_file()$vars
-                output[[paste0("hover_text_vf_",my_i)]] <- renderPrint({
-                    cat(paste0(
-                        sapply(1:length(list_of_all_names), function(x) {
-                            name <- list_of_all_names[[x]]
-                            if(!name %in% c(input[[paste0("vf_selector_x_",my_i)]],input[[paste0("vf_selector_y_",my_i)]])) {
-                                ifelse(is.null(input[[paste0("scale_slider_vf_",my_i,"_",x)]]), paste0(name,": "),
-                                       paste0(name,": ",round(input[[paste0("scale_slider_vf_",my_i,"_",x)]],rounding_in_hover)) )
-                            } else {
-                                ifelse(is.null(hover), paste0(name,": "),
-                                       ifelse(name %in% input[[paste0("vf_selector_x_",my_i)]], paste0(name,": ",round(hover$x,rounding_in_hover)),
-                                              paste0(name,": ",round(hover$y,rounding_in_hover)) ))
-                            }
-                        }), collapse="\n"))
-                },width="100")
-            })
-        }
-    }
+    
 })
 
 draw_ss_plots <- observe({
@@ -566,132 +475,10 @@ hover_over_ss_plots <- observe({
     }
 })
 
-draw_vector_field_crossroad <- function(name_x, name_y, plot_index, boundaries) {
-    if(name_x == name_y) return(draw_1D_vector_field(name_x, plot_index, boundaries))
-    else                 return(draw_vector_field(name_x, name_y, plot_index, boundaries))
-}
-draw_vector_field <- function(name_x, name_y, plot_index, boundaries) {
-    variables <- loading_vf_file()$vars
-    index_x <- match(name_x,variables)
-    index_y <- match(name_y,variables)
-    
-    # create current set of globals
-    checkpoint <- list(selectors =list(x=input[[paste0("vf_selector_x_",plot_index)]], y=input[[paste0("vf_selector_y_",plot_index)]]),
-                       boundaries=boundaries,
-                       arrows_number=input$arrows_number,
-                       color_variant=input$colVariant,
-                       abst_model=input[[paste0("abst_vf_",plot_index)]],
-                       # counter=input$generate_abstraction,
-                       parameters=list(),
-                       sliders=list() )
-    if(!is.null(loading_vf_file()$params)) {
-        for(p in 1:length(loading_vf_file()$params))    checkpoint$parameters[[names(loading_vf_file()$params)[p] ]] <- current_param_sliders()[[p]]
-    }
-    for(t in 1:length(variables)) {
-        if(!variables[[t]] %in% c(input[[paste0("vf_selector_x_",plot_index)]],input[[paste0("vf_selector_y_",plot_index)]] )) {
-            checkpoint$sliders[[variables[[t]] ]] <- input[[paste0("scale_slider_vf_",plot_index,"_",t)]]
-        }
-    }
-    # check for any change in globals for particular plot
-    if(is.na(vector_field_space$globals[[plot_index]]) || !identical(vector_field_space$globals[[plot_index]],checkpoint)) {
-        
-        mesh <- meshgrid(seq(boundaries[[name_x]][1],boundaries[[name_x]][2],(boundaries[[name_x]][2]-boundaries[[name_x]][1])/input$arrows_number),
-                         seq(boundaries[[name_y]][1],boundaries[[name_y]][2],(boundaries[[name_y]][2]-boundaries[[name_y]][1])/input$arrows_number))
-        input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
-        for(i in 1:length(variables)) {
-            if(variables[[i]] == name_x || variables[[i]] == name_y) {
-                if(variables[[i]] == name_x)  input_params <- paste0(input_params,variables[[i]],"=","mesh$X",",")
-                else                                        input_params <- paste0(input_params,variables[[i]],"=","mesh$Y",",")
-            } else {
-                if(is.null(input[[paste0("scale_slider_vf_",plot_index,"_",i)]]))
-                    input_params <- paste0(input_params,variables[[i]],"=",0,",")
-                else
-                    input_params <- paste0(input_params,variables[[i]],"=",input[[paste0("scale_slider_vf_",plot_index,"_",i)]],",")
-            }
-        }
-        substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
-        
-        if(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]]) {
-            fx = eval(funcs_abst[[name_x]])(eval(parse(text=input_params)))
-            fy = eval(funcs_abst[[name_y]])(eval(parse(text=input_params)))
-        } else {
-            fx = eval(funcs[[name_x]])(eval(parse(text=input_params)))
-            fy = eval(funcs[[name_y]])(eval(parse(text=input_params)))
-        }
-    
-        direction <- switch(input$colVariant,
-                            "both" = fx + fy,
-                            "horizontal" = fx,
-                            "vertical" = fy,
-                            "none" = 0)
-        vector_field_space$data[[plot_index]] <- list(mesh=mesh,
-                                                      fx=fx,
-                                                      fy=fy,
-                                                      direction=direction)
-    }
-    data <- vector_field_space$data[[plot_index]]
-    plot(range(boundaries[[name_x]]), range(boundaries[[name_y]]), type="n", xlab=name_x, ylab=name_y, xaxs="i", yaxs="i")
-    suppressWarnings(quiver(data$mesh$X, data$mesh$Y, data$fx, data$fy,
-                            scale=input$arrowSize, length=0.08, angle=30, lwd=input$transWidth,
-                            col=ifelse(data$direction > input$colThr, positive_color, ifelse(data$direction < -input$colThr, negative_color, neutral_color))))
-    
-    #============== drawing of flow =================================================
-    if(length(vector_field_clicked$point) >= plot_index && !(is.null(vector_field_clicked$point[[plot_index]]) || is.na(vector_field_clicked$point[[plot_index]]))) {
-        
-        point <- vector_field_clicked$point[[plot_index]]
-        count <- set_num_of_flow_points()
-        dense <- set_flow_points_density()
-        if(is.na(vector_field_clicked$old_point[[plot_index]]) || !identical(vector_field_clicked$old_point[[plot_index]],point) ||
-           !identical(vector_field_space$globals[[plot_index]],checkpoint) || !identical(vector_field_clicked$old_count[[plot_index]],count) ||
-           !identical(vector_field_clicked$old_dense[[plot_index]],dense)) {
-            
-            if(identical(vector_field_clicked$old_point[[plot_index]],point) && identical(vector_field_space$globals[[plot_index]],checkpoint) &&
-               identical(vector_field_clicked$old_dense[[plot_index]],dense) && !identical(vector_field_clicked$old_count[[plot_index]],count)) {
-                
-                if(count > vector_field_clicked$old_count[[plot_index]]) {
-                    flow_data <- vector_field_clicked$data[[plot_index]]
-                    flow_count <- (vector_field_clicked$old_count[[plot_index]]+1):count
-                } else {
-                    flow_data <- vector_field_clicked$data[[plot_index]][1:(count+1)]
-                    flow_count <- NULL
-                }
-            } else {
-                flow_data <- as.data.table(t(point))
-                flow_count <- seq(count)
-            }
-            for(r in flow_count) {
-                input_params <- ifelse(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]], set_abst_input_params(), set_input_params())
-                for(i in 1:length(variables)) {
-                    input_params <- paste0(input_params,variables[i],"=",flow_data[r,get(variables[[i]])],",")
-                }
-                substr(input_params,nchar(input_params),nchar(input_params)) <- ")"
-                new_move <- sapply(1:length(variables), function(i) {
-                    if(!is.null(input[[paste0("abst_vf_",plot_index)]]) && input[[paste0("abst_vf_",plot_index)]])
-                        eval(funcs_abst[[i]])(eval(parse(text=input_params)))
-                    else
-                        eval(funcs[[i]])(eval(parse(text=input_params)))
-                })
-                # names(new_move) <- variables
-                # new_move <- new_move*sapply(names(boundaries),function(x) ifelse(abs(new_move[[x]])>(dist(range(boundaries[[x]]))[1])/50,10^log10((dist(range(boundaries[[x]]))[1])/50),1))
-                min_scale <- min(sapply(loading_ss_file()$ranges,function(x) dist(range(x))[1]))
-                new_move <- new_move*ifelse(max(abs(new_move))>min_scale/50,10^log10(min_scale/50),1)
-                # flow_data <- rbind(flow_data,flow_data[r]+ifelse(max(abs(new_move))>= 0.1,0.1,1)*new_move)
-                flow_data <- rbind(flow_data,flow_data[r]+new_move*dense)
-            }
-            #########
-            vector_field_clicked$data[[plot_index]] <- flow_data
-        }
-        flow_data <- vector_field_clicked$data[[plot_index]]
-        # xspline(flow_data[,get(name_x)], flow_data[,get(name_y)], shape=1, col="blue", border="blue", lwd=size_of_flow_points)
-        lines(flow_data[,get(name_x)], flow_data[,get(name_y)], col="blue", lwd=size_of_flow_points)
-        # it has to be at the end
-        vector_field_clicked$old_point[[plot_index]] <- point
-        vector_field_clicked$old_count[[plot_index]] <- count
-        vector_field_clicked$old_dense[[plot_index]] <- dense
-    }
-    # it has to be at the end
-    vector_field_space$globals[[plot_index]] <- checkpoint
-}
+draw_vector_field_crossroad <- function(name_x, name_y, plot_index, boundaries) { }
+
+draw_vector_field <- function(name_x, name_y, plot_index, boundaries) { }
+
 draw_1D_vector_field <- function(name_x, plot_index, boundaries) {
     variables <- loading_vf_file()$vars
     index_x <- match(name_x,variables)

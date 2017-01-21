@@ -83,3 +83,7 @@ unwrapOr <- function(nullable, value) {
     nullable
   }
 }
+
+printInterval <- function(a, b) {
+  paste0("[", round(a, digits = 3), ", ", round(b, digits = 3), "]")
+}

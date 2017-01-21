@@ -16,9 +16,10 @@ parseBioFile <- function(file) {
 }
 
 parseBioLines <- function(lines) {
-	# TODO multiline comments
+	# TODO multiline comments	
 
-	model <- paste0(lines, collapse = "\n")
+	# \n ensures there is a new line at the end of file
+	model <- paste0(c(lines, "\n"), collapse = "\n")	
 	# remove comments
 	model <- str_replace_all(model, "(#|//).*\n", "\n")
 	# remove comments at the end of file 
@@ -120,7 +121,7 @@ ramp <- function(value,min,max,a,b) {
 }
 
 Approx <- function(m,l) {
-    as.vector(apply(as.matrix(m),c(1,2),function(s) {
+    apply(as.matrix(m),c(1,2),function(s) {
         if(s <= l[[1]][1]) return(l[[1]][2])
         if(s >= l[[length(l)]][1]) return(l[[length(l)]][2])
         for(i in 2:length(l)) {
@@ -128,5 +129,5 @@ Approx <- function(m,l) {
             b<-l[[i]]
             if(s >= a[1] && s <= b[1]) return(a[2]+(s-a[1])/(b[1]-a[1])*(b[2]-a[2]))
         }
-    }))
+    })
 }

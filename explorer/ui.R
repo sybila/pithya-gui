@@ -101,7 +101,7 @@ explorerPlot <- function(p) {
                 	imageOutput(p$plotVector, "auto", "auto", 
                    		click = p$clickVector,
                    		dblclick = p$doubleClickVector,
-                        brush = p$brushVector,
+                        brush = brushOpts(id = p$brushVector, resetOnNew = TRUE),
                         hover = p$hoverVector
                     )
             ),
