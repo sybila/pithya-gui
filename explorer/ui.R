@@ -64,12 +64,12 @@ plotRow <- function(r, input) {
 			column(1, paste0("Row ", r$id)),				
 			column(2, tooltip(tooltip = Explorer_horizontal_tooltip,
                 selectInput(r$xDimSelect, Explorer_horizontal_label, choices = r$model$varNames, 
-                    selected = unwrapOr(isolate(input[[r$xDimSelect]]), r$model$varNames[1])
+                    selected = unwrapOr(input[[r$xDimSelect]], r$model$varNames[1])
                 )
             )),
             column(2, tooltip(tooltip = Explorer_vertical_tooltip,
                 selectInput(r$yDimSelect, Explorer_vertical_label, choices = r$model$varNames, selected = if (oneVar) { NULL } else { 
-                    unwrapOr(isolate(input[[r$yDimSelect]]), r$model$varNames[2])
+                    unwrapOr(input[[r$yDimSelect]], r$model$varNames[2])
                 })
             )),
             column(2, tooltip(tooltip = Explorer_cancel_tooltip,

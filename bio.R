@@ -101,7 +101,7 @@ parseBioLines <- function(lines) {
 		paramRanges = paramRanges	
 	)
 	debug("[.bio parser] Parse successful.")
-	debug(model)
+	#debug(model)
 
 	model
 }

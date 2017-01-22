@@ -60,7 +60,7 @@ createResultPlotRow <- function(id, result, input, session, output,
 	# Params plot 
 	# Update select input to ensure no duplicates and one value is always parameter
 	row$.paramsDimSelectUpdate <- observeEvent(c(input[[row$xDimParams]], input[[row$yDimParams]]), {
-		debug("[row] update params dimension selectors")	
+		debug("[row] update params dimension selectors ", id)	
 		params <- row$result$paramNames
 		vars <- row$result$varNames
 		all <- c(vars, params)
