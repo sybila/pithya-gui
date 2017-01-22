@@ -30,21 +30,6 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 );
 "
 
-# message handler for giving an information about finished prameter synthesis
-JS.parameterSynthesisFinished <- "
-Shiny.addCustomMessageHandler('paramSynthEnd', function(message) {
-        eval(message.value);
-});
-"
-# message handler for giving an information about missing threshold
-JS.missingThreshold <- "
-Shiny.addCustomMessageHandler('missThres', function(message) {
-    Shiny.onInputChange('missing_threshold',eval(message.value));
-    Shiny.onInputChange('missing_threshold_counter',Math.random());
-    Shiny.onInputChange('missing_threshold_data',eval(message.data));
-})
-"
-
 shinyUI(
     fluidPage(
         useShinyjs(),
