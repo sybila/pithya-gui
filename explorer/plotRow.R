@@ -3,6 +3,7 @@ source("tooltips.R")        # texts
 source("ui_global.R")       
 source("explorer/ui.R")
 source("plot/vector_plot.R")
+source("plot/state_plot.R")
 
 ## Initializes a plot into the input/output objects and returns a plot
 # plot = list(id = num, outputId = string, destroy = function(), ...)
@@ -15,6 +16,8 @@ createPlotRow <- function(id, model, params, input, session, output, onRemove = 
 
 	row$vector <- createVectorPlot(model, NULL, session$pithya$nextId(), input, session, output)
 	row$vector$state$params <- params
+	row$state <- createStatePlot(model, session$pithya$nextId(), input, session, output)
+	row$state$state$params <- params
 
 	# Input elements
 	row$remove <- paste0("row_remove_", id)
@@ -43,6 +46,7 @@ createPlotRow <- function(id, model, params, input, session, output, onRemove = 
 				ySelected <- yOptions[1]
 			}
 			row$vector$updateDimensions(x = xSelected, y = ySelected)
+			row$state$updateDimensions(x = xSelected, y = ySelected)
 			updateSelectInput(session$shiny, row$xDimSelect, choices = row$model$varNames, selected = xSelected)
 			updateSelectInput(session$shiny, row$yDimSelect, choices = yOptions, selected = ySelected)
 		}

@@ -114,44 +114,52 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 		plot$state$zoom <- NULL	
 	})
 
-	# Override this function to implement custom value printing
-	plot$printValue <- function(x) {
-		paste0(round(x, digits = 3))
+	# Use this function to override default printing behavior
+	plot$buildPrintExact <- function(printHoverValue, printVarsValue, printZoomInterval, printRangeInterval) {
+		renderPrint({
+			config <- plot$baseConfig()
+			if (is.null(config)) {
+				cat("...")
+			} else {			
+				# render existing values
+				vars <- config$vars
+				for (i in 1:plot$varCount) {
+					if (!is.null(vars[[i]])) {
+						vars[[i]] <- printVarsValue(i, vars[[i]])
+					}
+				}
+				# add data from hover listener
+				hover <- input[[plot$eventHover]]
+				if (is.null(hover$x) || is.null(hover$y)) {
+					vars[[config$x]] <- printZoomInterval(config$x, config$zoom[1,1], config$zoom[1,2])
+					vars[[config$y]] <- printZoomInterval(config$y, config$zoom[2,1], config$zoom[2,2])
+				} else {
+					vars[[config$x]] <- printHoverValue(config$x, hover$x)
+					vars[[config$y]] <- printHoverValue(config$y, hover$y)
+				}
+				# fill in null values (projected) and put it all together
+				lines <- sapply(1:plot$varCount, function (i) {
+					value <- vars[[i]]
+					if (is.null(value)) {
+						value <- printRangeInterval(i, plot$varRanges[[i]]$min, plot$varRanges[[i]]$max)
+					}
+					paste0(plot$varNames[i], ": ", value)
+				})
+				cat(paste0(lines, collapse = "\n"))
+			}
+		})
 	}
 
-	# Override this function to implement custom interval printing
-	plot$printInterval <- function(x, y) {
+	roundToThree <- function(dim, x) { paste0(round(x, digits = 3)) }
+	roundIntervalToThree <- function(dim, x, y) {
 		paste0("[", round(x, digits = 3), ", ", round(y, digits = 3), "]")
 	}
 
 	# Print currently displayed exact values
-	output[[plot$outExact]] <- renderPrint({
-		config <- plot$baseConfig()
-		if (is.null(config)) {
-			cat("...")
-		} else {			
-			# render existing values
-			vars <- lapply(config$vars, function(v) if(is.null(v)) v else plot$printValue(v))
-			# add data from hover listener
-			hover <- input[[plot$eventHover]]
-			if (is.null(hover$x) || is.null(hover$y)) {
-				vars[[config$x]] <- plot$printInterval(config$zoom[1,1], config$zoom[1,2])
-				vars[[config$y]] <- plot$printInterval(config$zoom[2,1], config$zoom[2,2])
-			} else {
-				vars[[config$x]] <- plot$printValue(hover$x)
-				vars[[config$y]] <- plot$printValue(hover$y)
-			}
-			# fill in null values (projected) and put it all together
-			lines <- sapply(1:plot$varCount, function (i) {
-				value <- vars[[i]]
-				if (is.null(value)) {
-					value <- plot$printInterval(plot$varRanges[[i]]$min, plot$varRanges[[i]]$max)
-				}
-				paste0(plot$varNames[i], ": ", value)
-			})
-			cat(paste0(lines, collapse = "\n"))
-		}
-	})
+	output[[plot$outExact]] <- plot$buildPrintExact(
+		printVarsValue = roundToThree, printHoverValue = roundToThree,
+		printZoomInterval = roundIntervalToThree, printRangeInterval = roundIntervalToThree
+	)
 
 	## Plot event listeners
 
@@ -200,18 +208,6 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 		uiOutput(plot$outSliders)
 	}
 
-	plot$renderVarSlider <- function(var, labelPrefix = "Scale in ", tooltip = "Set exact variable value.", step = 1) {		
-		debug("render slider")
-		range <- plot$varRanges[[var]]
-		tooltip(tooltip = tooltip,			
-			sliderInput(plot$sliders[var],
-				label = paste0(labelPrefix, plot$varNames[var]),
-				min = range$min, max = range$max, 
-				value = unwrapOr(isolate(input[[plot$sliders[var]]]), range$min), step = step
-			)
-		)
-	}
-
 	plot$renderProjectionCheckbox <- function(var, labelPrefix = "Projection ", tooltip = "Set exact variable value.", step = 1) {
 		tooltip(tooltip = tooltip,
 			checkboxInput(plot$project[var],
@@ -230,6 +226,7 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 		plot$.unzoom$destroy()
 		plot$.dimensionChange$destroy()
 		output[[plot$outExact]] <- renderPrint({ "Destroyed" })
+		output[[plot$outImage]] <- renderPlot({ "Destroyed" })
 	}
 
 	plot

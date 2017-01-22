@@ -97,7 +97,22 @@ plotRow <- function(r) {
             column(4,
                 	helpText(Explorer_VF_label),
                     r$vector$renderImage()                	
-            )            
+            ),
+            # State field
+            column(4,
+                    helpText(Explorer_SS_label),
+                    r$state$renderImage()                  
+            ),
+            # State space controls
+            column(2,
+                tooltip(tooltip = Explorer_SS_ApplyToAll_tooltip,
+                    actionButton(r$applyStateToAll, Explorer_SS_ApplyToAll_label)
+                ),
+                r$state$renderUnselectButton(),
+                r$state$renderUnzoomButton(),
+                r$state$renderSliders(),
+                r$state$renderExact(tooltip = Explorer_SS_HoverTextArea_tooltip)      
+            )    
         )		
 	)		
 }

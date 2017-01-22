@@ -1,16 +1,21 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
 source("explorer/plotRow.R")
+source("bio.R")
 
-explorerServer <- function(input, session, output) {
+explorerServer <- function(input, session, output) {	
 
 	plotRows <- reactiveValues()
 
 	# Current params value list
 	params <- function(model) {
-		lapply(1:length(model$paramNames), function(p) {
-			unwrapOr(isolate(input[[paste0("param_slider_", p)]]), model$paramRanges[[p]]$min)
-		})
+		if (length(model$paramNames) == 0) {
+			list()
+		} else {
+			lapply(1:length(model$paramNames), function(p) {
+				unwrapOr(isolate(input[[paste0("param_slider_", p)]]), model$paramRanges[[p]]$min)
+			})
+		}		
 	}
 
 	# Update the parametrised models based on parameter values
@@ -20,6 +25,7 @@ explorerServer <- function(input, session, output) {
 			# Notify plots
 			for (row in isolate(reactiveValuesToList(plotRows))) {
 				row$vector$state$params <- params
+				row$state$state$params <- params
 			}
 		})
 	}
@@ -27,7 +33,10 @@ explorerServer <- function(input, session, output) {
 	# Show parameter numeric inputs when model is loaded
 	output$param_sliders_bio <- renderUI({
 		model <- session$pithya$approximatedModel$model
-		if (!is.null(model)) {	
+		if (!is.null(model)) {
+		if (length(model$paramNames) == 0) {
+			"No parameters"
+		} else {
 			lapply(1:length(model$paramNames), function(pIndex) {
 				debug("[param_sliders_bio] render bio slider")
 				min <- model$paramRanges[[pIndex]]$min
@@ -47,6 +56,7 @@ explorerServer <- function(input, session, output) {
 					)
 				)
 			})
+		}			
 		} else {
 			debug("[param_sliders_bio] remove bio sliders")			
 			"Model missing. Compute approximation first."

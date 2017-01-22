@@ -131,3 +131,112 @@ Approx <- function(m,l) {
         }
     })
 }
+
+# Compute whole transition system for given model and parametrisation.
+#
+# You can indicate which dimensions are bounded (create selfloops) using logical 
+# vectors boundedUp/Down. (useful for computing a cut of state space using a cut model)
+#
+# Note: computing whole transition system is necessary to properly evaluate selfloops.
+#
+# Results: list(loop=array, trans=list(list(up, down)))
+# (loop array and up/down arrays should directly correspond to the natural state indexing)
+computeTransitions <- function(model, params, boundedUp, boundedDown) {
+	
+	dimensionCount <- length(model$varNames)
+	
+	dimensionSizes <- sapply(model$varThresholds, function(x) length(x))
+	stateSpaceSizes <- sapply(dimensionSizes, function(x) x - 1)
+	
+	# Prepare values for equation evaluation
+	one <- array(1, dimensionSizes)
+	params <- lapply(params, function(p) one * p)
+	vars <- lapply(1:dimensionCount, function(d) {
+		thresholds <- model$varThresholds[[d]]
+		# create permutation vectors
+		dimensions <- 1:dimensionCount
+		dimensions[c(1,d)] <- dimensions[c(d,1)]
+		sizes <- sapply(dimensions, function(i) dimensionSizes[i])
+		aperm(array(model$varThresholds[[d]], sizes), dimensions)
+	})
+
+	# Compute derivation values in all vertices
+	dv <- lapply(model$varEQ, function(eq) one * eq(vars, params))	
+
+	## Utility functions
+
+	# Remove one specific row(column?) from given dimension without affecting rest of the array
+	dropRow <- function(arr, dim, row) {		
+		# arr[,,-row,,]
+		mask <- lapply(1:dimensionCount, function(i) if (i == dim) -row else TRUE)
+		do.call("[", append(list(arr, drop = FALSE), mask))		
+	}
+	# Update one specific row(column?) from given dimension without affecting rest of the array
+	assignRow <- function(arr, dim, row, value) {
+		# arr[,,row,,] <- value
+		mask <- append(lapply(1:dimensionCount, function(i) if (i == dim) row else TRUE), value)		
+		do.call("[<-", append(list(arr), mask))				
+	}
+	# Merge subsequent values in all dimensions except for the given one.
+	# Result is facet validity for investigated dimension.
+	contractDims <- function(l, dim) {
+		Reduce(init = l, x = (1:dimensionCount)[-dim], f= function(l, d) {
+			dropRow(l, d, 1) | dropRow(l, d, dimensionSizes[d])
+		})				
+	}
+
+	# Map values to their logical counterparts
+	dir <- lapply(dv, function(d) list(up = d > 0, down = d < 0))
+	
+	# For each dimension show if there is an arrow going up or down in that facet (includes border facets)
+	# We need both up and down, because there may be zero values which go neither way.
+	trans <- lapply(1:dimensionCount, function(dim) {
+		list(
+			up = contractDims(dir[[dim]]$up, dim),
+			down = contractDims(dir[[dim]]$down, dim)
+		)
+	})
+	
+	# Compute if flow is present in specific dimension
+	dimFlows <- lapply(1:dimensionCount, function(d) {		
+		# Note that d has not been dropped from yet, so dropping one row will bring it to 
+		# the same relative size as other dimensions
+		t <- trans[[d]]
+		negativeIn <- dropRow(t$up, d, 1)
+		negativeOut <- dropRow(t$down, d, dimensionSizes[d])
+		positiveIn <- dropRow(t$down, d, 1)
+		positiveOut <- dropRow(t$up, d, dimensionSizes[d])				
+
+		positiveFlow <- negativeIn & positiveOut & !(negativeOut | positiveIn)
+		negativeFlow <- negativeOut & positiveIn & !(negativeIn | positiveOut)
+
+		if (boundedUp[d]) {
+			# Positive flow can't occur in the highest states
+			positiveFlow <- assignRow(positiveFlow, d, stateSpaceSizes[d], FALSE)						
+		}
+
+		if (boundedDown[d]) {
+			# Negative flow can't occur in the lowest states
+			negativeFlow <- assignRow(negativeFlow, d, 1, FALSE)			
+		}
+		
+		positiveFlow|negativeFlow
+	})
+
+	# Compute global loop property based on flow in every dimension
+	flow <- Reduce(function(x,y) x|y, dimFlows)
+	loop <- !flow
+	list(
+		loop = loop,
+		trans = lapply(1:dimensionCount, function(d) {
+			# Remove first and erase last transition. (vice versa for negative)
+			# Both go out of the model and should not be considered as transitions.
+			t <- trans[[d]]
+			t$up <- dropRow(t$up, d, 1)						# can't come from -1
+			t$down <- dropRow(t$down, d, dimensionSizes[d])	# can't come from size+1
+			t$up <- assignRow(t$up, d, stateSpaceSizes[d], FALSE)	# can't go up from last state
+			t$down <- assignRow(t$down, d, 1, FALSE)				# con't go down from first state
+			t
+		})
+	)
+}

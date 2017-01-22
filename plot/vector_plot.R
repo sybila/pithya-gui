@@ -18,7 +18,6 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 
 	# Gather config about plot drawing and debounce it
 	plot$config <- reactive({
-		debug("config")
 		baseConfig <- plot$baseConfig()
 		params <- plot$state$params
 		model <- plot$state$activeModel
@@ -44,7 +43,6 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 
 	# Gather config data about flow computation and debounce it
 	plot$flowConfig <- reactive({
-		debug("flow config")
 		config <- plot$baseConfig()
 		selection <- plot$state$selection
 		model <- plot$state$activeModel
@@ -68,7 +66,7 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 	# Recompute flow when flow config changes
 	plot$.flowComputer <- observe({		
 		plot$state$flow <- let(plot$flowConfig(), function(config) {
-			debug("[plot] recomupte flow ", id)
+			debug(id, ":vectorPlot recomupte flow ")
 			flow <- replicate(plot$varCount, replicate(config$pointCount, 0))
 			flow[1,] <- config$startingPoint
 			for (i in 2:input$flow_points_count) {
@@ -81,14 +79,17 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 		})
 	})
 
-	# Render vector dimension sliders based on missing dimensions
+	# Render vector dimension continuous sliders based on missing dimensions
 	output[[plot$outSliders]] <- renderUI({		
-		debug("render sliders")			
 		lapply(plot$missingDimensions(), function(dim) {
-			plot$renderVarSlider(dim,
-				labelPrefix = Explorer_VF_ScaleSlider_label,
-				tooltip = Explorer_VF_ScaleSlider_tooltip,
-				step = scale_granularity
+			range <- plot$varRanges[[var]]
+			tooltip(tooltip = Explorer_VF_ScaleSlider_tooltip,,			
+				sliderInput(plot$sliders[var],
+					label = paste0(Explorer_VF_ScaleSlider_label, plot$varNames[var]),
+					min = range$min, max = range$max, 
+					value = unwrapOr(isolate(input[[plot$sliders[var]]]), range$min), 
+					step = scale_granularity
+				)
 			)			
 		})
 	})
@@ -98,9 +99,9 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 		config <- plot$config()
 		if (is.null(config)) {
 			# TODO some loading
-			debug("[plot] invalid config...")			
+			debug(id, ":vectorPlot invalid config...")			
 		} else {
-			debug("[plot] render plot: ", id)
+			debug(id, ":vectorPlot render plot")
 
 			# Draw plot outline
 			# TODO experiment with margins
@@ -157,8 +158,7 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 		plot$baseDestroy()
 		debug(id, ":vectorPlot destroy")
 
-		plot$.flowComputer$destroy()
-		output[[plot$outImage]] <- renderPlot({ "Destroyed" })
+		plot$.flowComputer$destroy()		
 	}	
 
 	plot
