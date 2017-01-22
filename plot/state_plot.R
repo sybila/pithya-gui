@@ -124,14 +124,22 @@ createStatePlot <- function(model, id, input, session, output) {
 			})
 
 			transitions <- computeTransitions(config$restrictedModel, config$params, boundedUp, boundedDown)
-			
-			xUp <- transitions$trans[[config$x]]$up
-			xDown <- transitions$trans[[config$x]]$down
-			yUp <- transitions$trans[[config$y]]$up
-			yDown <- transitions$trans[[config$y]]$down
-			loop <- transitions$loop
 
-			# Note: the trick with [xUp] works only because all other dimensions in restricted model have size 1			
+			# Note: the drop trick works only because all other dimensions in restricted model have size 1
+			xUp <- drop(transitions$trans[[config$x]]$up)
+			xDown <- drop(transitions$trans[[config$x]]$down)
+			yUp <- drop(transitions$trans[[config$y]]$up)
+			yDown <- drop(transitions$trans[[config$y]]$down)
+			loop <- drop(transitions$loop)
+
+			# Compute transitions returns results in increasing order always.
+			# If current dimension ordering is reversed, we have to transpose the results
+			if (config$x > config$y) {
+				xUp <- t(xUp); xDown <- t(xDown)
+				yUp <- t(yUp); yDown <- t(yDown)
+				loop <- t(loop)
+			}			
+			
 			arrows(
 				xStates[xUp], yStates[xUp], replicate(yStateCount, xThres[-1])[xUp], yStates[xUp],
 				angle = 20, length = 0.07, lty = transitions_line_type, lwd = config$arrowWidth,
