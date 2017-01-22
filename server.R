@@ -5,10 +5,12 @@ source("tooltips.R")        # texts
 
 # Utility files
 source("bio.R")             # .bio file parser and utilities
+source("result.R")          # result .json parser
 
 # Separate tab servers
 source("editor/server.R")
 source("explorer/server.R")
+source("result/server.R")
 
 shinyServer(function(input,output,session) {
 
@@ -16,7 +18,12 @@ debug("Reset")
 mySession <- list(shiny=session, pithya=list(
     # TODO remove sample file
     approximatedModel = reactiveValues(file = "sampleAbstraction.bio", model = parseBioFile("sampleAbstraction.bio"), outdated = FALSE),
-    synthesisResult = reactiveValues(file = NULL, outdated = TRUE),
+    #synthesisResult = reactiveValues(file = NULL, result = NULL, outdated = TRUE),
+    synthesisResult = reactiveValues(
+        file = "example/repressilator_2D/model_indep.results.json", 
+        result = parseResultFile("example/repressilator_2D/model_indep.results.json"), 
+        outdated = FALSE
+    ),
     sessionDir = tempdir(),
     examplesDir = "example//",
     nextId = createCounter(1)
@@ -32,14 +39,33 @@ observeEvent(mySession$pithya$approximatedModel$file, {
             debug("[.bio parser] parsing error: ", e)
             showNotification("[INTERNAL ERROR] Model parsing failed")
             mySession$pithya$approximatedModel$file <- NULL
+            mySession$pithya$approximatedModel$model <- NULL
         })        
     } else {
-        mySession$pithya$approximatedModel$file <- NULL
+        mySession$pithya$approximatedModel$model <- NULL
+    }
+})
+
+# Parse result .json files
+observeEvent(mySession$pithya$synthesisResult$file, {
+    file <- mySession$pithya$synthesisResult$file
+    if (!is.null(file)) {
+        tryCatch({
+                mySession$pithya$synthesisResult$result <- parseResultFile(file)
+        }, error = function(e) {
+            debug("[result parser] parsing error: ", e)
+            showNotification("[INTERNAL ERROR] Result parsing failed")
+            mySession$pithya$synthesisResult$file <- NULL
+            mySession$pithya$synthesisResult$result <- NULL
+        })
+    } else {
+        mySession$pithya$synthesisResult$result <- NULL         
     }
 })
 
 editorServer(input, mySession, output)
 explorerServer(input, mySession, output)
+resultServer(input, mySession, output)
 
 #=============== GLOBALS ===============================================
 session_random <- sample(1000^2,1)
@@ -212,15 +238,6 @@ observeEvent(input$reload_result_file,{
     updateButton(session,"reload_result_file",disabled=T)
 })
 
-
-output$save_result_file <- downloadHandler(
-    filename = "results.json",#ifelse(!is.null(preloading_ps_file()), paste0(preloading_ps_file()$filepath), "results.json"),
-    content = function(file) {
-        if(!is.null(loaded_ps_file$filedata)) writeLines(loaded_ps_file$filedata, file)
-        else                               writeLines("", file)
-    }
-)
-
 loading_ps_file <- reactive({
     if(!is.null(loaded_ps_file$filedata)) {
         # if(length(stored_ps_parsed_data$data) >= stored_ps_files$current && !is.null(stored_ps_parsed_data$data[[stored_ps_files$current]])) {
@@ -354,12 +371,6 @@ output$param_selector <- renderUI({
                 column(5,
                        tags$div(title=Result_vertical_tooltip,
                                 selectInput(idy,labely,choicesy,selectedy))
-                ),
-                column(2,
-                       tags$div(title=Result_cancel_tooltip,
-                                actionButton(paste0("cancel_ps_",i), Result_cancel_label)),
-                       tags$div(title=Result_hide_tooltip,
-                                checkboxInput(paste0("hide_ps_",i), Result_hide_label, ifelse(!is.null(input[[paste0("hide_ps_",i)]]),input[[paste0("hide_ps_",i)]],F)))
                 )
             )
         })

@@ -63,11 +63,11 @@ explorerServer <- function(input, session, output) {
 		}
 	})
 
-	# Remove graphs (always - what if variables changed?) when model changes and enable button
+	# Remove plots (always - what if variables changed?) when model changes and enable button
 	observeEvent(session$pithya$approximatedModel$model, {		
 		enabled <- !is.null(session$pithya$approximatedModel$model)
 		debug("[explorer] model changed. explorer enabled: ", enabled)
-		# remove graphs
+		# remove plots
 		lapply(isolate(reactiveValuesToList(plotRows)), function(row) {			
 			if (!is.null(row)) {	# TODO this seems to be happenning with the very last removed plot
 				row$destroy()

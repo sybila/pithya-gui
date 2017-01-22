@@ -8,7 +8,10 @@ resultTab <- function() {
     		fluidPage(theme = "simplex.css",
         		resultControlPanel(),
         		tags$hr(),
-        		uiOutput("param_space_plots")
+        		uiOutput("param_plots"),
+                tooltip(tooltip = Result_addPlot_tooltip,
+                    bsButton("add_param_plot", Result_addPlot_label, icon=icons$picture, disabled=T)
+                )
     		)
 		)
 	)
@@ -39,17 +42,80 @@ resultControlPanel <- function() {
                 tooltip(tooltip = Result_parameterDensity_tooltip,
                     sliderInput("density_coeficient",Result_parameterDensity_label,min=10,max=150,value=50,step=1,ticks=F)
                 )
-            ),
-            uiOutput("ps_zoom_sliders")
-		),
-		column(4,
-			uiOutput("chosen_ps_states_ui")
-		),
-		column(4,
-			uiOutput("param_selector"),
-           	tooltip(tooltip = Result_addPlot_tooltip,
-                bsButton("add_param_plot", Result_addPlot_label, icon=icons$picture, disabled=T)
             )
 		)
 	)
+}
+
+resultRow <- function(r, input) {
+    varList <- c(r$result$varNames, r$result$paramNames)
+    tagList(        
+        # Header (formula selector, hide, remove)
+        fluidRow(
+            column(1, paste0("Row ", r$id)),
+            column(4, tooltip(tooltip = Result_chooseFormulaOfInterest_tooltip,
+                selectInput(r$formula, Result_chooseFormulaOfInterest_label, choices = r$result$formulas, 
+                    selected = unwrapOr(isolate(input[[r$formula]]), r$result$formulas[1])
+                )
+            )),        
+            column(2, tooltip(tooltip = Result_cancel_tooltip,
+                actionButton(r$remove, Result_cancel_label)
+            )),
+            column(2, tooltip(tooltip = Result_hide_tooltip,
+                checkboxInput(r$hide, Result_hide_label)
+            ))
+        ),
+        # Plots
+        fluidRow(
+            # Params field controls
+            column(2,
+                r$params$renderUnselectButton(),
+                r$params$renderUnzoomButton(),
+                fluidRow(
+                    column(6, tooltip(tooltip = Result_horizontal_tooltip,
+                        selectInput(r$xDimParams, Result_horizontal_label, choices = varList,
+                            selected = unwrapOr(isolate(input[[r$xDimParams]]), varList[1])
+                        )
+                    )),
+                    column(6, tooltip(tooltip = Result_vertical_tooltip,
+                        selectInput(r$yDimParams, Result_vertical_label, choices = varList,
+                            selected = unwrapOr(isolate(input[[r$yDimParams]]), varList[2])
+                        )
+                    ))
+                ),
+                "* at least one parameter must be selected",
+                r$params$renderSliders(),
+                r$params$renderExact(tooltip = Result_PS_HoverTextArea_tooltip)
+            ),
+            # Vector field
+            column(4,
+                    helpText(Explorer_VF_label),
+                    r$params$renderImage()                  
+            ),
+            # State field
+            column(4,
+                    helpText(Explorer_SS_label),
+                    r$states$renderImage()                  
+            ),
+            # State space controls
+            column(2,
+                r$states$renderUnselectButton(),
+                r$states$renderUnzoomButton(),
+                fluidRow(
+                    column(6, tooltip(tooltip = Result_SS_horizontal_tooltip,
+                        selectInput(r$xDimStates, Result_SS_horizontal_label, choices = r$result$varNames,
+                            selected = unwrapOr(isolate(input[[r$xDimStates]]), r$result$varNames[1])
+                        )
+                    )),
+                    column(6, tooltip(tooltip = Result_SS_vertical_tooltip,
+                        selectInput(r$yDimStates, Result_SS_vertical_label, choices = r$result$varNames,
+                            selected = unwrapOr(isolate(input[[r$yDimStates]]), r$result$varNames[2])
+                        )
+                    ))
+                ),
+                r$states$renderSliders(),
+                r$states$renderExact(tooltip = Result_SS_HoverTextArea_tooltip)
+            )    
+        )
+    )
 }

@@ -35,7 +35,7 @@ createPlotRow <- function(id, model, params, input, session, output,
 	# Output elements
 	row$outRow <- paste0("row_output_", id)
 
-	# Update slider input to ensure only different values can be selected
+	# Update select input to ensure only different values can be selected
 	row$.dimensionSelectUpdate <- observeEvent(c(input[[row$xDimSelect]], input[[row$yDimSelect]]), {
 		debug("[row] update dimension selectors")	
 		if (length(row$model$varNames) == 1) {
@@ -59,7 +59,7 @@ createPlotRow <- function(id, model, params, input, session, output,
 	# Render plot UI
 	output[[row$outRow]] <- renderUI({
 		debug("[row] render row UI: ", id)
-		plotRow(row)
+		plotRow(row, input)
 	})
 
 	# Notify parent when remove button is clicked
@@ -81,7 +81,7 @@ createPlotRow <- function(id, model, params, input, session, output,
 
 	row$destroy <- function() {
 		# cleanup function
-		debug("[plot] destroy ", id)
+		debug("[plot row] destroy ", id)
 		row$vector$destroy()
 		row$.dimensionSelectUpdate$destroy()
 		row$.removeObserver$destroy()
