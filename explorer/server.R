@@ -80,10 +80,26 @@ explorerServer <- function(input, session, output) {
 	observeEvent(input$add_plot_row, {
 		debug("[explorer] new plot row")
 		let(session$pithya$approximatedModel$model, function(model) {
-			row <- createPlotRow(session$pithya$nextId(), model, params(model), input, session, output, onRemove = function(row) {
-				row$destroy()
-				plotRows[[row$outRow]] <- NULL
-			})
+			row <- createPlotRow(session$pithya$nextId(), model, params(model), input, session, output, 
+				onApplyAllVector = function(selection) {
+					for (row in isolate(reactiveValuesToList(plotRows))) {
+						if (!is.null(row)) {
+							row$vector$state$selection <- selection
+						}
+					}
+				},
+				onApplyAllState = function(selection) {
+					for (row in isolate(reactiveValuesToList(plotRows))) {
+						if (!is.null(row)) {
+							row$state$state$selection <- selection
+						}
+					}
+				},
+				onRemove = function(row) {
+					row$destroy()
+					plotRows[[row$outRow]] <- NULL
+				}
+			)
 			plotRows[[row$outRow]] <- row			
 		})			
 	})	

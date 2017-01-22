@@ -7,7 +7,11 @@ source("plot/state_plot.R")
 
 ## Initializes a plot into the input/output objects and returns a plot
 # plot = list(id = num, outputId = string, destroy = function(), ...)
-createPlotRow <- function(id, model, params, input, session, output, onRemove = function(row) {}) {
+createPlotRow <- function(id, model, params, input, session, output, 
+	onApplyAllVector = function(sel) {}, 	# called when apply to all button is clicked next to the vector plot
+	onApplyAllState = function(sel) {},		# called when apply to all button is clicked next to the state plot
+	onRemove = function(row) {}				# called when row is removed
+) {
 	debug("[createPlot] create plot row ", id)
 
 	row <- list()
@@ -32,7 +36,7 @@ createPlotRow <- function(id, model, params, input, session, output, onRemove = 
 	row$outRow <- paste0("row_output_", id)
 
 	# Update slider input to ensure only different values can be selected
-	dimensionSelectUpdate <- observeEvent(c(input[[row$xDimSelect]], input[[row$yDimSelect]]), {
+	row$.dimensionSelectUpdate <- observeEvent(c(input[[row$xDimSelect]], input[[row$yDimSelect]]), {
 		debug("[row] update dimension selectors")	
 		if (length(row$model$varNames) == 1) {
 			updateSelectInput(session$shiny, row$xDimSelect, choices = row$model$varNames, selected = row$model$varNames[1])
@@ -59,16 +63,31 @@ createPlotRow <- function(id, model, params, input, session, output, onRemove = 
 	})
 
 	# Notify parent when remove button is clicked
-	removeObserver <- observeEvent(input[[row$remove]], {
+	row$.removeObserver <- observeEvent(input[[row$remove]], {
 		onRemove(row)
+	})
+
+	row$.applyToState <- observeEvent(input[[row$applyVectorToState]], {
+		row$state$state$selection <- row$vector$state$selection
+	})
+
+	row$.applyToAllVector <- observeEvent(input[[row$applyVectorToAll]], {
+		onApplyAllVector(row$vector$state$selection)	
+	})
+
+	row$.applyToAllState <- observeEvent(input[[row$applyStateToAll]], {
+		onApplyAllState(row$state$state$selection)	
 	})
 
 	row$destroy <- function() {
 		# cleanup function
 		debug("[plot] destroy ", id)
 		row$vector$destroy()
-		dimensionSelectUpdate$destroy()
-		removeObserver$destroy()
+		row$.dimensionSelectUpdate$destroy()
+		row$.removeObserver$destroy()
+		row$.applyToState$destroy()
+		row$.applyToAllVector$destroy()
+		row$.applyToAllState$destroy()
 	}
 
 	row
