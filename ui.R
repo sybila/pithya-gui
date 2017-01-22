@@ -33,8 +33,6 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 shinyUI(
     fluidPage(
         useShinyjs(),
-        tags$head(tags$script(HTML(JS.parameterSynthesisFinished))),
-        tags$head(tags$script(HTML(JS.missingThreshold))),
         titlePanel(Tool_name),
         tags$hr(),
         tabsetPanel(id = "dimensions",
