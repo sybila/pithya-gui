@@ -80,10 +80,6 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 						unwrapOr(input[[plot$sliders[i]]], plot$varRanges[[i]]$min)
 					}
 			})
-			debug("Vars!")
-			debug(vars)
-			debug("Zoom!")
-			debug(zoom)
 			list(
 				vars = vars,
 				zoom = zoom,

@@ -13,12 +13,32 @@ createStatePlot <- function(model, id, input, session, output) {
 	plot$model <- model
 
 	plot$state$params <- NULL
+	plot$state$transitions <- NULL
 	plot$state$reachable <- NULL
 
-	plot$config <- reactive({
+	# Utility function which return the index of the state to which the vlaue belongs
+	plot$resolveStateIndex <- function(dim, x) {
+		t <- plot$model$varThresholds[[dim]]
+		for (i in 2:length(t)) {
+			if (t[i-1] <= x && x <= t[i]) {
+				return(i-1)
+			}
+		}
+		length(t-1)
+	}
+
+	# Utility function which translated continuous values into threshold boundaries
+	plot$resolveThresholds <- function(dim, x) {
+		t <- plot$model$varThresholds[[dim]]
+		i <- plot$resolveStateIndex(dim, x)
+		c(t[i], t[i+1])		
+	}
+
+	# Create a configuration object for computing the transition system.
+	plot$transitionsConfig <- reactive({
 		baseConfig <- plot$baseConfig()
 		params <- plot$state$params
-		if (is.null(baseConfig) || is.null(params)) {
+		if (is.null(baseConfig) || is.null(params))	{
 			NULL
 		} else {
 
@@ -30,27 +50,120 @@ createStatePlot <- function(model, id, input, session, output) {
 					c(t[index], t[index+1])
 				}
 			})
-			debug(restrictedThresholds)
-
+			
 			baseConfig$restrictedModel <- list(
-				varNames = plot$model$varNames,
-				varRanges = lapply(restrictedThresholds, function(x) list(min = x[1], max = x[length(x)])),
-				varThresholds = restrictedThresholds,
-				varEQ = plot$model$varEQ,
-				paramNames = plot$model$paramNames,
-				paramRanges = plot$model$paramRanges
-			)
+					varNames = plot$model$varNames,
+					varRanges = lapply(restrictedThresholds, function(x) list(min = x[1], max = x[length(x)])),
+					varThresholds = restrictedThresholds,
+					varEQ = plot$model$varEQ,
+					paramNames = plot$model$paramNames,
+					paramRanges = plot$model$paramRanges
+				)
 
 			baseConfig$params <- params
+
+			baseConfig
+		}
+	}) %>% debounce(200)
+
+	# Recompute the transition system when the configuration object changes.
+	plot$.computeTransitions <- observe({
+		config <- plot$transitionsConfig()
+		if (is.null(config)) {
+			plot$state$transitions <- NULL
+		} else {
+
+			boundedUp <- sapply(1:plot$varCount, function(i) {
+				t <- plot$model$varThresholds[[i]]
+				# dimension is either rendered or is set to highest threshold
+				i == config$x || i == config$y || config$vars[[i]] == length(t)-1
+			})
+
+			boundedDown <- sapply(1:plot$varCount, function(i) {
+				# dimension is either rendered or is set to lowest threshold
+				i == config$x || i == config$y || config$vars[[i]] == 1
+			})
+
+			transitions <- computeTransitions(config$restrictedModel, config$params, boundedUp, boundedDown)
+
+			# Note: the drop trick works only because all other dimensions in restricted model have size 1
+			xUp <- drop(transitions$trans[[config$x]]$up)
+			xDown <- drop(transitions$trans[[config$x]]$down)
+			yUp <- drop(transitions$trans[[config$y]]$up)
+			yDown <- drop(transitions$trans[[config$y]]$down)
+			loop <- drop(transitions$loop)
+
+			# Compute transitions returns results in increasing order always.
+			# If current dimension ordering is reversed, we have to transpose the results
+			if (config$x > config$y) {
+				xUp <- t(xUp); xDown <- t(xDown)
+				yUp <- t(yUp); yDown <- t(yDown)
+				loop <- t(loop)
+			}			
+			
+			plot$state$transitions <- list(
+				x = list(up = xUp, down = xDown), y = list(up = yUp, down = yDown), loop = loop
+			)
+		}
+	}, label = "computeTransitions")
+
+	plot$.computeReachability <- observe({
+		config <- plot$baseConfig()
+		transitions <- plot$state$transitions
+		if (is.null(config) || is.null(config$selection) || is.null(transitions)) {
+			plot$state$reachable <- NULL
+		} else {
+			xStateCount <- length(plot$model$varThresholds[[config$x]]) - 1 
+			yStateCount <- length(plot$model$varThresholds[[config$y]]) - 1
+			reachable <- array(0, c(xStateCount, yStateCount))
+			startX <- plot$resolveStateIndex(config$x, config$selection$x)[1]
+			startY <- plot$resolveStateIndex(config$y, config$selection$y)[1]
+			reachable[startX, startY] <- 1
+			
+			# Unfortuantely, shift works only with numeric matrices, so we are going to use 
+			# good old numbers for this one
+			xUp <- ifelse(transitions$x$up, 1, 0)
+			xDown <- ifelse(transitions$x$down, 1, 0)
+			yUp <- ifelse(transitions$y$up, 1, 0)
+			yDown <- ifelse(transitions$y$down, 1, 0)
+			repeat {
+				newReachable <- reachable
+				# Note: The operations are a little weird, because down actually means up,
+				# since [1,1] is first state and down shifts if to [2,1]
+				newReachable <- newReachable + shift.down(newReachable * xUp, 1)
+				newReachable <- newReachable + shift.up(newReachable * xDown, 1)
+				newReachable <- newReachable + shift.right(newReachable * yUp, 1)
+				newReachable <- newReachable + shift.left(newReachable * yDown, 1)
+				newReachable <- pmin(newReachable, 1)	# reset counters to one
+				if (all(newReachable == reachable)) { break } else {
+					reachable <- newReachable
+				}				
+			}
+			plot$state$reachable <- reachable > 0
+		}
+	}, label = "computeReachability")
+
+	# Create a configuration object for the main plot
+	plot$config <- reactive({
+		baseConfig <- plot$baseConfig()
+		transitions <- plot$state$transitions
+		reachable <- plot$state$reachable
+		if (is.null(baseConfig) || is.null(transitions)) {
+			NULL
+		} else {
+
 			baseConfig$xThres <- plot$model$varThresholds[[baseConfig$x]]
 			baseConfig$yThres <- plot$model$varThresholds[[baseConfig$y]]
+
+			baseConfig$reachable <- reachable
+			baseConfig$transitions <- transitions
 
 			baseConfig$coloringVariant <- unwrapOr(input$colVariant, "both")
 			baseConfig$arrowWidth <- unwrapOr(input$transWidth, 1.5)
 
 			baseConfig
 		}
-	}) %>% debounce(200)
+	}) %>% debounce(100)
 
 	# Render state dimension discrete sliders based on missing dimensions
 	output[[plot$outSliders]] <- renderUI({				
@@ -65,16 +178,6 @@ createStatePlot <- function(model, id, input, session, output) {
 			)			
 		})
 	})
-
-	plot$resolveThresholds <- function(dim, x) {
-		t <- plot$model$varThresholds[[dim]]
-		for (i in 2:length(t)) {
-			if (t[i-1] <= x && x <= t[i]) {
-				return(c(t[i-1], t[i]))
-			}
-		}
-		c(t[length(t) - 1], t[length(t)])
-	}
 
 	# Render the actual state plot
 	output[[plot$outImage]] <- renderPlot({			
@@ -112,33 +215,13 @@ createStatePlot <- function(model, id, input, session, output) {
 			xStates <- replicate(yStateCount, xCenters)
 			yStates <- t(replicate(xStateCount, yCenters))
 
-			boundedUp <- sapply(1:plot$varCount, function(i) {
-				t <- plot$model$varThresholds[[i]]
-				# dimension is either rendered or is set to highest threshold
-				i == config$x || i == config$y || config$vars[[i]] == length(t)-1
-			})
+			transitions <- config$transitions
 
-			boundedDown <- sapply(1:plot$varCount, function(i) {
-				# dimension is either rendered or is set to lowest threshold
-				i == config$x || i == config$y || config$vars[[i]] == 1
-			})
-
-			transitions <- computeTransitions(config$restrictedModel, config$params, boundedUp, boundedDown)
-
-			# Note: the drop trick works only because all other dimensions in restricted model have size 1
-			xUp <- drop(transitions$trans[[config$x]]$up)
-			xDown <- drop(transitions$trans[[config$x]]$down)
-			yUp <- drop(transitions$trans[[config$y]]$up)
-			yDown <- drop(transitions$trans[[config$y]]$down)
-			loop <- drop(transitions$loop)
-
-			# Compute transitions returns results in increasing order always.
-			# If current dimension ordering is reversed, we have to transpose the results
-			if (config$x > config$y) {
-				xUp <- t(xUp); xDown <- t(xDown)
-				yUp <- t(yUp); yDown <- t(yDown)
-				loop <- t(loop)
-			}			
+			xUp <- config$transitions$x$up
+			xDown <- config$transitions$x$down
+			yUp <- config$transitions$y$up
+			yDown <- config$transitions$y$down
+			loop <- config$transitions$loop
 			
 			arrows(
 				xStates[xUp], yStates[xUp], replicate(yStateCount, xThres[-1])[xUp], yStates[xUp],
@@ -163,6 +246,15 @@ createStatePlot <- function(model, id, input, session, output) {
 
 			# Loops
 			points(xStates[loop], yStates[loop], pch = 19)
+
+			reach <- config$reachable
+			if (!is.null(reach)) {
+				xLow <- replicate(yStateCount, xThres[-xThresholdCount])
+				xHigh <- replicate(yStateCount, xThres[-1])
+				yLow <- t(replicate(xStateCount, yThres[-yThresholdCount]))
+				yHigh <- t(replicate(xStateCount, yThres[-1]))
+				rect(xLow[reach], yLow[reach], xHigh[reach], yHigh[reach], border = "blue", lwd = 2)
+			}			
 		}
 	}, height = function() { session$shiny$clientData[[paste0("output_",plot$outImage,"_width")]] })
 
@@ -186,6 +278,7 @@ createStatePlot <- function(model, id, input, session, output) {
 		plot$baseDestroy()
 		debug(id, ":statePlot destroy")
 
+		plot$.computeTransitions$destroy()
 		output[[plot$outImage]] <- renderPlot({ "Destroyed" })
 	}	
 
