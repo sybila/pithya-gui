@@ -30,7 +30,7 @@ parseBioLines <- function(lines) {
 
 	# Extract payload from VARS: lines, split it by ",", remove duplicates and sort; [[1]] = first input (we only have one); [,2] = second row - matches
 
-	varNames <- sort(unlist(unique(c(str_split(str_match_all(model, "VARS:(.+)\n")[[1]][,2], ",")))))
+	varNames <- sort(unlist(unique(c(str_split(str_match_all(model, "VARS:(.+)\n")[[1]][,2], ",")))))	
 
 	# Extract params as a list of "name,min,max"
 	params <- sort(unlist(unique(c(str_split(str_match_all(model, "PARAMS:(.+)\n")[[1]][,2], ";")))))
@@ -84,6 +84,14 @@ parseBioLines <- function(lines) {
 	})
 	varEQ <- lapply(eqExpressions, function(eq) eval(parse(text = paste0("function(vars, params) { ", eq, "} "))))
 
+	# Ensure that no matter what, we have at least two variables!	
+	if (length(varNames) == 1) {
+		varNames <- c(varNames, emptyVarName)
+		varThresholds[[2]] <- c(0, 0)
+		varRanges[[2]] <- list(min = 0, max = 0)
+		varEQ[[2]] <- function(vars, params) { 0 }
+	}
+
 	model <- list(
 		varNames = varNames,
 		varThresholds = varThresholds,
@@ -93,7 +101,7 @@ parseBioLines <- function(lines) {
 		paramRanges = paramRanges	
 	)
 	debug("[.bio parser] Parse successful.")
-	#debug(model)
+	debug(model)
 
 	model
 }

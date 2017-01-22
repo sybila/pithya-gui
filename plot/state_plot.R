@@ -223,25 +223,33 @@ createStatePlot <- function(model, id, input, session, output) {
 			yDown <- config$transitions$y$down
 			loop <- config$transitions$loop
 			
-			arrows(
-				xStates[xUp], yStates[xUp], replicate(yStateCount, xThres[-1])[xUp], yStates[xUp],
-				angle = 20, length = 0.07, lty = transitions_line_type, lwd = config$arrowWidth,
-				col = if (config$coloringVariant %in% c("both", "horizontal")) positive_color else neutral_color
-			)
-			arrows(
-				xStates[xDown], yStates[xDown], replicate(yStateCount, xThres[-xThresholdCount])[xDown], yStates[xDown],
-				angle = 20, length = 0.07, lty = transitions_line_type, lwd = config$arrowWidth,
-				col = if (config$coloringVariant %in% c("both", "horizontal")) negative_color else neutral_color
+			suppressWarnings(
+				arrows(
+					xStates[xUp], yStates[xUp], replicate(yStateCount, xThres[-1])[xUp], yStates[xUp],
+					angle = 20, length = 0.07, lty = transitions_line_type, lwd = config$arrowWidth,
+					col = if (config$coloringVariant %in% c("both", "horizontal")) positive_color else neutral_color
+				)
 			)	
-			arrows(
-				xStates[yUp], yStates[yUp], xStates[yUp], t(replicate(xStateCount, yThres[-1]))[yUp],
-				angle = 20, length = 0.07, lty = transitions_line_type, lwd = config$arrowWidth,
-				col = if (config$coloringVariant %in% c("both", "vertical")) positive_color else neutral_color
+			suppressWarnings(		
+				arrows(
+					xStates[xDown], yStates[xDown], replicate(yStateCount, xThres[-xThresholdCount])[xDown], yStates[xDown],
+					angle = 20, length = 0.07, lty = transitions_line_type, lwd = config$arrowWidth,
+					col = if (config$coloringVariant %in% c("both", "horizontal")) negative_color else neutral_color
+				)	
 			)
-			arrows(
-				xStates[yDown], yStates[yDown], xStates[yDown], t(replicate(xStateCount, yThres[-yThresholdCount]))[yDown],
-				angle = 20, length = 0.07, lty = transitions_line_type, lwd = config$arrowWidth,
-				col = if (config$coloringVariant %in% c("both", "vertical")) negative_color else neutral_color
+			suppressWarnings(
+				arrows(
+					xStates[yUp], yStates[yUp], xStates[yUp], t(replicate(xStateCount, yThres[-1]))[yUp],
+					angle = 20, length = 0.07, lty = transitions_line_type, lwd = config$arrowWidth,
+					col = if (config$coloringVariant %in% c("both", "vertical")) positive_color else neutral_color
+				)
+			)
+			suppressWarnings(
+				arrows(
+					xStates[yDown], yStates[yDown], xStates[yDown], t(replicate(xStateCount, yThres[-yThresholdCount]))[yDown],
+					angle = 20, length = 0.07, lty = transitions_line_type, lwd = config$arrowWidth,
+					col = if (config$coloringVariant %in% c("both", "vertical")) negative_color else neutral_color
+				)
 			)
 
 			# Loops

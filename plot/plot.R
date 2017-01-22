@@ -139,7 +139,9 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 					if (is.null(value)) {
 						value <- printRangeInterval(i, plot$varRanges[[i]]$min, plot$varRanges[[i]]$max)
 					}
-					paste0(plot$varNames[i], ": ", value)
+					if (plot$varNames[i] != emptyVarName) {
+						paste0(plot$varNames[i], ": ", value)
+					} else ""
 				})
 				cat(paste0(lines, collapse = "\n"))
 			}
