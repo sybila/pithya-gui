@@ -3,6 +3,7 @@ source("tooltips.R")        # texts
 source("ui_global.R")       
 source("result/ui.R")
 source("plot/state_plot.R")
+source("plot/result_state_plot.R")
 
 createResultPlotRow <- function(id, result, input, session, output,
 	onRemove = function(row) {}		# called when row remove button is clicked
@@ -23,8 +24,8 @@ createResultPlotRow <- function(id, result, input, session, output,
 
 	row$params <- createStatePlot(fakeModel, session$pithya$nextId(), input, session, output)
 	#row$params$state$params <- list(1.0, 1.0, 1.0)
-	row$states <- createStatePlot(fakeModel, session$pithya$nextId(), input, session, output)
-	row$states$state$params <- list(1.0, 1.0, 1.0)
+	row$states <- createResultStatePlot(result, session$pithya$nextId(), input, session, output)
+	row$states$state$formulaIndex <- 1
 
 	row$remove <- paste0("row_remove_", id)
 	row$hide <- paste0("row_hide_", id)
@@ -55,6 +56,12 @@ createResultPlotRow <- function(id, result, input, session, output,
 			updateSelectInput(session$shiny, row$xDimStates, choices = row$result$varNames, selected = xSelected)
 			updateSelectInput(session$shiny, row$yDimStates, choices = yOptions, selected = ySelected)
 		}
+	})
+
+	row$.formulaUpdate <- observeEvent(input[[row$formula]], {
+		index <- match(input[[row$formula]], row$result$formulas)
+		row$states$state$formulaIndex <- index
+		row$params$state$formulaIndex <- index
 	})
 
 	# Params plot 

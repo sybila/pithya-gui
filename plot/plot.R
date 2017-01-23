@@ -107,7 +107,7 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 					unwrapOr(input[[plot$sliders[i]]], if(plot$varContinuous[i]) { plot$varRanges[[i]]$min } else { 1 })
 				}
 			})
-			
+
 			list(
 				vars = vars,
 				zoom = zoom,
@@ -121,12 +121,14 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 
 	plot$.dimensionChange <- observeEvent(plot$state$dim, {
 		plot$state$zoom <- NULL	
+		plot$state$selection <- NULL
 	})
 
 	## UI observers
 
 	# Clear selection on button click
 	plot$.unselect <- observeEvent(input[[plot$buttonUnselect]], {
+		debug("unselect!", plot$state$selection)
 		plot$state$selection <- NULL	
 	})
 

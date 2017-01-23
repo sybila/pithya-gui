@@ -17,7 +17,7 @@ parseResultData <- function(fileData) {
 	dimensionSizes <- sapply(thresholds, function(x) length(x))
 	stateSpaceSizes <- sapply(dimensionSizes, function(x) x - 1)
 
-	stateSpace <- array(0, dimensionSizes)
+	stateSpace <- array(0, stateSpaceSizes)
 
 	result <- list(
 		formulas = sapply(file$results, function(r) r$formula),
