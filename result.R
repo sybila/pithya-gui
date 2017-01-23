@@ -19,6 +19,8 @@ parseResultData <- function(fileData) {
 
 	stateSpace <- array(0, stateSpaceSizes)
 
+	debug("param count: ", length(paramValues))
+
 	result <- list(
 		formulas = sapply(file$results, function(r) r$formula),
 		type = file$type,

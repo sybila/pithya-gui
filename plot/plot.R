@@ -128,7 +128,6 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 
 	# Clear selection on button click
 	plot$.unselect <- observeEvent(input[[plot$buttonUnselect]], {
-		debug("unselect!", plot$state$selection)
 		plot$state$selection <- NULL	
 	})
 

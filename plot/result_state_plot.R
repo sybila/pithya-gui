@@ -19,6 +19,7 @@ createResultStatePlot <- function(result, id, input, session, output) {
 	plot$state$formulaIndex <- NULL
 	stateSpaceSizes <- sapply(plot$varThresholds, function(x) length(x) - 1)
 	plot$state$selectedStates <- stateSpace <- array(FALSE, stateSpaceSizes)
+	plot$state$selectedParams <- NULL
 
 	# Create a configuration object for the main plot
 	plot$config <- reactive({
@@ -30,6 +31,7 @@ createResultStatePlot <- function(result, id, input, session, output) {
 
 			baseConfig$mapping <- plot$result$resultMapping[[formula]]
 			baseConfig$selectedStates <- plot$state$selectedStates
+			baseConfig$selectedParams <- plot$state$selectedParams
 
 			baseConfig$xThres <- plot$result$varThresholds[[baseConfig$x]]
 			baseConfig$yThres <- plot$result$varThresholds[[baseConfig$y]]
@@ -76,7 +78,8 @@ createResultStatePlot <- function(result, id, input, session, output) {
 			})			
 
 			# dimensionMask ensures that all except two dimensions are reduced to trivial
-			projection <- do.call("[", append(list(config$mapping, drop = TRUE), dimensionMask)) > 0						
+			projectedValues <- do.call("[", append(list(config$mapping, drop = TRUE), dimensionMask))
+			projection <- projectedValues > 0						
 
 			# If current dimension ordering is reversed, we have to transpose the results
 			if (config$x > config$y) {
@@ -93,11 +96,20 @@ createResultStatePlot <- function(result, id, input, session, output) {
 				col = first_formula_color, border = "black", lwd = 1.5
 			)			
 
-			# Draw selected
+			# Draw selected states
 			selectedProjection <- projection & do.call("[", append(list(config$selectedStates, drop = TRUE), dimensionMask))
 			rect(xLow[selectedProjection], yLow[selectedProjection], xHigh[selectedProjection], yHigh[selectedProjection], 
 				col = first_formula_color_clicked, border = "black", lwd = 1.5
 			)			
+
+			# Draw selected params 
+			if (!is.null(config$selectedParams)) {
+				p <- config$selectedParams
+				selectedParamStates <- apply(projectedValues, c(1,2), function(v) v > 0 && p[v])
+				rect(xLow[selectedParamStates], yLow[selectedParamStates], xHigh[selectedParamStates], yHigh[selectedParamStates], 
+					border = "blue", lwd = 2
+				)					
+			}			
 		}
 	}, height = function() { session$shiny$clientData[[paste0("output_",plot$outImage,"_width")]] })
 	
