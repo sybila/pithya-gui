@@ -39,9 +39,6 @@ createStatePlot <- function(model, id, input, session, output) {
 					c(t[index], t[index+1])
 				}
 			})
-
-			debug("Restriced:")
-			debug(restrictedThresholds)
 			
 			restrictedModel <- list(
 					varNames = plot$model$varNames,

@@ -107,8 +107,7 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 					unwrapOr(input[[plot$sliders[i]]], if(plot$varContinuous[i]) { plot$varRanges[[i]]$min } else { 1 })
 				}
 			})
-			debug("Vars!")
-			debug(vars)
+			
 			list(
 				vars = vars,
 				zoom = zoom,

@@ -129,16 +129,17 @@ ramp <- function(value,min,max,a,b) {
 }
 
 # TODO: can we speed this up?!
-Approx <- function(m,l) {	
-    apply(as.matrix(m),c(1,2),function(s) {
-        if(s <= l[[1]][1]) return(l[[1]][2])
-        if(s >= l[[length(l)]][1]) return(l[[length(l)]][2])
-        for(i in 2:length(l)) {
-            a<-l[[i-1]]
-            b<-l[[i]]
+Approx <- function(var, ramps) {	
+	var <- as.array(var)	#coerect
+	apply(var, 1:length(dim(var)), function(s) {
+		if(s <= ramps[[1]][1]) return(ramps[[1]][2])
+        if(s >= ramps[[length(ramps)]][1]) return(ramps[[length(ramps)]][2])
+        for(i in 2:length(ramps)) {
+            a <- ramps[[i-1]]
+            b <- ramps[[i]]
             if(s >= a[1] && s <= b[1]) return(a[2]+(s-a[1])/(b[1]-a[1])*(b[2]-a[2]))
         }
-    })
+	})
 }
 
 # Compute whole transition system for given model and parametrisation.
@@ -156,8 +157,6 @@ computeTransitions <- function(model, params, boundedUp, boundedDown) {
 	
 	dimensionSizes <- sapply(model$varThresholds, function(x) length(x))
 	stateSpaceSizes <- sapply(dimensionSizes, function(x) x - 1)
-	
-	debug(dimensionSizes)
 
 	# Prepare values for equation evaluation
 	one <- array(1, dimensionSizes)
@@ -170,10 +169,6 @@ computeTransitions <- function(model, params, boundedUp, boundedDown) {
 		sizes <- sapply(dimensions, function(i) dimensionSizes[i])
 		aperm(array(model$varThresholds[[d]], sizes), dimensions)
 	})
-
-	for (v in vars) {
-		debug(dim(v))
-	}
 
 	# Compute derivation values in all vertices
 	progressPerVar <- 0.8 / dimensionCount
