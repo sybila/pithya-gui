@@ -5,7 +5,13 @@ source("plot/plot.R")
 
 createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 
-	plot <- createBasePlot(model$varNames, model$varRanges, id, input, session, output)
+	plot <- createBasePlot(
+		varNames = model$varNames, 
+		varThresholds = lapply(model$varRanges, function(r) c(r$min, r$max)), 
+		varContinuous = sapply(model$varNames, function(x) TRUE),
+		useProjections = FALSE, 
+		id, input, session, output
+	)
 
 	debug(id, ":vectorPlot create")
 
@@ -76,22 +82,6 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 				}				
 			}
 			plot$state$flow <- flow
-		})
-	})
-
-	# Render vector dimension continuous sliders based on missing dimensions
-	output[[plot$outSliders]] <- renderUI({
-		debug(id, ":vectorPlot render sliders")
-		lapply(plot$missingDimensions(), function(var) {
-			range <- plot$varRanges[[var]]
-			tooltip(tooltip = Explorer_VF_ScaleSlider_tooltip,
-				sliderInput(plot$sliders[var],
-					label = paste0(Explorer_VF_ScaleSlider_label, plot$varNames[var]),
-					min = range$min, max = range$max, 
-					value = unwrapOr(plot$baseConfig()$vars[[var]], range$min), 
-					step = scale_granularity
-				)
-			)			
 		})
 	})
 

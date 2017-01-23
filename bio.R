@@ -157,6 +157,8 @@ computeTransitions <- function(model, params, boundedUp, boundedDown) {
 	dimensionSizes <- sapply(model$varThresholds, function(x) length(x))
 	stateSpaceSizes <- sapply(dimensionSizes, function(x) x - 1)
 	
+	debug(dimensionSizes)
+
 	# Prepare values for equation evaluation
 	one <- array(1, dimensionSizes)
 	params <- lapply(params, function(p) one * p)
@@ -168,6 +170,10 @@ computeTransitions <- function(model, params, boundedUp, boundedDown) {
 		sizes <- sapply(dimensions, function(i) dimensionSizes[i])
 		aperm(array(model$varThresholds[[d]], sizes), dimensions)
 	})
+
+	for (v in vars) {
+		debug(dim(v))
+	}
 
 	# Compute derivation values in all vertices
 	progressPerVar <- 0.8 / dimensionCount

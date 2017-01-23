@@ -2,7 +2,7 @@ source("config.R")          # global configuration
 source("tooltips.R")        # texts
 source("ui_global.R")       
 
-createBasePlot <- function(varNames, varRanges, id, input, session, output) {
+createBasePlot <- function(varNames, varThresholds, varContinuous, useProjections, id, input, session, output) {
 
 	debug(id, ":plot create")
 
@@ -11,9 +11,18 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 	plot$id <- id
 	plot$varNames <- varNames
 	plot$varCount <- length(varNames)
-	plot$varRanges <- varRanges
+	plot$varThresholds <- varThresholds
+	plot$varContinuous <- varContinuous
+	plot$varRanges <- lapply(varThresholds, function(t) list(min = t[1], max = t[length(t)]))	
+	plot$useProjections <- useProjections
+
+	# Implementation notes:
+	# Zoom and selection are always exact values.
+	# Vars is a value for continuous variables and low threshold index for
+	# discrete variables.
+
 	plot$state <- reactiveValues(
-		dim = NULL, 			# list(x,y, xName, yName) of selected dimensions
+		dim = NULL, 			# list(x,y) of selected dimension indices
 		selection = NULL, 		# last double clicked point
 		zoom = NULL				# current zoom state
 	)	
@@ -47,6 +56,24 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 		}
 	}
 
+	# Utility function which return the index of the state to which the vlaue belongs
+	plot$resolveStateIndex <- function(dim, x) {
+		t <- plot$varThresholds[[dim]]
+		for (i in 2:length(t)) {
+			if (t[i-1] <= x && x <= t[i]) {
+				return(i-1)
+			}
+		}
+		length(t-1)
+	}
+
+	# Utility function which translated continuous values into threshold boundaries
+	plot$resolveThresholds <- function(dim, x) {
+		t <- plot$varThresholds[[dim]]
+		i <- plot$resolveStateIndex(dim, x)
+		c(t[i], t[i+1])		
+	}
+
 	# Returns vector of variable indices which are not rendered
 	plot$missingDimensions <- reactive({
 		debug("missingDimensions")
@@ -71,42 +98,29 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 				yRange <- plot$varRanges[[dim$y]]
 				zoom <- matrix(c(xRange$min, yRange$min, xRange$max, yRange$max), 2)
 			}
-			valid <- TRUE
-			vars <- list()
-			for (i in 1:plot$varCount) {
+			vars <- lapply(1:plot$varCount, function(i) {
 				if (i == dim$x || i == dim$y) {
-					# This is a very special way to set vars to NULL and actually keeping the index valid
-					vars[i] <- list(NULL)
-				} else if (unwrapOr(input[[plot$project[i]]], FALSE)) {
-					vars[i] <- list(NULL)
+					NULL
+				} else if (plot$useProjections && unwrapOr(input[[plot$project[i]]], FALSE)) {
+					NULL
 				} else {
-					value <- input[[plot$sliders[i]]]
-					if (is.null(value)) {
-						# If value if null, it means sliders are not yet initialized
-						# and this config is not valid
-						valid <- FALSE
-					} else {
-						vars[[i]] <- value
-					}
+					unwrapOr(input[[plot$sliders[i]]], if(plot$varContinuous[i]) { plot$varRanges[[i]]$min } else { 1 })
 				}
-			}
-			if (!valid) {
-				NULL
-			} else {
-				list(
-					vars = vars,
-					zoom = zoom,
-					x = dim$x, y = dim$y,
-					selection = plot$state$selection
-				)
-			}			
+			})
+			debug("Vars!")
+			debug(vars)
+			list(
+				vars = vars,
+				zoom = zoom,
+				x = dim$x, y = dim$y,
+				selection = plot$state$selection
+			)		
 		}
 	})
 
 	## State observers
 
 	plot$.dimensionChange <- observeEvent(plot$state$dim, {
-		debug("dimension update")
 		plot$state$zoom <- NULL	
 	})
 
@@ -114,64 +128,135 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 
 	# Clear selection on button click
 	plot$.unselect <- observeEvent(input[[plot$buttonUnselect]], {
-		debug("unselect")
 		plot$state$selection <- NULL	
 	})
 
 	# Clear zoom on button click
 	plot$.unzoom <- observeEvent(input[[plot$buttonUnzoom]], {
-		debug("unzoom")
 		plot$state$zoom <- NULL	
 	})
 
-	# Use this function to override default printing behavior
-	plot$buildPrintExact <- function(printHoverValue, printVarsValue, printZoomInterval, printRangeInterval) {
-		renderPrint({
-			config <- plot$baseConfig()
-			if (is.null(config)) {
-				cat("...")
-			} else {	
-				# render existing values	
-				vars <- config$vars
-				for (i in 1:plot$varCount) {
-					if (!is.null(vars[[i]])) {
-						vars[[i]] <- printVarsValue(i, vars[[i]])
-					}
-				}
-				# add data from hover listener
-				hover <- input[[plot$eventHover]]
-				if (is.null(hover$x) || is.null(hover$y)) {
-					vars[[config$x]] <- printZoomInterval(config$x, config$zoom[1,1], config$zoom[1,2])
-					vars[[config$y]] <- printZoomInterval(config$y, config$zoom[2,1], config$zoom[2,2])
-				} else {
-					vars[[config$x]] <- printHoverValue(config$x, hover$x)
-					vars[[config$y]] <- printHoverValue(config$y, hover$y)
-				}
-				# fill in null values (projected) and put it all together
-				lines <- sapply(1:plot$varCount, function (i) {
-					value <- vars[[i]]
-					if (is.null(value)) {
-						value <- printRangeInterval(i, plot$varRanges[[i]]$min, plot$varRanges[[i]]$max)
-					}
-					if (plot$varNames[i] != emptyVarName) {
-						paste0(plot$varNames[i], ": ", value)
-					} else ""
-				})
-				cat(paste0(lines, collapse = "\n"))
-			}
-		})
-	}
-
-	roundToThree <- function(dim, x) { paste0(round(x, digits = 3)) }
-	roundIntervalToThree <- function(dim, x, y) {
+	printContinuousInterval <- function(dim, x, y) {
 		paste0("[", round(x, digits = 3), ", ", round(y, digits = 3), "]")
 	}
 
+	# Takes a value from vars (continuous or threshold) and prints it accordingly
+	printVarsValue <- function(dim, x) {
+		if (plot$varContinuous[dim]) {
+			paste0(round(x, digits = 3)) 		
+		} else {
+			t <- plot$varThresholds[[dim]]
+			paste0("[", round(t[x], digits = 3), ", ", round(t[x+1], digits = 3), "]")
+		}
+	}
+
+	# Takes a continuous value and prints it (transforming to thresholds if needed)
+	printContinuousValue <- function(dim, x) {
+		if (plot$varContinuous[dim]) {
+			paste0(round(x, digits = 3)) 		
+		} else {
+			x <- plot$resolveStateIndex(dim, x)
+			t <- plot$varThresholds[[dim]]
+			paste0("[", round(t[x], digits = 3), ", ", round(t[x+1], digits = 3), "]")
+		}
+	}
+
+	# Print interval takes continuous values and prints them as needed
+	printInterval <- function(dim, x, y) {
+		if (plot$varContinuous[dim]) {
+			printContinuousInterval(dim, x, y)
+		} else {
+			x <- plot$resolveStateIndex(dim, x)
+			y <- plot$resolveStateIndex(dim, y)
+			t <- plot$varThresholds[[dim]]
+			printContinuousInterval(dim, t[x], t[y+1])
+		}
+	}
+
 	# Print currently displayed exact values
-	output[[plot$outExact]] <- plot$buildPrintExact(
-		printVarsValue = roundToThree, printHoverValue = roundToThree,
-		printZoomInterval = roundIntervalToThree, printRangeInterval = roundIntervalToThree
-	)
+	output[[plot$outExact]] <- renderPrint({
+		config <- plot$baseConfig()
+		if (is.null(config)) {
+			cat("...")
+		} else {	
+			# render existing values	
+			vars <- config$vars
+			for (i in 1:plot$varCount) {
+				if (!is.null(vars[[i]])) {
+					vars[[i]] <- printVarsValue(i, vars[[i]])
+				}
+			}
+			# add data from hover listener
+			hover <- input[[plot$eventHover]]
+			if (is.null(hover$x) || is.null(hover$y)) {
+				vars[[config$x]] <- printInterval(config$x, config$zoom[1,1], config$zoom[1,2])
+				vars[[config$y]] <- printInterval(config$y, config$zoom[2,1], config$zoom[2,2])
+			} else {
+				vars[[config$x]] <- printContinuousValue(config$x, hover$x)
+				vars[[config$y]] <- printContinuousValue(config$y, hover$y)
+			}
+			# fill in null values (projected) and put it all together
+			lines <- sapply(1:plot$varCount, function (i) {
+				value <- vars[[i]]
+				if (is.null(value)) {
+					value <- printInterval(i, plot$varRanges[[i]]$min, plot$varRanges[[i]]$max)
+				}
+				if (plot$varNames[i] != emptyVarName) {
+					paste0(plot$varNames[i], ": ", value)
+				} else ""
+			})
+			cat(paste0(lines, collapse = "\n"))
+		}
+	})
+
+	plot$renderSlider <- function(var) {
+		if (plot$varContinuous[var]) {
+			range <- plot$varRanges[[var]]
+			tooltip(tooltip = Explorer_VF_ScaleSlider_tooltip,
+				sliderInput(plot$sliders[var],
+					label = paste0(Explorer_VF_ScaleSlider_label, plot$varNames[var]),
+					min = range$min, max = range$max, 
+					value = unwrapOr(plot$baseConfig()$vars[[var]], range$min), 
+					step = scale_granularity
+				)
+			)
+		} else {
+			thresholds <- plot$varThresholds[[var]]
+			if (length(thresholds) > 2) {	# Don't render sliders for variables that can't be scaled
+				tooltip(tooltip = Explorer_SS_ScaleSlider_tooltip,			
+					sliderInput(plot$sliders[var],
+						label = paste0(Explorer_SS_ScaleSlider_label, plot$varNames[var]),
+						min = 1, max = length(thresholds) - 1, 
+						value = unwrapOr(plot$baseConfig()$vars[[var]], 1), step = 1
+					)
+				)
+			}			
+		}
+	}
+
+	# Render state dimension sliders based on missing dimensions
+	output[[plot$outSliders]] <- renderUI({				
+		lapply(plot$missingDimensions(), function(var) {	
+			if (useProjections) {
+				advanced(
+					tooltip(tooltip = Result_PS_ScaleSwitch_tooltip,
+						checkboxInput(plot$project[var], 
+							label = paste0(Result_PS_ScaleSlider_label, plot$varNames[var]),
+							# Note: the default value is a little bit of a hack, because we assume only
+							# parameters are countinuous in a mixed graph.
+							value = unwrapOr(input[[plot$project[var]]], plot$varContinuous[var])	# TODO default value
+						),
+
+					),
+					conditionalPanel(condition = paste0("input.", plot$project[var]), " == false",
+						plot$renderSlider(var)
+					)
+				)				
+			} else {
+				plot$renderSlider(var)
+			}
+		})
+	})
 
 	## Plot event listeners
 

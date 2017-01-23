@@ -6,7 +6,13 @@ source("bio.R")
 
 createStatePlot <- function(model, id, input, session, output) {
 
-	plot <- createBasePlot(model$varNames, model$varRanges, id, input, session, output)
+	plot <- createBasePlot(
+		varNames = model$varNames, 
+		varThresholds = model$varThresholds, 
+		varContinuous = sapply(model$varNames, function(x) FALSE),
+		useProjections = FALSE, 
+		id, input, session, output
+	)
 
 	debug(id, ":statePlot create")
 
@@ -16,24 +22,6 @@ createStatePlot <- function(model, id, input, session, output) {
 	plot$state$transitions <- NULL
 	plot$state$reachable <- NULL
 	plot$state$transitionsConfig <- NULL
-
-	# Utility function which return the index of the state to which the vlaue belongs
-	plot$resolveStateIndex <- function(dim, x) {
-		t <- plot$model$varThresholds[[dim]]
-		for (i in 2:length(t)) {
-			if (t[i-1] <= x && x <= t[i]) {
-				return(i-1)
-			}
-		}
-		length(t-1)
-	}
-
-	# Utility function which translated continuous values into threshold boundaries
-	plot$resolveThresholds <- function(dim, x) {
-		t <- plot$model$varThresholds[[dim]]
-		i <- plot$resolveStateIndex(dim, x)
-		c(t[i], t[i+1])		
-	}
 
 	# Create a configuration object for computing the transition system.
 	plot$transitionsConfig <- reactive({
@@ -51,6 +39,9 @@ createStatePlot <- function(model, id, input, session, output) {
 					c(t[index], t[index+1])
 				}
 			})
+
+			debug("Restriced:")
+			debug(restrictedThresholds)
 			
 			restrictedModel <- list(
 					varNames = plot$model$varNames,
@@ -178,20 +169,6 @@ createStatePlot <- function(model, id, input, session, output) {
 		}
 	}) %>% debounce(100)
 
-	# Render state dimension discrete sliders based on missing dimensions
-	output[[plot$outSliders]] <- renderUI({				
-		lapply(plot$missingDimensions(), function(var) {
-			range <- plot$varRanges[[var]]
-			tooltip(tooltip = Explorer_SS_ScaleSlider_tooltip,			
-				sliderInput(plot$sliders[var],
-					label = paste0(Explorer_SS_ScaleSlider_label, plot$varNames[var]),
-					min = 1, max = length(plot$model$varThresholds[[var]]) - 1, 
-					value = unwrapOr(plot$baseConfig()$vars[[var]], 1), step = 1
-				)
-			)			
-		})
-	})
-
 	# Render the actual state plot
 	output[[plot$outImage]] <- renderPlot({			
 		config <- plot$config()
@@ -278,22 +255,6 @@ createStatePlot <- function(model, id, input, session, output) {
 			}			
 		}
 	}, height = function() { session$shiny$clientData[[paste0("output_",plot$outImage,"_width")]] })
-
-	printValue <- function(dim, x) {
-		t <- plot$resolveThresholds(dim, x)
-		paste0("[", round(t[1], digits = 3), ", ", round(t[2], digits = 3), "]")
-	}
-	printInterval <- function(dim, x, y) {
-		x <- plot$resolveThresholds(dim, x)
-		y <- plot$resolveThresholds(dim, y)			
-		paste0("[", round(x[1], digits = 3), ", ", round(y[2], digits = 3), "]")
-	}
-
-	# Print currently displayed exact values
-	output[[plot$outExact]] <- plot$buildPrintExact(
-		printVarsValue = printValue, printHoverValue = printValue,
-		printZoomInterval = printInterval, printRangeInterval = printInterval
-	)
 	
 	plot$destroy <- function() {
 		plot$baseDestroy()
