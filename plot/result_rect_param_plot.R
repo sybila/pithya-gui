@@ -145,12 +145,7 @@ createRectResultPlot <- function(result, id, input, session, output) {
 					value <- vars[[v]]
 					if (!is.null(value)) {
 						validRectangles <- lapply(validRectangles, function(v) {
-							debug("valid rectangles")
-							debug(paste0(v, collapse = ", "))
-							r <- Filter(function(r) rectangleContains(r, p, value), v) 
-							debug("after filtering in ", p, " for ", value)
-							debug(paste0(r, collapse = ", "))
-							r
+							Filter(function(r) rectangleContains(r, p, value), v) 
 						})
 					}
 				}

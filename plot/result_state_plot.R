@@ -127,8 +127,10 @@ createResultStatePlot <- function(result, id, input, session, output) {
 			vars[[config$x]] <- plot$resolveStateIndex(config$x, sel$x)
 			vars[[config$y]] <- plot$resolveStateIndex(config$y, sel$y)
 
-			currentValue <- do.call("[", append(list(current), vars))
-			plot$state$selectedStates <- do.call("[<-", append(list(current), append(vars, !currentValue)))
+			# TODO: can we also deselect using this? 
+			# Problem: how to tell fast if the selection is empty
+			#currentValue <- do.call("[", append(list(current), vars))
+			plot$state$selectedStates <- do.call("[<-", append(list(current), append(vars, TRUE)))
 		}
 	})
 

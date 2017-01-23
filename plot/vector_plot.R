@@ -105,12 +105,8 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 			one <- replicate(config$arrowCount, replicate(config$arrowCount, 1))
 			range <- config$zoom[,2] - config$zoom[,1]
 			# Compute arrow grid
-			xDim <- t(replicate(config$arrowCount, sapply(0:(config$arrowCount-1), function(i) { 
-				i/(config$arrowCount-1) * range[1] + config$zoom[1,1]
-			})))
-			yDim <- replicate(config$arrowCount, sapply(0:(config$arrowCount-1), function(i) {
-				i/(config$arrowCount-1) * range[2] + config$zoom[2,1]
-			}))
+			xDim <- t(replicate(config$arrowCount, seq(config$zoom[1,1], range[1] + config$zoom[1,1], length.out = config$arrowCount)))
+			yDim <- replicate(config$arrowCount, seq(config$zoom[2,1], range[2] + config$zoom[2,1], length.out = config$arrowCount))
 
 			# Convert variable values to matrices
 			vars <- config$vars			
