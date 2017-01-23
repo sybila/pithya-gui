@@ -20,6 +20,8 @@ corePath = "..//biodivine-ctl//build//install//biodivine-ctl//bin//"
 
 shinyAppPort = "9999"
 
+emptyVarName = "(none)"
+
 # TODO change this on release version
 debug <- function(...) { print(paste0(...)) }
 

@@ -80,14 +80,15 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 	})
 
 	# Render vector dimension continuous sliders based on missing dimensions
-	output[[plot$outSliders]] <- renderUI({		
+	output[[plot$outSliders]] <- renderUI({
+		debug(id, ":vectorPlot render sliders")
 		lapply(plot$missingDimensions(), function(var) {
 			range <- plot$varRanges[[var]]
 			tooltip(tooltip = Explorer_VF_ScaleSlider_tooltip,
 				sliderInput(plot$sliders[var],
 					label = paste0(Explorer_VF_ScaleSlider_label, plot$varNames[var]),
 					min = range$min, max = range$max, 
-					value = unwrapOr(isolate(input[[plot$sliders[var]]]), range$min), 
+					value = unwrapOr(plot$baseConfig()$vars[[var]], range$min), 
 					step = scale_granularity
 				)
 			)			

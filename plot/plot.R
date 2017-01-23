@@ -71,21 +71,34 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 				yRange <- plot$varRanges[[dim$y]]
 				zoom <- matrix(c(xRange$min, yRange$min, xRange$max, yRange$max), 2)
 			}
-			vars <- lapply(1:plot$varCount, function(i) {
-					if (i == dim$x || i == dim$y) {
-						NULL
-					} else if (unwrapOr(input[[plot$project[i]]], FALSE)) {
-						NULL
+			valid <- TRUE
+			vars <- list()
+			for (i in 1:plot$varCount) {
+				if (i == dim$x || i == dim$y) {
+					vars[[i]] <- NULL
+				} else if (unwrapOr(input[[plot$project[i]]], FALSE)) {
+					vars[[i]] <- NULL
+				} else {
+					value <- input[[plot$sliders[i]]]
+					if (is.null(value)) {
+						# If value if null, it means sliders are not yet initialized
+						# and this config is not valid
+						valid <- FALSE
 					} else {
-						unwrapOr(input[[plot$sliders[i]]], plot$varRanges[[i]]$min)
+						vars[[i]] <- value
 					}
-			})
-			list(
-				vars = vars,
-				zoom = zoom,
-				x = dim$x, y = dim$y,
-				selection = plot$state$selection
-			)
+				}
+			}
+			if (!valid) {
+				NULL
+			} else {
+				list(
+					vars = vars,
+					zoom = zoom,
+					x = dim$x, y = dim$y,
+					selection = plot$state$selection
+				)
+			}			
 		}
 	})
 

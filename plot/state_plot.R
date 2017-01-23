@@ -173,7 +173,7 @@ createStatePlot <- function(model, id, input, session, output) {
 				sliderInput(plot$sliders[var],
 					label = paste0(Explorer_SS_ScaleSlider_label, plot$varNames[var]),
 					min = 1, max = length(plot$model$varThresholds[[var]]) - 1, 
-					value = unwrapOr(isolate(input[[plot$sliders[var]]]), 1), step = 1
+					value = unwrapOr(plot$baseConfig()$vars[[var]], 1), step = 1
 				)
 			)			
 		})
