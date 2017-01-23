@@ -9,4 +9,4 @@ Model files:
   model_indep.bio -- model with two algebraically independent uncertain parameters
 
 Property files:
-  properties.ctl -- HUCTL property investigating states on limiting cycles 
+  property.ctl -- HUCTL property investigating states on limiting cycles 
