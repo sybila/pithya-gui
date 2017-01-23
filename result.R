@@ -21,24 +21,25 @@ parseResultData <- function(fileData) {
 
 	debug("param count: ", length(paramValues))
 
+	type <- file$type
+
+	# TODO - handle models without parameters or with just one variable
+
 	result <- list(
 		formulas = sapply(file$results, function(r) r$formula),
 		type = file$type,
 		varNames = file$variables,
+		varCount = length(file$variables),
 		varThresholds = file$thresholds,
 		varRanges = lapply(file$thresholds, function(t) list(min = t[1], max = t[length(t)])),
 		paramNames = file$parameters,
+		paramCount = length(file$parameters),
 		paramRanges = lapply(file$parameter_bounds, function(p) list(min = p[1], max = p[2])),
-		paramValues = lapply(paramValues, function(param) {
-			#if (type == "rectangular") {
-			#	rectangleCount <- length(param)
-			#	parameterCount <- length(file$parameters)				
-			#} else if (type == "smt") {
-			#	expression <- gsub("&&", "&", fixed = TRUE, gsub("||", "|", fixed = TRUE, param$Rexpression))
-			#	eval(parse(text = paste0("function(ip) { ", expression, "} ")))
-			#} else "Unknown parameter type"
-			NULL
-		}),
+		paramValues = if (type == "rectangular") {
+			lapply(paramValues, function(p) lapply(p, function(r) unlist(r)))
+		} else {
+			# TODO
+		},
 		resultMapping = lapply(file$results, function(result) {
 			map <- stateSpace
 			# WARNING!!! This whole thing relies on the predictable state IDs which correspond to 
@@ -55,7 +56,12 @@ parseResultData <- function(fileData) {
 	)
 
 	debug("[result] parsing finished")
-	#debug(result)
+	#debug(result$paramValues[[1]])
+	debug(result$paramValues[[2]])
 
 	result
+}
+
+rectangleContains <- function(rect, dim, value) {
+	rect[2*(dim-1)+1] <= value && value <= rect[2*(dim-1)+2]
 }

@@ -180,18 +180,6 @@ computeTransitions <- function(model, params, boundedUp, boundedDown) {
 
 	## Utility functions
 
-	# Remove one specific row(column?) from given dimension without affecting rest of the array
-	dropRow <- function(arr, dim, row) {		
-		# arr[,,-row,,]
-		mask <- lapply(1:dimensionCount, function(i) if (i == dim) -row else TRUE)
-		do.call("[", append(list(arr, drop = FALSE), mask))		
-	}
-	# Update one specific row(column?) from given dimension without affecting rest of the array
-	assignRow <- function(arr, dim, row, value) {
-		# arr[,,row,,] <- value
-		mask <- append(lapply(1:dimensionCount, function(i) if (i == dim) row else TRUE), value)		
-		do.call("[<-", append(list(arr), mask))				
-	}
 	# Merge subsequent values in all dimensions except for the given one.
 	# Result is facet validity for investigated dimension.
 	contractDims <- function(l, dim) {

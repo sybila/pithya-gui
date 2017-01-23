@@ -115,7 +115,7 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 				selection = plot$state$selection
 			)		
 		}
-	})
+	}) %>% debounce(100)
 
 	## State observers
 
@@ -238,17 +238,17 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 	output[[plot$outSliders]] <- renderUI({				
 		lapply(plot$missingDimensions(), function(var) {	
 			if (useProjections) {
-				advanced(
+				# TODO advanced(
+				tagList(
 					tooltip(tooltip = Result_PS_ScaleSwitch_tooltip,
 						checkboxInput(plot$project[var], 
 							label = paste0(Result_PS_ScaleSlider_label, plot$varNames[var]),
 							# Note: the default value is a little bit of a hack, because we assume only
 							# parameters are countinuous in a mixed graph.
-							value = unwrapOr(input[[plot$project[var]]], plot$varContinuous[var])	# TODO default value
-						),
-
+							value = unwrapOr(input[[plot$project[var]]], TRUE)#plot$varContinuous[var])	# TODO default value
+						)
 					),
-					conditionalPanel(condition = paste0("input.", plot$project[var]), " == false",
+					conditionalPanel(condition = paste0("input.", plot$project[var], " == false"),
 						plot$renderSlider(var)
 					)
 				)				

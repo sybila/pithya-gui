@@ -17,8 +17,7 @@ createResultStatePlot <- function(result, id, input, session, output) {
 
 	plot$result <- result
 	plot$state$formulaIndex <- NULL
-	stateSpaceSizes <- sapply(plot$varThresholds, function(x) length(x) - 1)
-	plot$state$selectedStates <- stateSpace <- array(FALSE, stateSpaceSizes)
+	plot$state$selectedStates <- NULL
 	plot$state$selectedParams <- NULL
 
 	# Create a configuration object for the main plot
@@ -60,9 +59,9 @@ createResultStatePlot <- function(result, id, input, session, output) {
 				xlab = plot$varNames[config$x], ylab = plot$varNames[config$y],
 				xaxs = "i", yaxs = "i", type = "n"
 			)
-			
+
 			# Draw threshold lines
-			abline(v = xThres, h = yThres)
+			abline(v = xThres, h = yThres)		
 
 			xThresholdCount <- length(xThres)
 			yThresholdCount <- length(yThres)
@@ -97,10 +96,12 @@ createResultStatePlot <- function(result, id, input, session, output) {
 			)			
 
 			# Draw selected states
-			selectedProjection <- projection & do.call("[", append(list(config$selectedStates, drop = TRUE), dimensionMask))
-			rect(xLow[selectedProjection], yLow[selectedProjection], xHigh[selectedProjection], yHigh[selectedProjection], 
-				col = first_formula_color_clicked, border = "black", lwd = 1.5
-			)			
+			if (!is.null(config$selectedStates)) {
+				selectedProjection <- projection & do.call("[", append(list(config$selectedStates, drop = TRUE), dimensionMask))
+				rect(xLow[selectedProjection], yLow[selectedProjection], xHigh[selectedProjection], yHigh[selectedProjection], 
+					col = first_formula_color_clicked, border = "black", lwd = 1.5
+				)			
+			}			
 
 			# Draw selected params 
 			if (!is.null(config$selectedParams)) {
@@ -109,21 +110,25 @@ createResultStatePlot <- function(result, id, input, session, output) {
 				rect(xLow[selectedParamStates], yLow[selectedParamStates], xHigh[selectedParamStates], yHigh[selectedParamStates], 
 					border = "blue", lwd = 2
 				)					
-			}			
+			}	
 		}
 	}, height = function() { session$shiny$clientData[[paste0("output_",plot$outImage,"_width")]] })
 	
+	# Add/remove to selected items when selection changes
 	plot$.selectionUpdate <- observe({
 		sel <- plot$state$selection
 		config <- isolate(plot$baseConfig())
 		if (is.null(sel) || is.null(config)) {
-			stateSpaceSizes <- sapply(plot$varThresholds, function(x) length(x) - 1)
-			plot$state$selectedStates <- stateSpace <- array(FALSE, stateSpaceSizes)
+			plot$state$selectedStates <- NULL
 		} else {
+			stateSpaceSizes <- sapply(plot$varThresholds, function(x) length(x) - 1)
+			current <- unwrapOr(isolate(plot$state$selectedStates), array(FALSE, stateSpaceSizes))
 			vars <- config$vars
 			vars[[config$x]] <- plot$resolveStateIndex(config$x, sel$x)
 			vars[[config$y]] <- plot$resolveStateIndex(config$y, sel$y)
-			plot$state$selectedStates <- do.call("[<-", append(list(plot$state$selectedStates), append(vars, TRUE)))
+
+			currentValue <- do.call("[", append(list(current), vars))
+			plot$state$selectedStates <- do.call("[<-", append(list(current), append(vars, !currentValue)))
 		}
 	})
 

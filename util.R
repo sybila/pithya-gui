@@ -95,3 +95,22 @@ let <- function(value, action) {
     action(value)
   }
 }
+
+
+# Remove one specific row(column?) from given dimension without affecting rest of the array
+dropRow <- function(arr, dim, row) {    
+  # arr[,,-row,,]
+  mask <- lapply(1:length(dim(arr)), function(i) if (i == dim) -row else TRUE)
+  do.call("[", append(list(arr, drop = FALSE), mask))   
+}
+# Update one specific row(column?) from given dimension without affecting rest of the array
+assignRow <- function(arr, dim, row, value) {
+  # arr[,,row,,] <- value
+  mask <- append(lapply(1:length(dim(arr)), function(i) if (i == dim) row else TRUE), value)    
+  do.call("[<-", append(list(arr), mask))       
+}
+
+rowProjection <- function(arr, dim, row) {
+  mask <- lapply(1:length(dim(arr)), function(i) if (i == dim) row else TRUE)
+  do.call("[", append(list(arr, drop = FALSE), mask))
+}

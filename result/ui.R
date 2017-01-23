@@ -55,7 +55,7 @@ resultRow <- function(r, input) {
             column(1, paste0("Row ", r$id)),
             column(4, tooltip(tooltip = Result_chooseFormulaOfInterest_tooltip,
                 selectInput(r$formula, Result_chooseFormulaOfInterest_label, choices = r$result$formulas, 
-                    selected = unwrapOr(isolate(input[[r$formula]]), r$result$formulas[1])
+                    selected = unwrapOr(input[[r$formula]], r$result$formulas[1])
                 )
             )),        
             column(2, tooltip(tooltip = Result_cancel_tooltip,
@@ -74,12 +74,12 @@ resultRow <- function(r, input) {
                 fluidRow(
                     column(6, tooltip(tooltip = Result_horizontal_tooltip,
                         selectInput(r$xDimParams, Result_horizontal_label, choices = varList,
-                            selected = unwrapOr(isolate(input[[r$xDimParams]]), varList[1])
+                            selected = unwrapOr(input[[r$xDimParams]], varList[1])
                         )
                     )),
                     column(6, tooltip(tooltip = Result_vertical_tooltip,
                         selectInput(r$yDimParams, Result_vertical_label, choices = varList,
-                            selected = unwrapOr(isolate(input[[r$yDimParams]]), varList[2])
+                            selected = unwrapOr(input[[r$yDimParams]], varList[2])
                         )
                     ))
                 ),
@@ -104,12 +104,12 @@ resultRow <- function(r, input) {
                 fluidRow(
                     column(6, tooltip(tooltip = Result_SS_horizontal_tooltip,
                         selectInput(r$xDimStates, Result_SS_horizontal_label, choices = r$result$varNames,
-                            selected = unwrapOr(isolate(input[[r$xDimStates]]), r$result$varNames[1])
+                            selected = unwrapOr(input[[r$xDimStates]], r$result$varNames[1])
                         )
                     )),
                     column(6, tooltip(tooltip = Result_SS_vertical_tooltip,
                         selectInput(r$yDimStates, Result_SS_vertical_label, choices = r$result$varNames,
-                            selected = unwrapOr(isolate(input[[r$yDimStates]]), r$result$varNames[2])
+                            selected = unwrapOr(input[[r$yDimStates]], r$result$varNames[2])
                         )
                     ))
                 ),

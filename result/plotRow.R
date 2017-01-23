@@ -2,7 +2,7 @@ source("config.R")          # global configuration
 source("tooltips.R")        # texts
 source("ui_global.R")       
 source("result/ui.R")
-source("plot/state_plot.R")
+source("plot/result_rect_param_plot.R")
 source("plot/result_state_plot.R")
 
 createResultPlotRow <- function(id, result, input, session, output,
@@ -22,8 +22,11 @@ createResultPlotRow <- function(id, result, input, session, output,
 		paramRanges = result$paramRanges	
 	)
 
-	row$params <- createStatePlot(fakeModel, session$pithya$nextId(), input, session, output)
-	#row$params$state$params <- list(1.0, 1.0, 1.0)
+	if (result$type == "rectangular") {
+		row$params <- createRectResultPlot(result, session$pithya$nextId(), input, session, output)
+	} else {
+		row$params <- createStatePlot(fakeModel, session$pithya$nextId(), input, session, output)
+	}	
 	row$states <- createResultStatePlot(result, session$pithya$nextId(), input, session, output)
 	row$states$state$formulaIndex <- 1
 
@@ -64,10 +67,18 @@ createResultPlotRow <- function(id, result, input, session, output,
 		row$params$state$formulaIndex <- index
 	})
 
+	row$.syncSelectedStates <- observe(
+		row$params$state$selectedStates <- row$state$state$selectedStates		
+	)
+
+	row$.syncSelectedParams <- observe(
+		row$states$state$selectedParams <- row$params$state$selectedParams
+	)
+
 	# Params plot 
 	# Update select input to ensure no duplicates and one value is always parameter
 	row$.paramsDimSelectUpdate <- observeEvent(c(input[[row$xDimParams]], input[[row$yDimParams]]), {
-		debug("[row] update params dimension selectors ", id)	
+		debug("[row] update params dimension selectors")	
 		params <- row$result$paramNames
 		vars <- row$result$varNames
 		all <- c(vars, params)
@@ -89,6 +100,7 @@ createResultPlotRow <- function(id, result, input, session, output,
 				ySelected <- yOptions[1]
 			}
 		}
+		row$params$updateDimensions(x = xSelected, y = ySelected)
 		updateSelectInput(session$shiny, row$xDimParams, choices = xOptions, selected = xSelected)
 		updateSelectInput(session$shiny, row$yDimParams, choices = yOptions, selected = ySelected)
 	})
