@@ -1,5 +1,5 @@
 #####################################################################################
-# synthetic biology example							    #
+# metabolic synthetic biology example						    #
 # modelled process: degradation of substrate SUB into product PROD 		    #
 #  	   	    via INT1 and INT2 intermediates,				    #
 #		    chain of three catalytic reactions				    # 
