@@ -242,6 +242,11 @@ editorServer <- function(input, session, output) {
 		killRemoteProcess(session, approximationProcess)
 	})
 
+	observeEvent(input$synthesis_kill, {
+		debug("[killSynthesis] kill requested")	
+		killRemoteProcess(session, synthesisProcess)
+	})
+
 	observeEvent(input$add_thresholds, {
 		tryCatch({
 			removeModal()

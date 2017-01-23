@@ -1,6 +1,7 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
 source("result/plotRow.R")
+source("result.R")
 
 
 resultServer <- function(input, session, output) {
@@ -51,6 +52,23 @@ resultServer <- function(input, session, output) {
 	#observeEvent(session$pithya$synthesisResult$file, {
 	#	updateButton(session$shiny, "save_result_file", style = "success", disabled = is.null(session$pithya$synthesisResult$file))	
 	#})
+
+	# Load result file into the text editor after upload or reset
+	observeEvent(input$ps_file, {
+		if (is.null(input$ps_file) || is.null(input$ps_file$datapath)) {
+			showNotification("Invalid result file")			
+		} else {
+			tryCatch({
+				result <- parseResultFile(input$ps_file$datapath)
+				session$pithya$synthesisResult$result <- result
+				# Always outdates, because it is loaded from file
+				session$pithya$synthesisResult$outdated <- TRUE
+				debug("result loaded successfully")
+			}, error = function(e) {
+				showNotification(paste0("Invalid result file: ", e))
+			})
+		}
+	})
 
 	# Download result file (if available)
 	output$save_result_file <- downloadHandler(
