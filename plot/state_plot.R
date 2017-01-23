@@ -15,6 +15,7 @@ createStatePlot <- function(model, id, input, session, output) {
 	plot$state$params <- NULL
 	plot$state$transitions <- NULL
 	plot$state$reachable <- NULL
+	plot$state$transitionsConfig <- NULL
 
 	# Utility function which return the index of the state to which the vlaue belongs
 	plot$resolveStateIndex <- function(dim, x) {
@@ -51,24 +52,34 @@ createStatePlot <- function(model, id, input, session, output) {
 				}
 			})
 			
-			baseConfig$restrictedModel <- list(
+			restrictedModel <- list(
 					varNames = plot$model$varNames,
 					varRanges = lapply(restrictedThresholds, function(x) list(min = x[1], max = x[length(x)])),
 					varThresholds = restrictedThresholds,
 					varEQ = plot$model$varEQ,
 					paramNames = plot$model$paramNames,
 					paramRanges = plot$model$paramRanges
-				)
+				)			
 
-			baseConfig$params <- params
+			# We can't use basConfig, becuase we don't want to get notified about zoom and selection
+			newConfig <- list(
+				vars = baseConfig$vars,
+				params = params,
+				restrictedModel = restrictedModel,
+				x = baseConfig$x, y = baseConfig$y
+			)
 
-			baseConfig
+			# Update only if changed
+			if (!isTRUE(all.equal(newConfig, plot$state$transitionsConfig))) {
+				debug("update transition config")
+				plot$state$transitionsConfig <- newConfig
+			}
 		}
 	}) %>% debounce(200)
 
 	# Recompute the transition system when the configuration object changes.
 	plot$.computeTransitions <- observe({
-		config <- plot$transitionsConfig()
+		config <- plot$state$transitionsConfig
 		if (is.null(config)) {
 			plot$state$transitions <- NULL
 		} else {
@@ -84,7 +95,9 @@ createStatePlot <- function(model, id, input, session, output) {
 				i == config$x || i == config$y || config$vars[[i]] == 1
 			})
 
-			transitions <- computeTransitions(config$restrictedModel, config$params, boundedUp, boundedDown)
+			withProgress(message = "Computing transitions", min = 0, max = 1, expr = {
+				transitions <- computeTransitions(config$restrictedModel, config$params, boundedUp, boundedDown)
+			})			
 
 			# Note: the drop trick works only because all other dimensions in restricted model have size 1
 			xUp <- drop(transitions$trans[[config$x]]$up)

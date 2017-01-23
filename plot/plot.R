@@ -75,9 +75,10 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 			vars <- list()
 			for (i in 1:plot$varCount) {
 				if (i == dim$x || i == dim$y) {
-					vars[[i]] <- NULL
+					# This is a very special way to set vars to NULL and actually keeping the index valid
+					vars[i] <- list(NULL)
 				} else if (unwrapOr(input[[plot$project[i]]], FALSE)) {
-					vars[[i]] <- NULL
+					vars[i] <- list(NULL)
 				} else {
 					value <- input[[plot$sliders[i]]]
 					if (is.null(value)) {
@@ -129,8 +130,8 @@ createBasePlot <- function(varNames, varRanges, id, input, session, output) {
 			config <- plot$baseConfig()
 			if (is.null(config)) {
 				cat("...")
-			} else {			
-				# render existing values
+			} else {	
+				# render existing values	
 				vars <- config$vars
 				for (i in 1:plot$varCount) {
 					if (!is.null(vars[[i]])) {

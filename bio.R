@@ -128,7 +128,8 @@ ramp <- function(value,min,max,a,b) {
     }
 }
 
-Approx <- function(m,l) {
+# TODO: can we speed this up?!
+Approx <- function(m,l) {	
     apply(as.matrix(m),c(1,2),function(s) {
         if(s <= l[[1]][1]) return(l[[1]][2])
         if(s >= l[[length(l)]][1]) return(l[[length(l)]][2])
@@ -169,7 +170,12 @@ computeTransitions <- function(model, params, boundedUp, boundedDown) {
 	})
 
 	# Compute derivation values in all vertices
-	dv <- lapply(model$varEQ, function(eq) one * eq(vars, params))	
+	progressPerVar <- 0.8 / dimensionCount
+	dv <- lapply(model$varEQ, function(eq) {				
+		r <- one * eq(vars, params)
+		incProgress(progressPerVar)
+		r
+	})	
 
 	## Utility functions
 
@@ -231,9 +237,12 @@ computeTransitions <- function(model, params, boundedUp, boundedDown) {
 		positiveFlow|negativeFlow
 	})
 
+	setProgress(0.9)
+
 	# Compute global loop property based on flow in every dimension
 	flow <- Reduce(function(x,y) x|y, dimFlows)
 	loop <- !flow
+	setProgress(1.0)
 	list(
 		loop = loop,
 		trans = lapply(1:dimensionCount, function(d) {
