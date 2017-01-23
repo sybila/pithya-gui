@@ -1,5 +1,5 @@
 ##################################################################################
-# Properties representing basic properties of G1/S transition switch.	         #
+# Formulae representing basic properties of G1/S transition switch.	         #
 ##################################################################################
 # 1. E2F1 protein is required to stay in high or low concentration mode.         #
 # 2. E2F1 protein is required to reach the high or low concentration mode.       #
