@@ -1,0 +1,12 @@
+#####################################################################################
+# synthetic biology example files	                                            #
+# modelled process: repressilator of 3 genes with mut negative feedback             #
+#                                                                                   #
+# goal: investigate oscillatory behaviour for specific parameters                   #
+#####################################################################################
+
+Model files:
+  model_indep.bio -- model with two algebraically independent uncertain parameters
+
+Property files:
+  properties.ctl -- HUCTL property investigating states on limiting cycles 
