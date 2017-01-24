@@ -45,7 +45,7 @@ createResultParamPlot <- function(result, id, input, session, output) {
 		baseConfig <- plot$baseConfig()
 		formula <- plot$state$formulaIndex
 		coverage <- plot$state$coverage
-		if (is.null(baseConfig) || is.null(formula) || is.null(coverage)) {
+		if (is.null(baseConfig) || is.null(formula)) {
 			NULL
 		} else {
 
