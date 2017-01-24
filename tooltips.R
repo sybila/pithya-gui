@@ -219,8 +219,8 @@ Result_addPlot_tooltip <- "Add new plot for parameter space and the correspondin
 #WARNING: these are in server.R
 #Result_experiment_label <- "Experiment no. "
 
-Result_chooseFormulaOfInterest_label <- "choose formula:"
-Result_chooseFormulaOfInterest_tooltip <- "Choose formula for which to display the results."
+Result_chooseFormulaOfInterest_label <- "select formula:"
+Result_chooseFormulaOfInterest_tooltip <- "Select formula for which to display the results."
 
 Result_chooseFormulaOfInterest_error <- "Parameter synthesis has to be run or a results file loaded before results can be shown."
 
