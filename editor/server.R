@@ -173,8 +173,8 @@ editorServer <- function(input, session, output) {
 	# Load property file into the text editor after upload or reset
 	observeEvent(c(input$prop_file, input$reset_prop), {
 		if (is.null(input$prop_file) || is.null(input$prop_file$datapath)) {
-			# load example properties TODO: remove in final version
-			data <- readLines(paste0(session$pithya$examplesDir, defaultProperty))
+			#data <- readLines(paste0(session$pithya$examplesDir, defaultProperty))
+			data <- ""
 		} else {
 			data <- readLines(input$prop_file$datapath)
 		}
