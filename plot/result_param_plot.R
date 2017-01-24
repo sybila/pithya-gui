@@ -45,13 +45,8 @@ createResultParamPlot <- function(result, id, input, session, output) {
 			thresholds <- lapply(1:result$paramCount, function(p) {
 				range <- result$paramRanges[[p]]				
 				if (p + result$varCount == config$x) {
-					debug("px seq")
-					debug(range)
-					debug(config$zoom[1,])
-					debug(max(range$min, config$zoom[1,1]), min(range$max, config$zoom[1,2]))
 					seq(max(range$min, config$zoom[1,1]), min(range$max, config$zoom[1,2]), length.out = density)	
 				} else if (p + result$varCount == config$y) {
-					debug("py seq")
 					seq(max(range$min, config$zoom[2,1]), min(range$max, config$zoom[2,2]), length.out = density)	
 				} else {
 					seq(range$min, range$max, length.out = density)	
@@ -193,8 +188,6 @@ createResultParamPlot <- function(result, id, input, session, output) {
 
 		pValues <- unique(Reduce(c, mapping))
 		pValues <- pValues[!pValues==0]
-
-		plot$state$pValues <- unique(append(pValues, isolate(plot$state$pValues)))
 
 		if (length(pValues) == 0) {
 			list()
@@ -398,7 +391,7 @@ createResultParamPlot <- function(result, id, input, session, output) {
 
 					for (iT in 1:(length(plot$varThresholds[[iVar]])-1)) {
 						if (!stateMask[iT]) next
-						
+
 						# Reduce state space to this threshold.
 						reducedMapping <- rowProjection(mapping, iVar, iT)
 
@@ -452,14 +445,21 @@ createResultParamPlot <- function(result, id, input, session, output) {
 		}
 	}, height = function() { session$shiny$clientData[[paste0("output_",plot$outImage,"_width")]] })	
 
-	# Recompute selected parameters when pValues of selection changes
-	observe({
-		pValues <- plot$state$pValues
+	# Recompute selected parameters
+	observe({				
 		sel <- plot$state$selection
 		config <- isolate(plot$config())
-		if (is.null(pValues) || is.null(sel) || is.null(config)) {
+
+		if (is.null(sel) || is.null(config)) {
 			plot$state$selectedParams <- NULL
 		} else {
+
+			# We have to recompute pValues here, becuase they can't depend on selected states
+			mapping <- config$mapping
+
+			pValues <- unique(Reduce(c, mapping))
+			pValues <- pValues[!pValues==0]
+
 			vars <- config$vars
 			if (plot$varContinuous[config$x]) {
 				vars[[config$x]] <- sel$x				
