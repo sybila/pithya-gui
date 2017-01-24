@@ -75,12 +75,17 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 		plot$state$flow <- let(plot$flowConfig(), function(config) {
 			debug(id, ":vectorPlot recomupte flow ")
 			flow <- replicate(plot$varCount, replicate(config$pointCount, 0, simplify = "matrix"), simplify = "matrix")
-			debug(flow)
+			maxMove <- sapply(plot$model$varRanges, function(r) abs(r$max - r$min) / 50)
 			flow[1,] <- config$startingPoint
 			for (i in 2:config$pointCount) {
 				vars <- flow[i-1,]
 				for (v in 1:plot$varCount) {
-					flow[i,v] <- vars[v] + config$pointDensity * config$equations[[v]](vars, config$params)
+					move <- config$equations[[v]](vars, config$params)
+					if (abs(move) > maxMove[v]) {
+						move <- move * 10^log10(maxMove[v])
+					}
+					new <- vars[v] + config$pointDensity * move
+					flow[i,v] <- new
 				}				
 			}
 			flow		
