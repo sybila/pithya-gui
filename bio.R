@@ -162,7 +162,6 @@ computeTransitions <- function(model, params, boundedUp, boundedDown) {
 	one <- array(1, dimensionSizes)
 	params <- lapply(params, function(p) one * p)
 	vars <- lapply(1:dimensionCount, function(d) {
-		thresholds <- model$varThresholds[[d]]
 		# create permutation vectors
 		dimensions <- 1:dimensionCount
 		dimensions[c(1,d)] <- dimensions[c(d,1)]

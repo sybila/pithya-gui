@@ -4,6 +4,7 @@ source("ui_global.R")
 source("result/ui.R")
 source("plot/result_rect_param_plot.R")
 source("plot/result_state_plot.R")
+source("plot/result_smt_param_plot.R")
 
 createResultPlotRow <- function(id, result, input, session, output,
 	onRemove = function(row) {}		# called when row remove button is clicked
@@ -13,19 +14,10 @@ createResultPlotRow <- function(id, result, input, session, output,
 	row$id <- id
 	row$result <- result
 
-	fakeModel <- list(
-		varNames = result$varNames,
-		varThresholds = result$varThresholds,
-		varRanges = result$varRanges,
-		varEQ = lapply(result$varNames, function(n) { function(vars, params) 1 } ),
-		paramNames = result$paramNames,
-		paramRanges = result$paramRanges	
-	)
-
 	if (result$type == "rectangular") {
 		row$params <- createRectResultPlot(result, session$pithya$nextId(), input, session, output)
 	} else {
-		row$params <- createStatePlot(fakeModel, session$pithya$nextId(), input, session, output)
+		row$params <- createSmtResultPlot(result, session$pithya$nextId(), input, session, output)
 	}	
 	row$states <- createResultStatePlot(result, session$pithya$nextId(), input, session, output)
 	row$states$state$formulaIndex <- 1

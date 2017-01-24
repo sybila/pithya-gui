@@ -8,6 +8,59 @@ resultServer <- function(input, session, output) {
 
 	plotRows <- reactiveValues()
 
+	# Compute parameter coverage when result changes and is SMT or coverage is enabled
+	observe({
+		enabled <- input$coverage_check
+		density <- input$density_coeficient
+		result <- session$pithya$synthesisResult$result
+		debug("Result changed!")
+		if (is.null(result) || (result$type == "rectangular" && !enabled)) {
+			session$pithya$synthesisResult$coverage <- NULL
+		} else {
+			withProgress(message = "Computing parameter coverage...", expr = {
+				debug("[coverage] computing coverage: ", result$type)
+				paramThresholds <- lapply(result$paramRanges, function(range) {
+					seq(range$min, range$max, length.out = density)	
+				})
+				centers <- lapply(paramThresholds, function(thresholds) {
+					(thresholds[-1] + thresholds[-length(thresholds)]) / 2
+				})
+				dimensionSizes <- rep(density - 1, result$paramCount)
+				one <- array(1, dimensionSizes)
+				params <- lapply(1:result$paramCount, function(p) {
+					# create permutation vectors (sizes are all the same)
+					dimensions <- 1:result$paramCount
+					dimensions[c(1,p)] <- dimensions[c(p,1)]
+					aperm(array(centers[[p]], dimensionSizes), dimensions)
+				})
+
+				step <- 1/length(result$paramValues)
+				coverage <- lapply(result$paramValues, function(p) { 
+					incProgress(step)
+					if(result$type == "smt") {
+						p(params) 
+					} else {					
+						Reduce(function(a,b) a | b, lapply(p, function(rect) rectangleContainsPoints(rect, params)))
+					}
+				})
+
+				#for (c in coverage) debug(c)
+
+				session$pithya$synthesisResult$coverage <- list(
+					thresholds = paramThresholds,
+					data = coverage
+				)
+			})			
+		}		
+	})
+
+	# Update coverage after it has been computed
+	observeEvent(session$pithya$synthesisResult$coverage, {
+		for (row in isolate(reactiveValuesToList(plotRows))) {
+			row$params$state$coverage <- session$pithya$synthesisResult$coverage
+		}
+	})
+
 	# Remove plots when synthesis result changes and enable button
 	observeEvent(session$pithya$synthesisResult$result, {		
 		enabled <- !is.null(session$pithya$synthesisResult$result)
@@ -31,7 +84,7 @@ resultServer <- function(input, session, output) {
 					row$destroy()
 					plotRows[[row$outRow]] <- NULL
 				}
-			)
+			)			
 			plotRows[[row$outRow]] <- row			
 		})			
 	})	

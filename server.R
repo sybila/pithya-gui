@@ -20,8 +20,8 @@ mySession <- list(shiny=session, pithya=list(
     approximatedModel = reactiveValues(file = NULL, model = NULL, outdated = FALSE),
     #synthesisResult = reactiveValues(file = NULL, result = NULL, outdated = TRUE),
     synthesisResult = reactiveValues(
-        file = "example/repressilator_2D/model_indep.results.json", 
-        result = parseResultFile("example/repressilator_2D/model_indep.results.json"), 
+        file = NULL,#"example/repressilator_2D/model_dep.results.json", 
+        result = parseResultFile("example/repressilator_2D/model_dep.results.json"), 
         outdated = FALSE
     ),
     sessionDir = tempdir(),
@@ -51,7 +51,7 @@ observeEvent(mySession$pithya$synthesisResult$file, {
     file <- mySession$pithya$synthesisResult$file
     if (!is.null(file)) {
         tryCatch({
-                mySession$pithya$synthesisResult$result <- parseResultFile(file)
+            mySession$pithya$synthesisResult$result <- parseResultFile(file)
         }, error = function(e) {
             debug("[result parser] parsing error: ", e)
             showNotification("[INTERNAL ERROR] Result parsing failed")
