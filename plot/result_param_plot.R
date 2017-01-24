@@ -257,32 +257,33 @@ createResultParamPlot <- function(result, id, input, session, output) {
 							}
 
 							validity <- validity > 0
+
+							varLow <- plot$varThresholds[[iVar]][iT]
+							varHigh <- plot$varThresholds[[iVar]][iT+1]	
+
+							pThres <- config$coverage$thresholds[[iParam]]
+							pCount <- length(pThres)
+
+							validity <- validity > 0
+
+							if (config$x == iVar) {
+								xLow <- rep(varLow, length(validity))
+								xHigh <- rep(varHigh, length(validity))
+								yLow <- pThres[-pCount]
+								yHigh <- pThres[-1]
+							} else {
+								xLow <- pThres[-pCount]
+								xHigh <- pThres[-1]
+								yLow <- rep(varLow, length(validity))
+								yHigh <- rep(varHigh, length(validity))							
+							}
+
+							rect(
+								xLow[validity], yLow[validity], xHigh[validity], yHigh[validity],
+								col = rgb(0, 0.5, 0, alpha = alpha[validity]), border = NA
+							)
+
 						}
-
-						varLow <- plot$varThresholds[[iVar]][iT]
-						varHigh <- plot$varThresholds[[iVar]][iT+1]	
-
-						pThres <- config$coverage$thresholds[[iParam]]
-						pCount <- length(pThres)
-
-						validity <- validity > 0
-
-						if (config$x == iVar) {
-							xLow <- rep(varLow, length(validity))
-							xHigh <- rep(varHigh, length(validity))
-							yLow <- pThres[-pCount]
-							yHigh <- pThres[-1]
-						} else {
-							xLow <- pThres[-pCount]
-							xHigh <- pThres[-1]
-							yLow <- rep(varLow, length(validity))
-							yHigh <- rep(varHigh, length(validity))							
-						}
-
-						rect(
-							xLow[validity], yLow[validity], xHigh[validity], yHigh[validity],
-							col = rgb(0, 0.5, 0, alpha = alpha[validity]), border = NA
-						)
 					}
 				}
 			} else {
