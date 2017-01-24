@@ -93,7 +93,7 @@ Explorer_tooltip <- ""
 Explorer_countOfDirectionArrows_label <- "Arrows Count"
 Explorer_countOfDirectionArrows_tooltip <- "Total number of arrows per dimension inside vector field(s)."
 
-Explorer_lengthOfDirectionArrows_label <- "Arrows Lenght"
+Explorer_lengthOfDirectionArrows_label <- "Arrows Length"
 Explorer_lengthOfDirectionArrows_tooltip <- "Scaling factor for length of arrows inside vector field(s)."
 
 Explorer_coloringThreshold_label <- "Colouring Threshold"
@@ -103,13 +103,13 @@ Explorer_widthOfAllArrows_label <- "Arrows Width"
 Explorer_widthOfAllArrows_tooltip <- "Scaling factor for width of arrows inside vector field(s) and transition-state space(s)."
 
 Explorer_coloringDirection_label <- "Colouring Orientation"
-Explorer_coloringDirection_tooltip <- "Choose vector field arrow component(s) to which colouring is applied."#"Choose direction(s) to color."
+Explorer_coloringDirection_tooltip <- "Choose vector field arrow component(s) to which colouring is applied."#"Choose direction(s) to colour."
 
 Explorer_flowPointsCount_label <- "Trajectory Points Number"  
 #"no. of trajectory points"
 Explorer_flowPointsCount_tooltip <- "Set number of points to plot the trajectory. Increase to prolong the trajectory." #TODO: "sets "
 
-Explorer_flowPointsDensity_label <- "Trajectory Points Scalling Factor" 
+Explorer_flowPointsDensity_label <- "Trajectory Points Scaling Factor" 
 #"trajectory point density"
 Explorer_flowPointsDensity_tooltip <- "Set inverse value of trajectory points density. Decrease to make trajectory plot more precise."
 
