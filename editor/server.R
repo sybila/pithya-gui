@@ -162,9 +162,8 @@ editorServer <- function(input, session, output) {
 	# Load model file into the text editor after upload or reset
 	observeEvent(c(input$model_file, input$reset_model), {
 		if (is.null(input$model_file) || is.null(input$model_file$datapath)) {
-			# load example model TODO: remove in final version
-			printProgress(Starting_advice)
-			data <- readLines(paste0(session$pithya$examplesDir, defaultModel))
+			#data <- readLines(paste0(session$pithya$examplesDir, defaultModel))
+			data <- ""
 		} else {
 			data <- readLines(input$model_file$datapath)
 		}

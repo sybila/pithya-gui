@@ -15,14 +15,8 @@ source("result/server.R")
 shinyServer(function(input,output,session) {
 
     mySession <- list(shiny=session, pithya=list(
-        # TODO remove sample file
         approximatedModel = reactiveValues(file = NULL, model = NULL, outdated = FALSE),
-        #synthesisResult = reactiveValues(file = NULL, result = NULL, outdated = TRUE),
-        synthesisResult = reactiveValues(
-            file = NULL,#"example/repressilator_2D/model_dep.results.json", 
-            result = parseResultFile("example/repressilator_2D/model_dep.results.json"), 
-            outdated = FALSE
-        ),
+        synthesisResult = reactiveValues(file = NULL, result = NULL, outdated = FALSE),
         sessionDir = tempdir(),
         examplesDir = "example//",
         nextId = createCounter(1)
