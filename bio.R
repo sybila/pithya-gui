@@ -87,7 +87,7 @@ parseBioLines <- function(lines) {
 	# Ensure that no matter what, we have at least two variables!	
 	if (length(varNames) == 1) {
 		varNames <- c(varNames, emptyVarName)
-		varThresholds[[2]] <- c(0, 0)
+		varThresholds[[2]] <- c(0,1)
 		varRanges[[2]] <- list(min = 0, max = 0)
 		varEQ[[2]] <- function(vars, params) { 0 }
 	}

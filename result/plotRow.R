@@ -33,7 +33,7 @@ createResultPlotRow <- function(id, result, input, session, output,
 		debug("[row] update states dimension selectors")	
 		if (length(row$result$varNames) == 1) {
 			updateSelectInput(session$shiny, row$xDimStates, choices = row$result$varNames, selected = row$result$varNames[1])
-			updateSelectInput(session$shiny, row$yDimStates, choices = list("none"), selected = "none")
+			updateSelectInput(session$shiny, row$yDimStates, choices = list("(none)"), selected = "(none)")
 		} else {
 			xSelected <- input[[row$xDimStates]]
 			ySelected <- input[[row$yDimStates]]			

@@ -30,10 +30,18 @@ createResultParamPlot <- function(result, id, input, session, output) {
 	plot$state$formulaIndex <- NULL
 	plot$state$selectedStates <- NULL
 	plot$state$selectedParams <- NULL
+	plot$state$pValues <- NULL
+
+	# Clear selection when formula changes
+	observeEvent(plot$state$formulaIndex, {
+		plot$state$selection <- NULL	
+	})
 
 	# Create a configuration object for the main plot
 	plot$config <- reactive({
-		debug(id, ":resultRectParamsPlot update config")
+		# Erase pValues, since config changed
+		plot$state$pValues <- NULL
+		debug(id, ":resultParamsPlot update config")
 		baseConfig <- plot$baseConfig()
 		formula <- plot$state$formulaIndex
 		coverage <- plot$state$coverage
@@ -42,7 +50,9 @@ createResultParamPlot <- function(result, id, input, session, output) {
 		} else {
 
 			baseConfig$selectedStates <- plot$state$selectedStates
-			baseConfig$selectedParams <- plot$state$selectedParams
+			# We don't need it here and it will start looping the 
+			# param validity computation.
+			#baseConfig$selectedParams <- plot$state$selectedParams
 
 			baseConfig$xThres <- plot$varThresholds[[baseConfig$x]]
 			baseConfig$yThres <- plot$varThresholds[[baseConfig$y]]
@@ -75,6 +85,8 @@ createResultParamPlot <- function(result, id, input, session, output) {
 		# Get all valid parameter indices
 		pValues <- unique(Reduce(c, mapping))
 		pValues <- pValues[!pValues==0] 
+
+		plot$state$pValues <- unique(append(pValues, isolate(plot$state$pValues)))
 
 		if (length(pValues) == 0) {
 			c()			
@@ -112,6 +124,8 @@ createResultParamPlot <- function(result, id, input, session, output) {
 
 		pValues <- unique(Reduce(c, mapping))
 		pValues <- pValues[!pValues==0]
+
+		plot$state$pValues <- unique(append(pValues, isolate(plot$state$pValues)))
 
 		if (length(pValues) == 0) {
 			list()
@@ -334,11 +348,85 @@ createResultParamPlot <- function(result, id, input, session, output) {
 
 			}
 
+			sel <- config$selection			
+			if (!is.null(sel)) {
+				debug("selection: ", sel)
+				if (plot$varContinuous[config$x] && plot$varContinuous[config$y]) {
+					points(sel$x, sel$y, 
+						col=param_space_clicked_point$color, pch=param_space_clicked_point$type, ps=param_space_clicked_point$size, lwd=param_space_clicked_point$width
+					)
+				} else if (plot$varContinuous[config$x]) {
+					abline(v = sel$x, col = param_space_clicked_point$color)
+				} else {
+					abline(h = sel$y, col = param_space_clicked_point$color)
+				}
+			}		
+
 			# Draw threshold lines
 			# Draw last to ensure they are visible above parameter space
 			abline(v = xThres, h = yThres)		
 		}
 	}, height = function() { session$shiny$clientData[[paste0("output_",plot$outImage,"_width")]] })	
+
+	# Recompute selected parameters when pValues of selection changes
+	observe({
+		pValues <- plot$state$pValues
+		sel <- plot$state$selection
+		config <- isolate(plot$config())
+		if (is.null(pValues) || is.null(sel) || is.null(config)) {
+			plot$state$selectedParams <- NULL
+		} else {
+			vars <- config$vars
+			if (plot$varContinuous[config$x]) {
+				vars[[config$x]] <- sel$x				
+			} else {				
+				vars[[config$x]] <- plot$resolveStateIndex(config$x, sel$x)
+			}
+			if (plot$varContinuous[config$y]) {				
+				vars[[config$y]] <- sel$y
+			} else {				
+				vars[[config$y]] <- plot$resolveStateIndex(config$y, sel$y)
+			}
+			
+			if (!is.null(config$coverage)) {	# We are using coverage!
+				coverage <- config$coverage				
+				pValues <- Filter(function(p) {
+					validity <- coverage$data[[p]]					
+					# Apply parameter space cuts
+					for (p in 1:plot$result$paramCount) {
+						value <- vars[[p + plot$result$varCount]]						
+						if (!is.null(value)) {							
+							index <- stateIndexFromValue(coverage$thresholds[[p]], value)
+							validity <- rowProjection(validity, p, index)
+						}
+					}
+					any(validity)
+				}, pValues)		
+				plot$state$selectedParams <- sapply(1:length(plot$result$paramValues), function(p) {
+					p %in% pValues	
+				})
+			} else {
+				pValues <- Filter(function(p) {				
+					for (rect in plot$result$paramValues[[p]]) {
+						valid <- TRUE
+						for (p in 1:plot$result$paramCount) {
+							value <- vars[[p + plot$result$varCount]]
+							if (!is.null(value)) {
+								valid <- valid && rectangleContains(rect, p, value)								
+							}
+						}
+						if (valid) {
+							return(TRUE)
+						}
+					}			
+					FALSE
+				}, pValues)
+				plot$state$selectedParams <- sapply(1:length(plot$result$paramValues), function(p) {
+					p %in% pValues	
+				})
+			}
+		}
+	})
 
 	plot$destroy <- function() {
 		plot$baseDestroy()

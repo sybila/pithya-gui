@@ -111,6 +111,7 @@ createResultStatePlot <- function(result, id, input, session, output) {
 					border = "blue", lwd = 2
 				)					
 			}	
+
 		}
 	}, height = function() { session$shiny$clientData[[paste0("output_",plot$outImage,"_width")]] })
 	
