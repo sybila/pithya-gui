@@ -26,7 +26,7 @@ createSmtResultPlot <- function(result, id, input, session, output) {
 	debug(id, ":statePlot create")
 
 	plot$result <- result
-	plot$state$coverage <- session$pithya$synthesisResult$coverage
+	plot$state$coverage <- isolate(session$pithya$synthesisResult$coverage)
 	plot$state$formulaIndex <- NULL
 	plot$state$selectedStates <- NULL
 	plot$state$selectedParams <- NULL
@@ -43,7 +43,11 @@ createSmtResultPlot <- function(result, id, input, session, output) {
 
 			baseConfig$mapping <- plot$result$resultMapping[[formula]]
 			baseConfig$inverseMapping <- plot$result$resultInverseMapping[[formula]]
+
 			baseConfig$coverage <- plot$state$coverage
+			baseConfig$coverageEnabled <- unwrapOr(input$coverage_check, FALSE)
+			baseConfig$coverageAlpha <- unwrapOr(input$color_alpha_coeficient, 0.9)
+
 			baseConfig$selectedStates <- plot$state$selectedStates
 			baseConfig$selectedParams <- plot$state$selectedParams
 
@@ -130,9 +134,14 @@ createSmtResultPlot <- function(result, id, input, session, output) {
 						#validRectangles <- Filter(function(r) rectangleContains(r, p, value), validRectangles)
 					}
 				}
-
-				maxValidity <- max(validity)
-				alpha <- validity / maxValidity
+				
+				if (config$coverageEnabled) {
+					maxValidity <- max(validity)
+					alpha <- (validity / maxValidity) * config$coverageAlpha
+				} else {
+					# just set all to one
+					alpha <- pmin(1, validity)
+				}
 
 				xpThres <- config$coverage$thresholds[[xp]]				
 				ypThres <- config$coverage$thresholds[[yp]]

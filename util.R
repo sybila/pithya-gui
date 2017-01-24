@@ -114,3 +114,11 @@ rowProjection <- function(arr, dim, row) {
   mask <- lapply(1:length(dim(arr)), function(i) if (i == dim) row else TRUE)
   do.call("[", append(list(arr, drop = FALSE), mask))
 }
+
+explodeArray <- function(thresholds, d, dimensionSizes) {
+    # create permutation vector
+    dimensions <- 1:length(dimensionSizes)
+    dimensions[c(1,d)] <- dimensions[c(d,1)]
+    sizes <- sapply(dimensions, function(i) dimensionSizes[i])
+    aperm(array(thresholds, sizes), dimensions)
+}
