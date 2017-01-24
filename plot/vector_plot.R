@@ -70,12 +70,12 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 	}) %>% debounce(200)
 
 	# Recompute flow when flow config changes
-	plot$.flowComputer <- observe({		
+	plot$.flowComputer <- observe({	
 		plot$state$flow <- let(plot$flowConfig(), function(config) {
 			debug(id, ":vectorPlot recomupte flow ")
 			flow <- replicate(plot$varCount, replicate(config$pointCount, 0))
 			flow[1,] <- config$startingPoint
-			for (i in 2:input$flow_points_count) {
+			for (i in 2:config$pointCount) {
 				vars <- flow[i-1,]
 				for (v in 1:plot$varCount) {
 					flow[i,v] <- vars[v] + config$pointDensity * config$equations[[v]](vars, config$params)
