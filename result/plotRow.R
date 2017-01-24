@@ -68,7 +68,7 @@ createResultPlotRow <- function(id, result, input, session, output,
 		debug("[row] update params dimension selectors")	
 		params <- row$result$paramNames
 		vars <- row$result$varNames
-		all <- c(vars, params)
+		all <- c(params, vars)
 
 		# TODO - No parameters?!
 		

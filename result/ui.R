@@ -48,7 +48,7 @@ resultControlPanel <- function() {
 }
 
 resultRow <- function(r, input) {
-    varList <- c(r$result$varNames, r$result$paramNames)
+    varList <- c(r$result$paramNames, r$result$varNames)
     tagList(        
         # Header (formula selector, hide, remove)
         fluidRow(
