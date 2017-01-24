@@ -159,7 +159,12 @@ createResultParamPlot <- function(result, id, input, session, output) {
 			# Note: Sum is correct because each state is valid for only one pValue, 
 			# so the summed sets are distinct.
 			validity <- Reduce(function(a,b) a + b, lapply(pValues, function(p) {
-				config$coverage$data[[p]] * config$inverseMapping[p]
+				data <- config$coverage$data[[p]]
+				# this if is here just because sometimes, by error, an empty set can be returned.
+				# and such set has empty coverage data
+				if (length(data) == 0) { 0 } else {
+					config$coverage$data[[p]] * config$inverseMapping[p]
+				}				
 			}))
 
 			#Apply parameter space cuts (assuming the parameter projection is off)
