@@ -83,6 +83,7 @@ createResultStatePlot <- function(result, id, input, session, output) {
 			# If current dimension ordering is reversed, we have to transpose the results
 			if (config$x > config$y) {
 				projection <- t(projection)
+				projectedValues <- t(projectedValues)
 			}
 
 			xLow <- replicate(yStateCount, xThres[-xThresholdCount])
@@ -97,7 +98,11 @@ createResultStatePlot <- function(result, id, input, session, output) {
 
 			# Draw selected states
 			if (!is.null(config$selectedStates)) {
-				selectedProjection <- projection & do.call("[", append(list(config$selectedStates, drop = TRUE), dimensionMask))
+				selectedProjection <- do.call("[", append(list(config$selectedStates, drop = TRUE), dimensionMask))
+				if (config$x > config$y) {
+					selectedProjection <- t(selectedProjection)
+				}
+				selectedProjection <- projection & selectedProjection
 				rect(xLow[selectedProjection], yLow[selectedProjection], xHigh[selectedProjection], yHigh[selectedProjection], 
 					col = first_formula_color_clicked, border = "black", lwd = 1.5
 				)			
@@ -129,10 +134,13 @@ createResultStatePlot <- function(result, id, input, session, output) {
 			vars[[config$x]] <- plot$resolveStateIndex(config$x, sel$x)
 			vars[[config$y]] <- plot$resolveStateIndex(config$y, sel$y)
 
-			# TODO: can we also deselect using this? 
-			# Problem: how to tell fast if the selection is empty
-			#currentValue <- do.call("[", append(list(current), vars))
-			plot$state$selectedStates <- do.call("[<-", append(list(current), append(vars, TRUE)))
+			currentValue <- do.call("[", append(list(current), vars))
+			newValue <- do.call("[<-", append(list(current), append(vars, !currentValue)))
+			if (any(newValue)) {
+				plot$state$selectedStates <- newValue
+			} else {
+				plot$state$selectedStates <- NULL
+			}
 		}
 	})
 
