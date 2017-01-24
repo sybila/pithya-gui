@@ -309,7 +309,14 @@ createResultParamPlot <- function(result, id, input, session, output) {
 					iVar <- if (config$x <= plot$result$varCount) config$x else config$y
 					iParam <- (if (iVar == config$x) config$y else config$x) - plot$result$varCount	
 
+					if (is.null(config$selectedStates)) {
+						stateMask <- rep(TRUE, length(plot$varThresholds[[iVar]]) - 1)
+					} else {
+						stateMask <- apply(config$selectedStates, c(iVar), any)
+					}
+
 					for (iT in 1:(length(plot$varThresholds[[iVar]])-1)) {
+						if (!stateMask[iT]) next
 
 						# Reduce state space to this threshold.
 						reducedMapping <- rowProjection(mapping, iVar, iT)
@@ -383,8 +390,15 @@ createResultParamPlot <- function(result, id, input, session, output) {
 					iVar <- if (config$x <= plot$result$varCount) config$x else config$y
 					iParam <- (if (iVar == config$x) config$y else config$x) - plot$result$varCount	
 
-					for (iT in 1:(length(plot$varThresholds[[iVar]])-1)) {
+					if (is.null(config$selectedStates)) {
+						stateMask <- rep(TRUE, length(plot$varThresholds[[iVar]]) - 1)
+					} else {
+						stateMask <- apply(config$selectedStates, c(iVar), any)
+					}
 
+					for (iT in 1:(length(plot$varThresholds[[iVar]])-1)) {
+						if (!stateMask[iT]) next
+						
 						# Reduce state space to this threshold.
 						reducedMapping <- rowProjection(mapping, iVar, iT)
 
