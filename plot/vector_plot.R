@@ -75,18 +75,19 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 		plot$state$flow <- let(plot$flowConfig(), function(config) {
 			debug(id, ":vectorPlot recomupte flow ")
 			flow <- replicate(plot$varCount, replicate(config$pointCount, 0, simplify = "matrix"), simplify = "matrix")
-			maxMove <- sapply(plot$model$varRanges, function(r) abs(r$max - r$min) / 50)
+			maxMove <- min(sapply(plot$model$varRanges, function(r) abs(r$max - r$min) / 50))
 			flow[1,] <- config$startingPoint
 			for (i in 2:config$pointCount) {
 				vars <- flow[i-1,]
+				move <- replicate(plot$varCount, 0)
 				for (v in 1:plot$varCount) {
-					move <- config$equations[[v]](vars, config$params)
-					if (abs(move) > maxMove[v]) {
-						move <- move * 10^log10(maxMove[v])
-					}
-					new <- vars[v] + config$pointDensity * move
-					flow[i,v] <- new
-				}				
+					move[v] <- config$equations[[v]](vars, config$params)										
+				}			
+				if (max(abs(move)) > maxMove) {
+					move <- move * 10^log10(maxMove)
+				}					
+				new <- vars + config$pointDensity * move	
+				flow[i,] <- new
 			}
 			flow		
 		})
@@ -142,7 +143,7 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 
 			# Draw flow if available
 			let(config$flow, function(flow) {
-				lines(flow[,1], flow[,2], col = "blue", lwd = size_of_flow_points)
+				lines(flow[,config$x], flow[,config$y], col = "blue", lwd = size_of_flow_points)
 			})
 		}
 	}, height = function() { session$shiny$clientData[[paste0("output_",plot$outImage,"_width")]] })
