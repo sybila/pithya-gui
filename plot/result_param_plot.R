@@ -402,9 +402,13 @@ createResultParamPlot <- function(result, id, input, session, output) {
 					}
 					any(validity)
 				}, pValues)		
-				plot$state$selectedParams <- sapply(1:length(plot$result$paramValues), function(p) {
-					p %in% pValues	
-				})
+				if (length(pValues) > 0) {
+					plot$state$selectedParams <- sapply(1:length(plot$result$paramValues), function(p) {
+						p %in% pValues	
+					})
+				} else {
+					plot$state$selectedParams <- NULL
+				}			
 			} else {
 				pValues <- Filter(function(p) {				
 					for (rect in plot$result$paramValues[[p]]) {
@@ -421,9 +425,13 @@ createResultParamPlot <- function(result, id, input, session, output) {
 					}			
 					FALSE
 				}, pValues)
-				plot$state$selectedParams <- sapply(1:length(plot$result$paramValues), function(p) {
-					p %in% pValues	
-				})
+				if (length(pValues) > 0) {
+					plot$state$selectedParams <- sapply(1:length(plot$result$paramValues), function(p) {
+						p %in% pValues	
+					})
+				} else {
+					plot$state$selectedParams <- NULL
+				}			
 			}
 		}
 	})

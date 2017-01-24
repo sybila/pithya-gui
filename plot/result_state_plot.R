@@ -106,7 +106,8 @@ createResultStatePlot <- function(result, id, input, session, output) {
 			# Draw selected params 
 			if (!is.null(config$selectedParams)) {
 				p <- config$selectedParams
-				selectedParamStates <- apply(projectedValues, c(1,2), function(v) v > 0 && p[v])
+				# as.matrix is here for one dimensional graphs, because drop=TRUE will cause them to have just one dimension
+				selectedParamStates <- apply(as.matrix(projectedValues), c(1,2), function(v) v > 0 && p[v])
 				rect(xLow[selectedParamStates], yLow[selectedParamStates], xHigh[selectedParamStates], yHigh[selectedParamStates], 
 					border = "blue", lwd = 2
 				)					

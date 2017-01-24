@@ -141,7 +141,7 @@ editorServer <- function(input, session, output) {
 	})
 	
 	# Enable synthesis button when process is not running and model is ready and result is outdated
-	observeEvent(c(input$prop_input_area, session$pithya$synthesisResult$outdated, session$pithya$approximatedModel$outdated), {
+	observeEvent(c(input$prop_input_area, session$pithya$synthesisResult$outdated, session$pithya$approximatedModel$outdated, synthesisProcess$running), {
 		# TODO check if the properties are identical to the last synthesised one
 		enabled <- is.null(synthesisProcess$running) && session$pithya$synthesisResult$outdated	&& !session$pithya$approximatedModel$outdated
 		updateButton(session$shiny, "process_run", style = "success", disabled = !enabled)
