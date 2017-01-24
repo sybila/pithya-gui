@@ -8,66 +8,6 @@ resultServer <- function(input, session, output) {
 
 	plotRows <- reactiveValues()
 
-	# Compute coverage config
-	observeEvent(c(session$pithya$synthesisResult$result, input$coverage_check, input$density_coeficient), {
-		enabled <- input$coverage_check
-		density <- input$density_coeficient
-		result <- session$pithya$synthesisResult$result
-		debug("[coverage config] changed")
-		if (is.null(result) || (result$type == "rectangular" && !enabled)) {
-			session$pithya$synthesisResult$coverageConfig <- NULL
-		} else {
-			session$pithya$synthesisResult$coverageConfig <- list(
-				result = result,
-				thresholds = lapply(result$paramRanges, function(range) {
-					seq(range$min, range$max, length.out = density)	
-				}),
-				count = result$paramCount,
-				thresholdSized = rep(density, result$paramCount),
-				dimensionSizes = rep(density - 1, result$paramCount)
-			)
-		}
-	})
-
-	# Compute parameter coverage when result changes and is SMT or coverage is enabled
-	observeEvent(session$pithya$synthesisResult$coverageConfig, {
-		config <- session$pithya$synthesisResult$coverageConfig
-		if (is.null(config)) {
-			session$pithya$synthesisResult$coverage <- NULL
-		} else {
-			result <- config$result
-			withProgress(message = "Computing parameter coverage...", 
-				min = 0, max = length(result$paramValues), value = 0,
-			expr = {				
-				thresholds <- config$thresholds
-				dimensionSizes <- config$dimensionSizes
-				centers <- lapply(thresholds, function(t) (t[-1] + t[-length(t)]) / 2)
-				one <- array(1, dimensionSizes)
-				params <- lapply(1:config$count, function(d) {
-					explodeArray(centers[[d]], d, dimensionSizes)	
-				})
-
-				coverage <- lapply(result$paramValues, function(p) {
-					incProgress(1)
-					if (result$type == "smt") { p(params) } else {
-						# TODO this can be optimized to compute this for thresholds first and then explode them
-						Reduce(function(a,b) a | b, lapply(p, function(rect) rectangleContainsPoints(rect, params)))
-					}	
-				})
-
-				config$data <- coverage
-				session$pithya$synthesisResult$coverage <- config
-			})
-		}
-	})
-
-	# Update coverage after it has been computed
-	observeEvent(session$pithya$synthesisResult$coverage, {
-		for (row in isolate(reactiveValuesToList(plotRows))) {
-			row$params$state$coverage <- session$pithya$synthesisResult$coverage
-		}
-	})
-
 	# Remove plots when synthesis result changes and enable button
 	observeEvent(session$pithya$synthesisResult$result, {		
 		enabled <- !is.null(session$pithya$synthesisResult$result)

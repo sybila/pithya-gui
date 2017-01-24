@@ -26,11 +26,80 @@ createResultParamPlot <- function(result, id, input, session, output) {
 	debug(id, ":statePlot create")
 
 	plot$result <- result
-	plot$state$coverage <- isolate(session$pithya$synthesisResult$coverage)
+	plot$state$coverage <- NULL
 	plot$state$formulaIndex <- NULL
 	plot$state$selectedStates <- NULL
 	plot$state$selectedParams <- NULL
 	plot$state$pValues <- NULL
+
+	# Compute coverage config
+	observe({
+		enabled <- input$coverage_check
+		density <- input$density_coeficient
+		result <- plot$result
+		config <- plot$baseConfig()
+		debug("[coverage config] changed")
+		if (is.null(config) || is.null(result) || (result$type == "rectangular" && !enabled)) {
+			plot$state$coverageConfig <- NULL
+		} else {			
+			thresholds <- lapply(1:result$paramCount, function(p) {
+				range <- result$paramRanges[[p]]				
+				if (p + result$varCount == config$x) {
+					debug("px seq")
+					debug(range)
+					debug(config$zoom[1,])
+					debug(max(range$min, config$zoom[1,1]), min(range$max, config$zoom[1,2]))
+					seq(max(range$min, config$zoom[1,1]), min(range$max, config$zoom[1,2]), length.out = density)	
+				} else if (p + result$varCount == config$y) {
+					debug("py seq")
+					seq(max(range$min, config$zoom[2,1]), min(range$max, config$zoom[2,2]), length.out = density)	
+				} else {
+					seq(range$min, range$max, length.out = density)	
+				}
+			})
+			plot$state$coverageConfig <- list(
+				result = result,
+				thresholds = thresholds,
+				count = result$paramCount,
+				thresholdSized = rep(density, result$paramCount),
+				dimensionSizes = rep(density - 1, result$paramCount)
+			)
+		}
+	})
+
+	# Compute parameter coverage when result changes and is SMT or coverage is enabled
+	observeEvent(plot$state$coverageConfig, {
+		config <- plot$state$coverageConfig
+		if (is.null(config)) {
+			plot$state$coverage <- NULL
+		} else {
+			result <- config$result
+			withProgress(message = "Computing parameter coverage...", 
+				min = 0, max = length(result$paramValues), value = 0,
+			expr = {				
+				thresholds <- config$thresholds
+				dimensionSizes <- config$dimensionSizes
+				centers <- lapply(thresholds, function(t) (t[-1] + t[-length(t)]) / 2)
+				one <- array(1, dimensionSizes)
+				params <- lapply(1:config$count, function(d) {
+					explodeArray(centers[[d]], d, dimensionSizes)	
+				})
+
+				coverage <- lapply(result$paramValues, function(p) {
+					incProgress(1)
+					if (result$type == "smt") { p(params) } else {
+						# TODO this can be optimized to compute this for thresholds first and then explode them
+						Reduce(function(a,b) a | b, lapply(p, function(rect) rectangleContainsPoints(rect, params)))
+					}	
+				})
+
+				config$data <- coverage
+				plot$state$coverage <- config
+			})
+		}
+	})
+
+
 
 	# Clear selection when formula changes
 	observeEvent(plot$state$formulaIndex, {
