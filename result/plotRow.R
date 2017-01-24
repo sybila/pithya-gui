@@ -2,9 +2,8 @@ source("config.R")          # global configuration
 source("tooltips.R")        # texts
 source("ui_global.R")       
 source("result/ui.R")
-source("plot/result_rect_param_plot.R")
 source("plot/result_state_plot.R")
-source("plot/result_smt_param_plot.R")
+source("plot/result_param_plot.R")
 
 createResultPlotRow <- function(id, result, input, session, output,
 	onRemove = function(row) {}		# called when row remove button is clicked
@@ -14,11 +13,7 @@ createResultPlotRow <- function(id, result, input, session, output,
 	row$id <- id
 	row$result <- result
 
-	if (result$type == "rectangular") {
-		row$params <- createRectResultPlot(result, session$pithya$nextId(), input, session, output)
-	} else {
-		row$params <- createSmtResultPlot(result, session$pithya$nextId(), input, session, output)
-	}	
+	row$params <- createResultParamPlot(result, session$pithya$nextId(), input, session, output)
 	row$states <- createResultStatePlot(result, session$pithya$nextId(), input, session, output)
 	row$states$state$formulaIndex <- 1
 

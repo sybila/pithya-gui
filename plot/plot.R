@@ -58,13 +58,7 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 
 	# Utility function which return the index of the state to which the vlaue belongs
 	plot$resolveStateIndex <- function(dim, x) {
-		t <- plot$varThresholds[[dim]]
-		for (i in 2:length(t)) {
-			if (t[i-1] <= x && x <= t[i]) {
-				return(i-1)
-			}
-		}
-		length(t-1)
+		stateIndexFromValue(plot$varThresholds[[dim]], x)		
 	}
 
 	# Utility function which translated continuous values into threshold boundaries

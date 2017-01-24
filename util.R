@@ -122,3 +122,12 @@ explodeArray <- function(thresholds, d, dimensionSizes) {
     sizes <- sapply(dimensions, function(i) dimensionSizes[i])
     aperm(array(thresholds, sizes), dimensions)
 }
+
+stateIndexFromValue <- function(t, x) {
+  for (i in 2:length(t)) {
+    if (t[i-1] <= x && x <= t[i]) {
+      return(i-1)
+    }
+  }
+  length(t-1)
+}
