@@ -53,7 +53,8 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 		selection <- plot$state$selection
 		model <- plot$state$activeModel
 		params <- plot$state$params		
-		if (is.null(config) || is.null(selection) || is.null(model) || is.null(params)) {
+		pointCount <- unwrapOr(input$flow_points_count, 300)
+		if (is.null(config) || is.null(selection) || is.null(model) || is.null(params) || is.na(pointCount) || pointCount < 2) {
 			NULL
 		} else {
 			vars <- config$vars
@@ -63,7 +64,7 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 				params = params,
 				startingPoint = unlist(vars),	# vars should be complete now
 				equations = model$varEQ,		# we need all equations
-				pointCount = unwrapOr(input$flow_points_count, 300),
+				pointCount = pointCount,
 				pointDensity = unwrapOr(input$flow_points_density, 1)
 			)
 		}		
@@ -73,7 +74,8 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 	plot$.flowComputer <- observe({	
 		plot$state$flow <- let(plot$flowConfig(), function(config) {
 			debug(id, ":vectorPlot recomupte flow ")
-			flow <- replicate(plot$varCount, replicate(config$pointCount, 0))
+			flow <- replicate(plot$varCount, replicate(config$pointCount, 0, simplify = "matrix"), simplify = "matrix")
+			debug(flow)
 			flow[1,] <- config$startingPoint
 			for (i in 2:config$pointCount) {
 				vars <- flow[i-1,]
@@ -81,7 +83,7 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 					flow[i,v] <- vars[v] + config$pointDensity * config$equations[[v]](vars, config$params)
 				}				
 			}
-			plot$state$flow <- flow
+			flow		
 		})
 	})
 
