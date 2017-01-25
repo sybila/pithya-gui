@@ -1,4 +1,6 @@
 @import url("//fonts.googleapis.com/css?family=Open+Sans:400,700");
+
+
 /*!
  * bootswatch v3.3.1+1
  * Homepage: http://bootswatch.com
@@ -6591,3 +6593,149 @@ label {
   z-index: -2;
 }
 /* this part is for loading spinning-like circle - END */
+
+
+/**
+  Additions
+*/
+
+.advanced_checkbox {
+
+}
+
+.advanced_checkbox .shiny-input-container {
+  float: right;
+  width: 130px;
+  margin-top: 35px;
+}
+
+.tabbable {
+  margin-top: 10px;
+}
+
+.tab-content {
+  border-left: 1px solid #dedede;
+  border-bottom: 1px solid #dedede;
+  border-right: 1px solid #dedede;
+  border-radius: 0 0 5px 5px;
+}
+
+.model_control_panel .border, 
+.property_control_panel .border,
+.synth_control_panel .border {
+  border: 1px solid #dedede;
+  border-radius: 2px;
+  margin-top: 10px;
+  padding-bottom: 5px;
+}
+
+.model_control_panel hr,
+.property_control_panel hr,
+.synth_control_panel hr {
+  border-color: #dedede;
+  margin-bottom: 5px;
+}
+
+.model_control_panel h2,
+.property_control_panel h2,
+.synth_control_panel h2 {
+  font-size: 15px;
+  margin: 10px;
+}
+
+.model_control_panel .btn,
+.property_control_panel .btn,
+.synth_control_panel .btn {
+  width: 100%;
+}
+
+.model_file_column .btn,
+.property_file_column .btn { 
+  margin: 0px;
+  height: 24px;
+}
+
+.model_file_column input,
+.property_file_column input {
+  height: 24px;
+}
+
+.model_file_column .input-group,
+.property_file_column .input-group {
+  margin-top: -12px;
+}
+
+.model_file_column .progress,
+.property_file_column .progress {
+  margin-top: 10px;
+}
+
+.model_control_panel .container-fluid,
+.property_control_panel .container-fluid,
+.synth_control_panel .container-fluid {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.model_file_column {
+  border-right: 1px solid #dedede;
+  padding-right: 10px;
+}
+
+.model_buttons_column {
+  border-left: 1px solid #dedede;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-right: 1px solid #dedede;
+  margin-left: -1px;
+  margin-right: -1px;
+}
+
+.model_approx_column {
+  border-left: 1px solid #dedede;
+  padding-left: 10px;
+}
+
+.property_file_column {
+  border-right: 1px solid #dedede;
+  padding-right: 10px;
+}
+
+.property_buttons_column {
+  border-left: 1px solid #dedede;
+  padding-left: 10px;
+  margin-left: -1px;
+}
+
+.model_control_panel {
+  padding-right: 5px;
+}
+
+.property_control_panel {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.synth_control_panel {
+  padding-left: 5px;
+}
+
+.approx_not .progress {  
+  margin: 0 auto;
+  width: 100px;
+  height: 12px;
+  overflow: hidden;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.approx_not .progress img {
+  width: 100px;
+  height: 12px;
+  margin-top: -5px;
+}
+
+.synth_not pre {
+  max-height: 100px;
+  height: 100px;
+}

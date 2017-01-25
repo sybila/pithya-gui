@@ -53,7 +53,7 @@ Editor_cutTresholds_tooltip <- "Do not allow automatic adding of thresholds exce
 Editor_fastApproximation_label <- "Fast Approximation"
 Editor_fastApproximation_tooltip <- "Enable coarser and less precise approximation method." # "Two versions of The-PWA-approximation are available. Slower one - more precise and computationally more demanding - and fast one - much faster but also less precise."
 
-Editor_process_controlPanel_label <- "Parameter Synthesis Control Panel"
+Editor_process_controlPanel_label <- "Parameter Synthesis"
 
 Editor_numberOfThreads_label <- "Number of Threads"
 Editor_numberOfThreads_tooltip <- "Set number of threads computing parameter synthesis."

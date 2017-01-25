@@ -34,9 +34,15 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 shinyUI(
     fluidPage(
         useShinyjs(),
-        titlePanel(Tool_name),
-        tooltip(tooltip = Editor_advancedSettings_tooltip,
-            checkboxInput("advanced", Editor_advancedSettings_label, F)
+        fluidPage(
+            fluidRow(
+                column(8, titlePanel(Tool_name)),
+                column(4, class = "advanced_checkbox", 
+                    tooltip(tooltip = Editor_advancedSettings_tooltip,
+                        checkboxInput("advanced", Editor_advancedSettings_label, F)
+                    )
+                )
+            )
         ),
         tags$hr(),
         tabsetPanel(id = "dimensions",
