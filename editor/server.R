@@ -7,13 +7,9 @@ source("editor/process.R")	# remote process inerface
 editorServer <- function(input, session, output) {
 
 	sessionDir <- session$pithya$sessionDir
-	progressFile <- tempfile(pattern = "progress", fileext = ".txt", tmpdir = sessionDir)
-	file.create(progressFile)
-	progressReader <- reactiveFileReader(intervalMillis = 100, session$shiny, progressFile, readLines)
 
 	printProgress <- function(line) {
-		print(line)
-		write(paste0(line, "\n"), progressFile, append = T)
+		print(line)		
 	}
 
 
@@ -33,7 +29,7 @@ editorServer <- function(input, session, output) {
         		session$pithya$approximatedModel$outdated <- FALSE	        		        	
         		printProgress(Approximation_finished)
         		approximationProcess$finalize(TRUE)
-        		showNotification(Approximation_finished)
+        		showNotification(Approximation_finished, type = "message")
         	} else {
         		printProgress(Approximation_error)
         		approximationProcess$onError("Missing result")
@@ -73,6 +69,7 @@ editorServer <- function(input, session, output) {
 		observer = NULL,
 		propertyFile = NULL,
 		resultFile = NULL,
+		logFile = NULL,
 		notificationID = NULL,
 		missingThresholds = NULL,
 		onSuccess = function() {
@@ -81,10 +78,26 @@ editorServer <- function(input, session, output) {
 			session$pithya$synthesisResult$file <- synthesisProcess$resultFile
 			session$pithya$synthesisResult$outdated <- FALSE			
 			synthesisProcess$finalize(TRUE)
-			showNotification("Parameter synthesis finished")
+
+			showNotification(
+				tags$div(class = "synth_done",
+					"Parameter synthesis finished",
+					tags$div(
+						downloadButton("save_synth_log_after", "Download log")
+					)
+				), 
+				duration = NULL, closeButton = TRUE, type = "message"
+			)
+
+			output$save_synth_log_after <- downloadHandler(
+				filename = "log.txt",
+				content = function(file) {
+					debug("download")
+					writeLines(readLines(synthesisProcess$logFile), file)
+			})
 		},
 		onError = function(e) {
-			debug(paste0("[synhtesisProcess] error ", e))
+			debug(paste0("[synthesisProcess] error ", e))
 			synthesisProcess$finalize(FALSE)
 			if (grepl("Missing thresholds: .*", e)) {
 				# Note: This message has a fixed syntax and therefore this matching should not fail!
@@ -126,6 +139,7 @@ editorServer <- function(input, session, output) {
 				file.remove(synthesisProcess$resultFile)
 				synthesisProcess$resultFile <- NULL
 			}
+			synthesisProcess$logReader$destroy()
 		}
 	)
 
@@ -220,15 +234,34 @@ editorServer <- function(input, session, output) {
 		writeLines(modelData, approximationProcess$inputFile)
 
 		approximationProcess$notificationID <- showNotification(
-			tagList("Approximation running", actionButton("approximation_kill", "Cancel")), 
+			tags$div(class = "approx_not",
+				"Approximation running",
+				tags$div(class = "progress",
+					tags$img(src = "progress.gif", width = "100")
+				),
+				actionButton("approximation_kill",
+				 "Cancel", style = "warning")
+			), 
 			duration = NULL, closeButton = FALSE
 		)
 
+		args <- c()
+
+		if (input$fast_approximation) {
+			args <- c(args, "--fast")
+		}
+
+		if (input$thresholds_cut) {
+			args <- c(args, "--cut-to-range")
+		}
+
+		debug(args)
+
 		startRemoteProcess(session, approximationProcess, list(
-			command = paste0(corePath, "tractor"), 
-			args = c(approximationProcess$inputFile, ifelse(input$fast_approximation,"true","false"), ifelse(input$thresholds_cut,"true","false")),
-			stdout = approximationProcess$resultFile,
-			stderr = progressFile
+			command = "com.github.sybila.biodivine.exe.ApproximationKt", 
+			args = args,
+			stdin = approximationProcess$inputFile,
+			stdout = approximationProcess$resultFile
 		))		
 	}
 		
@@ -275,7 +308,7 @@ editorServer <- function(input, session, output) {
 					}												
 				}
 				updateAceEditor(session$shiny, "model_input_area", value = model)
-				showNotification("Thresholds added successfully")
+				showNotification("Thresholds added successfully", type = "message")
 				# We need to pass model directly because the editor is not updated yet
 				generateApproximation(model)
 			}
@@ -303,18 +336,44 @@ editorServer <- function(input, session, output) {
 		# Run combine to check syntax and semantics
 		synthesisProcess$propertyFile <- tempfile(pattern = "property", fileext = ".ctl", tmpdir = sessionDir)
 		synthesisProcess$resultFile <- tempfile(pattern = "synthesisResult", fileext = ".ctl", tmpdir = sessionDir)
+		synthesisProcess$logFile <- tempfile(pattern = "synthesisLog", fileext = ".txt", tmpdir = sessionDir)
+		synthesisProcess$logReader <- myReactiveFileReader(500, session$shiny, synthesisProcess$logFile, function(progress) {
+			output$synth_log <- renderPrint({
+				cat(paste0(progress, collapse = "\n"))
+			})	
+		})
 		writeLines(input$prop_input_area, synthesisProcess$propertyFile)
 
-		synthesisProcess$notificationID = showNotification(
-			tagList("Parameter synthesis running", actionButton("synthesis_kill", "Cancel")), 
-			duration = NULL, closeButton = FALSE)
+		synthesisProcess$notificationID <- showNotification(
+			tags$div(class = "synth_not",
+				"Parameter synthesis running",
+				verbatimTextOutput("synth_log")	,
+				tags$div(
+					downloadButton("save_synth_log", "Download log"),
+					actionButton("synthesis_kill", "Cancel", style = "warning")
+				)
+			), 
+			duration = NULL, closeButton = FALSE
+		)
+
+		output$save_synth_log <- downloadHandler(
+			filename = "log.txt",
+			content = function(file) {
+				writeLines(readLines(synthesisProcess$logFile), file)
+		})
 
 		# TODO thread count
 		startRemoteProcess(session, synthesisProcess, list(
-			command = paste0(corePath, "biodivine-ctl"),
-			args = c(session$pithya$approximatedModel$file, synthesisProcess$propertyFile),
-			stdout = synthesisProcess$resultFile,
-			stderr = progressFile
+			command = "com.github.sybila.biodivine.exe.MainKt",
+			args = c(
+				"-m", session$pithya$approximatedModel$file, 
+				"-p", synthesisProcess$propertyFile, 
+				"-r", "json", "-ro", synthesisProcess$resultFile,
+				"--parallelism", input$threads_number 
+			),
+			stdout = synthesisProcess$logFile,
+			stderr = synthesisProcess$logFile,
+			stdin = ""
 		))
 
 	})

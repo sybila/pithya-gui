@@ -1,5 +1,6 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
+source("ui_global.R")
 
 # Other parts of the UI
 source("editor/ui.R")
@@ -33,7 +34,16 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 shinyUI(
     fluidPage(
         useShinyjs(),
-        titlePanel(Tool_name),
+        fluidPage(
+            fluidRow(
+                column(8, titlePanel(Tool_name)),
+                column(4, class = "advanced_checkbox", 
+                    tooltip(tooltip = Editor_advancedSettings_tooltip,
+                        checkboxInput("advanced", Editor_advancedSettings_label, F)
+                    )
+                )
+            )
+        ),
         tags$hr(),
         tabsetPanel(id = "dimensions",
             editorTab(),

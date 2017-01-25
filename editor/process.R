@@ -42,11 +42,16 @@ killRemoteProcess <- function(session, process) {
 }
 
 startRemoteProcess <- function(session, process, config) {
+	debug("start")
 	if (!is.null(process$running)) {
 		# There is already another running process that needs to be stopped first.
 		# Note: This should not happen. Make sure you disable the process start button while process is running.
 		killRemoteProcess(session, process)
 	}
+
+	debug("prepare")
+
+	debug(config)
 
 	debug(paste0("[startRemoteProcess] starting ", config$command))
 
@@ -74,14 +79,14 @@ startRemoteProcess <- function(session, process, config) {
 		}
 	})	
 
-	processArgs <- c(process$port, notificationFile, config$args)		
-	debug(paste(c("[startRemoteProcess] execute: ", config$command, processArgs), collapse = " "))	
+	processArgs <- c(process$port, notificationFile, config$command, config$args)	
+	debug(paste(c("[startRemoteProcess] execute: ", "core/bin/pithyaGUIrunner", processArgs), collapse = " "))	
 
 	system2(
-		command = config$command, 
+		command = "core/bin/pithyaGUIrunner", 
 		args = processArgs, 
 		stdout = config$stdout, 
-		stderr = config$stderr, 
+		stdin = config$stdin,
 		wait = FALSE
 	)
 

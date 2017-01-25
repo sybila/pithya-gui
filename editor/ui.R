@@ -4,12 +4,8 @@ source("ui_global.R")       # UI utilities
 
 editorTab <- function() {
     tabPanel(Editor_label, icon=icons$bug,
-        tooltip(tooltip = Editor_tooltip,
+        tooltip(tooltip = Editor_tooltip,            
             editorControlPanel(),
-            tooltip(tooltip = Editor_progressBar_tooltip,
-                helpText(Editor_progressBar_label),
-                verbatimTextOutput("progress_output")
-            ),
             fluidPage(
                 column(6, 
                     tooltip(tooltip = Editor_modelTextEditor_tooltip,
@@ -32,27 +28,20 @@ editorControlPanel <- function() {
 
     # Model controls panel - load, save and run approximation
     modelControls <- fluidPage(
-        column(4,
-            verticalLayout(
-                tooltip(tooltip = Editor_advancedSettings_tooltip,
-                    checkboxInput("advanced", Editor_advancedSettings_label, FALSE)                          
-                ),
-                tooltip(tooltip = Editor_model_Browse_tooltip,
-                    fileInput("model_file", Editor_model_Browse_label, accept=".bio")
-                )  
-            )
+        column(4, class = "model_file_column",
+            tooltip(tooltip = Editor_model_Browse_tooltip,
+                fileInput("model_file", Editor_model_Browse_label, accept=".bio")
+            )  
         ),
-        column(4,
-            verticalLayout(
-                tooltip(tooltip = Editor_model_resetChangesInModel_tooltip,
-                    actionButton("reset_model", Editor_model_resetChangesInModel_label, icon=icons$remove)
-                ),
-                tooltip(tooltip = Editor_model_saveModel_tooltip,
-                    downloadButton("save_model_file", Editor_model_saveModel_label)
-                )                               
-           )
+        column(4, class = "model_buttons_column",
+            tooltip(tooltip = Editor_model_resetChangesInModel_tooltip,
+                actionButton("reset_model", Editor_model_resetChangesInModel_label, icon=icons$remove)
+            ),
+            tooltip(tooltip = Editor_model_saveModel_tooltip,
+                downloadButton("save_model_file", Editor_model_saveModel_label)
+            )  
         ),
-        column(4,
+        column(4, class = "model_approx_column",
             advanced(
                 tooltip(tooltip = Editor_cutTresholds_tooltip,
                     checkboxInput("thresholds_cut", Editor_cutTresholds_label,F)
@@ -69,12 +58,12 @@ editorControlPanel <- function() {
 
     # Property control panel - load and save
     propertyControls <- fluidPage(
-        column(6, 
+        column(6, class = "property_file_column",
             tooltip(tooltip = Editor_property_Browse_tooltip,
                 fileInput("prop_file", Editor_property_Browse_label, accept=".ctl")
             )
         ),
-        column(6,
+        column(6, class = "property_buttons_column",
             verticalLayout(
                 tooltip(tooltip = Editor_property_resetChangesInProperties_tooltip,
                     actionButton("reset_prop", Editor_property_resetChangesInProperties_label, icon=icons$remove)
@@ -87,10 +76,10 @@ editorControlPanel <- function() {
     )
 
     # Synthesis control panel - start and stop
-    synthesisControls <- wellPanel(
+    synthesisControls <- fluidPage(
         advanced(
             tooltip(tooltip = Editor_numberOfThreads_tooltip,
-                numericInput("threads_number", Editor_numberOfThreads_label, 1, 1, detectCores(), 1)
+                sliderInput("threads_number", Editor_numberOfThreads_label, value = detectCores(), min=1, max=detectCores(), step=1)
             )
         ),
         tooltip(tooltip = Editor_runParameterSynthesis_tooltip,
@@ -103,8 +92,8 @@ editorControlPanel <- function() {
 
     # And put it all together
     fluidPage(
-        column(6, wellPanel(modelControls)),
-        column(4, wellPanel(propertyControls)),
-        column(2, synthesisControls)
+        column(6, class = "model_control_panel", tags$div(class = "border", titlePanel(Editor_model_controlPanel_label), hr(), modelControls)),
+        column(4, class = "property_control_panel", tags$div(class = "border", titlePanel(Editor_property_controlPanel_label), hr(), propertyControls)),
+        column(2, class = "synth_control_panel", tags$div(class = "border", titlePanel(Editor_process_controlPanel_label), hr(), synthesisControls))
     )
 }

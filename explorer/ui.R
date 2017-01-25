@@ -42,14 +42,16 @@ explorerControlPanel <- function() {
                 radioButtons("colVariant",Explorer_coloringDirection_label,list(both="both",none="none",horizontal="horizontal",vertical="vertical"),"both",inline=T)
             )
 		),
-		column(3,
-			tooltip(tooltip = Explorer_flowPointsCount_tooltip,
-                numericInput("flow_points_count", Explorer_flowPointsCount_label,min=50,max=NA,step=50,value=500)
-            ),
-            tooltip(tooltip = Explorer_flowPointsDensity_tooltip,
-                sliderInput("flow_points_density", Explorer_flowPointsDensity_label,0.01,10,step=0.01,value=1)
+        advanced(
+            column(3,
+                tooltip(tooltip = Explorer_flowPointsCount_tooltip,
+                    numericInput("flow_points_count", Explorer_flowPointsCount_label,min=50,max=NA,step=50,value=500)
+                ),
+                tooltip(tooltip = Explorer_flowPointsDensity_tooltip,
+                    sliderInput("flow_points_density", Explorer_flowPointsDensity_label,0.01,10,step=0.01,value=1)
+                )
             )
-		),
+        ),
 		column(3,
 			uiOutput("param_sliders_bio")
 		)

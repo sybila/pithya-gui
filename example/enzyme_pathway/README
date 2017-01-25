@@ -1,0 +1,14 @@
+#####################################################################################
+# synthetic biology example files						    #
+# modelled process: degradation of substrate SUB into product PROD 		    #
+#  	   	    via INT1 and INT2 intermediates,				    #
+#		    chain of three catalytic reactions				    # 
+# goal: synthesis of enzyme parameteres guaranteeing optimal metabolic conversion.  # 
+#####################################################################################
+
+Model files:
+  model_indep.bio -- variant with two uncertain parameters algebraically independent
+  model_dep.bio   -- variant with three uncertain parameters algebraically dependent
+
+Property files:
+  expected_flow.ctl -- three properties defining the optimal metabolic conversion

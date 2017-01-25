@@ -1,6 +1,6 @@
 #####################################################################################
 # genetic synthetic biology example                                                 #
-# modelled process: repressilator of 3 genes with circular negative feedback        #
+# modelled process: repressilator of 2 genes with mutual negative feedback          #
 #                                                                                   #
 # goal: investigate bistable behaviour for specific independent parameters          #
 #####################################################################################
@@ -8,38 +8,34 @@
 # model variables declaration
 # variables represent gene-regulatory proteins concentration
 #
-VARS: x,y,z
+VARS: x,y
 
 # constants declaration
 # k1 ...... protein x production coefficient
 # k2 ...... protein y production coefficient
-# k3 ...... protein z production coefficient
-#
-CONSTS: k1,1; k2,1; k3,1
+#								
+CONSTS: k1,1; k2,1					
 
 # parameters declaration
 # deg_x ... protein x degradation coefficient
 # deg_y ... protein y degradation coefficient
-# deg_z ... protein z degradation coefficient
 #
-PARAMS: deg_x,0,1; deg_y,0,1; deg_z,0,1
+PARAMS: deg_x,0,1; deg_y,0,1		
 
 # non-linear differential equations defining rate of change of model variables
 # hillm() represents negative Hill function modelling negative feedback
 #
 EQ: x = k1*hillm(y,5,5,1,0) - deg_x*x
-EQ: y = k2*hillm(z,5,5,1,0) - deg_y*y
-EQ: z = k3*hillm(x,5,5,1,0) - deg_z*z
+EQ: y = k2*hillm(x,5,5,1,0) - deg_y*y
 
 # piece-wise multi-affine approximation settings (optional)
 # variable:breaking points precision,number of piece-wise affine segments
 #
-VAR_POINTS: x: 1500, 10; y: 1500, 10; z: 1500, 10
+VAR_POINTS: x: 1500, 10; y: 1500, 10
 
 # rectangular abstraction discretising thresholds
 # points in variables domains where the continuous state space is discretised
 # at least two thresholds must be given for each variable (minimal and maximal value)
 #
-THRES: x: 0, 15
-THRES: y: 0, 15
-THRES: z: 0, 15
+THRES: x: 0, 15			
+THRES: y: 0, 15				

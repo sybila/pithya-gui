@@ -52,6 +52,7 @@ myReactiveFileReaderOld <- function(intervalMillis, session, filePath, readFunc,
   )
 }
 
+# TODO - add extra fixed check interval for progress files.
 myReactiveFileReader <- function(intervalMillis, session, path, action) {
   checkFunc <- function() {
     info <- file.info(path)
