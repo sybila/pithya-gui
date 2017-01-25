@@ -6810,3 +6810,15 @@ label {
 .result_file_column, .coverage_column  {
   padding: 10px;
 }
+
+.controls .btn {
+  width: 100px;
+}
+
+.controls .col-sm-6 {
+  padding: 0px;
+}
+
+.controls {
+  padding-top: 15px;
+}

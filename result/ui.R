@@ -72,16 +72,18 @@ resultRow <- function(r, input) {
         # Plots
         fluidRow(class = "row-content",
             # Params field controls
-            column(2,
-                r$params$renderUnselectButton(),
-                r$params$renderUnzoomButton(),
-                fluidRow(
-                    column(6, tooltip(tooltip = Result_horizontal_tooltip,
+            column(2, class = "left-controls controls",
+                tags$div(style = "float: right",
+                    r$params$renderUnselectButton(),
+                    r$params$renderUnzoomButton()
+                ),                
+                fluidRow(style = "clear: both",
+                    column(6, style = "padding-right: 3px;", tooltip(tooltip = Result_horizontal_tooltip,
                         selectInput(r$xDimParams, Result_horizontal_label, choices = varList,
                             selected = unwrapOr(input[[r$xDimParams]], varList[1])
                         )
                     )),
-                    column(6, tooltip(tooltip = Result_vertical_tooltip,
+                    column(6, style = "padding-left: 3px;", tooltip(tooltip = Result_vertical_tooltip,
                         selectInput(r$yDimParams, Result_vertical_label, choices = varList,
                             selected = unwrapOr(input[[r$yDimParams]], varList[2])
                         )
@@ -102,16 +104,16 @@ resultRow <- function(r, input) {
                     r$states$renderImage()                  
             ),
             # State space controls
-            column(2,
+            column(2, class = "right-controls controls",
                 r$states$renderUnselectButton(),
                 r$states$renderUnzoomButton(),
                 fluidRow(
-                    column(6, tooltip(tooltip = Result_SS_horizontal_tooltip,
+                    column(6, style = "padding-right: 3px;", tooltip(tooltip = Result_SS_horizontal_tooltip,
                         selectInput(r$xDimStates, Result_SS_horizontal_label, choices = r$result$varNames,
                             selected = unwrapOr(input[[r$xDimStates]], r$result$varNames[1])
                         )
                     )),
-                    column(6, tooltip(tooltip = Result_SS_vertical_tooltip,
+                    column(6, style = "padding-left: 3px;", tooltip(tooltip = Result_SS_vertical_tooltip,
                         selectInput(r$yDimStates, Result_SS_vertical_label, choices = r$result$varNames,
                             selected = unwrapOr(input[[r$yDimStates]], r$result$varNames[2])
                         )
