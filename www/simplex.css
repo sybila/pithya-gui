@@ -6739,3 +6739,23 @@ label {
   max-height: 100px;
   height: 100px;
 }
+
+.arrow_column_1 {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.arrow_column_2 {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.fluid_column {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.param_column {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}

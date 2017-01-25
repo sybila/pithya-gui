@@ -59,7 +59,9 @@ explorerServer <- function(input, session, output) {
 		}			
 		} else {
 			debug("[param_sliders_bio] remove bio sliders")			
-			"Model missing. Compute approximation first."
+			titlePanel(
+				"No model loaded. Please compute approximation first."
+			)
 		}
 	})
 

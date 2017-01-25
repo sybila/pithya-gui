@@ -258,7 +258,7 @@ editorServer <- function(input, session, output) {
 		debug(args)
 
 		startRemoteProcess(session, approximationProcess, list(
-			command = "com.github.sybila.biodivine.exe.ApproximationKt", 
+			command = "pithyaGUIapprox", 
 			args = args,
 			stdin = approximationProcess$inputFile,
 			stdout = approximationProcess$resultFile
@@ -364,7 +364,7 @@ editorServer <- function(input, session, output) {
 
 		# TODO thread count
 		startRemoteProcess(session, synthesisProcess, list(
-			command = "com.github.sybila.biodivine.exe.MainKt",
+			command = "pithyaGUImain",
 			args = c(
 				"-m", session$pithya$approximatedModel$file, 
 				"-p", synthesisProcess$propertyFile, 

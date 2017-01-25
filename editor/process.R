@@ -79,11 +79,11 @@ startRemoteProcess <- function(session, process, config) {
 		}
 	})	
 
-	processArgs <- c(process$port, notificationFile, config$command, config$args)	
-	debug(paste(c("[startRemoteProcess] execute: ", "core/bin/pithyaGUIrunner", processArgs), collapse = " "))	
+	processArgs <- c(process$port, notificationFile, config$args)	
+	debug(paste(c("[startRemoteProcess] execute: ", "core/bin/", config$command, processArgs), collapse = " "))	
 
 	system2(
-		command = "core/bin/pithyaGUIrunner", 
+		command = paste0("core/bin/", config$command), 
 		args = processArgs, 
 		stdout = config$stdout, 
 		stdin = config$stdin,
