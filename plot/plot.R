@@ -95,12 +95,17 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 			vars <- lapply(1:plot$varCount, function(i) {
 				if (i == dim$x || i == dim$y) {
 					NULL
-				} else if (plot$useProjections && unwrapOr(input[[plot$project[i]]], FALSE)) {
+				} else if (plot$useProjections && unwrapOr(input[[plot$project[i]]], TRUE)) {
 					NULL
 				} else {
-					unwrapOr(input[[plot$sliders[i]]], if(plot$varContinuous[i]) { plot$varRanges[[i]]$min } else { 1 })
+					r <- unwrapOr(input[[plot$sliders[i]]], if(plot$varContinuous[i]) { plot$varRanges[[i]]$min } else { 1 })
+					debug(r)
+					r
 				}
 			})
+
+			debug("vars")
+			debug(vars)
 
 			list(
 				vars = vars,
