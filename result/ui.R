@@ -64,7 +64,7 @@ resultRow <- function(r, input) {
                 actionButton(r$remove, "Remove")
             )),
             column(1, class = "hid", tooltip(tooltip = Result_hide_tooltip,
-                checkboxInput(r$hide, Result_hide_label)
+                checkboxInput(r$hide, Result_hide_label, unwrapOr(input[[r$hide]], FALSE))
             ))
         ),
         conditionalPanel(condition = paste0("input.", r$hide, " == false"),
