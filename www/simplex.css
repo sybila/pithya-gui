@@ -6812,7 +6812,7 @@ label {
 }
 
 .controls .btn {
-  width: 100px;
+  width: 120px;
 }
 
 .controls .col-sm-6 {
@@ -6820,5 +6820,5 @@ label {
 }
 
 .controls {
-  padding-top: 15px;
+  padding-top: 40px;
 }

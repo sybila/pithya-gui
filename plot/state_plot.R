@@ -179,6 +179,7 @@ createStatePlot <- function(model, id, input, session, output) {
 			yThres <- config$yThres
 
 			plot$setupPlot(config)	
+			title(Explorer_SS_label)
 			
 			# Draw threshold lines
 			abline(v = xThres, h = yThres)

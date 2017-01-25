@@ -77,34 +77,35 @@ plotRow <- function(r, input) {
         hr(),
 		fluidRow(class = "row-content",
 			# Vector field controls
-            column(2,
-            	tooltip(tooltip = Explorer_VF_ApplyToAll_tooltip,
-            		actionButton(r$applyVectorToAll, Explorer_VF_ApplyToAll_label)
-        		),
-        		tooltip(tooltip = Explorer_VF_ApplyToTSS_tooltip,
-        			actionButton(r$applyVectorToState, Explorer_VF_ApplyToTSS_label)
-    			),
-                r$vector$renderUnselectButton(),
-                r$vector$renderUnzoomButton(),
-                # TODO add pwma switch
+            column(2, class = "left-controls controls",
+                tags$div(style = "float: right",
+                    tooltip(tooltip = Explorer_VF_ApplyToAll_tooltip,
+                        actionButton(r$applyVectorToAll, Explorer_VF_ApplyToAll_label)
+                    ),
+                    tooltip(tooltip = Explorer_VF_ApplyToTSS_tooltip,
+                        actionButton(r$applyVectorToState, Explorer_VF_ApplyToTSS_label)
+                    ),
+                    r$vector$renderUnselectButton(),
+                    r$vector$renderUnzoomButton()   
+                ),
+            	# TODO add pwma switch
     			#advanced(tooltip(tooltip = Explorer_VF_UsePWAmodel_tooltip,
 				#	checkboxInput(p$usePWMA, Explorer_VF_UsePWAmodel_label)
 				#)),
+                tags$div(style = "clear: both"),
                 r$vector$renderSliders(),
                 r$vector$renderExact(tooltip = Explorer_VF_HoverTextArea_tooltip)      
             ),
             # Vector field
             column(4,
-                	helpText(Explorer_VF_label),
                     r$vector$renderImage()                	
             ),
             # State field
             column(4,
-                    helpText(Explorer_SS_label),
                     r$state$renderImage()                  
             ),
             # State space controls
-            column(2,
+            column(2, class = "right-controls controls",
                 tooltip(tooltip = Explorer_SS_ApplyToAll_tooltip,
                     actionButton(r$applyStateToAll, Explorer_SS_ApplyToAll_label)
                 ),

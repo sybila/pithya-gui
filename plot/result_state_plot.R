@@ -55,6 +55,8 @@ createResultStatePlot <- function(result, id, input, session, output) {
 			# TODO experiment with margins
 			plot$setupPlot(config)
 
+			title(Explorer_SS_label)
+
 			# Draw threshold lines
 			abline(v = xThres, h = yThres)		
 

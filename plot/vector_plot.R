@@ -102,7 +102,8 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 		} else {
 			debug(id, ":vectorPlot render plot")
 
-			plot$setupPlot(config)	
+			plot$setupPlot(config)
+			title(Explorer_VF_label)	
 			
 			one <- replicate(config$arrowCount, replicate(config$arrowCount, 1))
 			range <- config$zoom[,2] - config$zoom[,1]

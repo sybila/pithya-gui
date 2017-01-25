@@ -233,7 +233,9 @@ createResultParamPlot <- function(result, id, input, session, output) {
 
 			# Draw plot outline
 			# TODO experiment with margins
-			plot$setupPlot(config)			
+			plot$setupPlot(config)		
+
+			title(main = Explorer_VF_label)	
 
 			#### HERE WE APPLY ALL STATE SPACE RESTRICTIONS ####
 

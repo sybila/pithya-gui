@@ -95,12 +95,10 @@ resultRow <- function(r, input) {
             ),
             # Vector field
             column(4,
-                    helpText(Explorer_VF_label),
                     r$params$renderImage()                  
             ),
             # State field
             column(4,
-                    helpText(Explorer_SS_label),
                     r$states$renderImage()                  
             ),
             # State space controls
