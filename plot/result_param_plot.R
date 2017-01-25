@@ -233,12 +233,7 @@ createResultParamPlot <- function(result, id, input, session, output) {
 
 			# Draw plot outline
 			# TODO experiment with margins
-			par(mar = c(4,4,4,4))
-			plot(
-				x = config$zoom[1,], y = config$zoom[2,],
-				xlab = plot$varNames[config$x], ylab = plot$varNames[config$y],
-				xaxs = "i", yaxs = "i", type = "n"
-			)
+			plot$setupPlot(config)			
 
 			#### HERE WE APPLY ALL STATE SPACE RESTRICTIONS ####
 

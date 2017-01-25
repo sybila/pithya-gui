@@ -15,7 +15,7 @@ parseResultData <- function(fileData) {
 	varThresholds <- file$thresholds
 
 	if (length(varNames) == 1) {
-		varNames <- c(varNames, "(none)")
+		varNames <- c(varNames, emptyVarName)
 		varThresholds[[2]] <- c(0,1)
 	}
 

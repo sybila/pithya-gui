@@ -178,14 +178,7 @@ createStatePlot <- function(model, id, input, session, output) {
 			xThres <- config$xThres
 			yThres <- config$yThres
 
-			# Draw plot outline
-			# TODO experiment with margins
-			par(mar = c(4,4,4,4))
-			plot(
-				x = config$zoom[1,], y = config$zoom[2,],
-				xlab = plot$varNames[config$x], ylab = plot$varNames[config$y],
-				xaxs = "i", yaxs = "i", type = "n"
-			)
+			plot$setupPlot(config)	
 			
 			# Draw threshold lines
 			abline(v = xThres, h = yThres)

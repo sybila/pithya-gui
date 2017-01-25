@@ -44,6 +44,23 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 	plot$eventBrush <- paste0("plot_brush_", id)				# Plot brushed
 	plot$eventHover <- paste0("plot_hover_", id)				# Plot hovered
 
+	plot$setupPlot <- function(config) {
+		par(mar = c(2.5,2.5,2.5,2.5))
+		par(mgp = c(1.5, 0.5, 0))
+		xName <- plot$varNames[config$x]
+		if (xName == "(none)") {
+			xName <- ""
+		}
+		yName <- plot$varNames[config$y]
+		if (yName == "(none)") {
+			yName <- ""
+		}
+		plot(
+			x = config$zoom[1,], y = config$zoom[2,],
+			xlab = xName, ylab = yName,
+			xaxs = "i", yaxs = "i", type = "n"
+		)
+	}
 
 	# Update dimensions based on their names instead of indices
 	plot$updateDimensions <- function(x, y) {
