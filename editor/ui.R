@@ -33,10 +33,7 @@ editorControlPanel <- function() {
     # Model controls panel - load, save and run approximation
     modelControls <- fluidPage(
         column(4,
-            verticalLayout(
-                tooltip(tooltip = Editor_advancedSettings_tooltip,
-                    checkboxInput("advanced", Editor_advancedSettings_label, FALSE)                          
-                ),
+            verticalLayout(                
                 tooltip(tooltip = Editor_model_Browse_tooltip,
                     fileInput("model_file", Editor_model_Browse_label, accept=".bio")
                 )  
@@ -90,7 +87,7 @@ editorControlPanel <- function() {
     synthesisControls <- wellPanel(
         advanced(
             tooltip(tooltip = Editor_numberOfThreads_tooltip,
-                numericInput("threads_number", Editor_numberOfThreads_label, 1, 1, detectCores(), 1)
+                sliderInput("threads_number", Editor_numberOfThreads_label, value = detectCores(), min=1, max=detectCores(), step=1)
             )
         ),
         tooltip(tooltip = Editor_runParameterSynthesis_tooltip,
