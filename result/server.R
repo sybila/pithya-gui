@@ -36,6 +36,12 @@ resultServer <- function(input, session, output) {
 		})			
 	})	
 
+	output$error_message <- renderUI({
+		if (is.null(session$pithya$synthesisResult$result)) {
+			titlePanel("No results loaded. Compute parameter synthesis or load old results.")
+		} else ""
+	})
+
 	# Render plot rows
 	output$param_plots <- renderUI({
 		debug("[result] render plots")

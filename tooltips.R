@@ -249,7 +249,7 @@ Result_PS_DeselectClick_tooltip <- "Clear this plot" #TODO #this plot #parameter
 Result_PS_Unzoom_label <- "Unzoom"
 Result_PS_Unzoom_tooltip <- "Unzoom this plot." #TODO #this plot #parameter space plot #bud alebo 
 
-Result_PS_ScaleSlider_label <- "Value of "
+Result_PS_ScaleSlider_label <- "Projection in "
 Result_PS_ScaleSlider_tooltip <- "Set the respective variable/parameter value to which the plot is projected." #TODO
 
 Result_PS_ScaleSwitch_tooltip <- ""

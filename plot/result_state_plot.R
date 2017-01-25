@@ -53,7 +53,7 @@ createResultStatePlot <- function(result, id, input, session, output) {
 
 			# Draw plot outline
 			# TODO experiment with margins
-			par(mar = c(2,2,2,2))
+			par(mar = c(4,4,4,4))
 			plot(
 				x = config$zoom[1,], y = config$zoom[2,],
 				xlab = plot$varNames[config$x], ylab = plot$varNames[config$y],

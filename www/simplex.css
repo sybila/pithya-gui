@@ -6650,24 +6650,32 @@ label {
 }
 
 .model_file_column .btn,
-.property_file_column .btn { 
+.property_file_column .btn,
+.result_file_column .btn { 
   margin: 0px;
   height: 24px;
 }
 
 .model_file_column input,
-.property_file_column input {
+.property_file_column input,
+.result_file_column input {
   height: 24px;
 }
 
 .model_file_column .input-group,
-.property_file_column .input-group {
+.property_file_column .input-group,
+.result_file_column .input-group {
   margin-top: -12px;
 }
 
 .model_file_column .progress,
-.property_file_column .progress {
+.property_file_column .progress,
+.result_file_column .progress {
   margin-top: 10px;
+}
+
+.result_file_column .progress {
+  margin-bottom: 10px;
 }
 
 .model_control_panel .container-fluid,
@@ -6758,4 +6766,47 @@ label {
 .param_column {
   padding-top: 15px;
   padding-bottom: 15px;
+  text-align: center;
+}
+
+#add_plot_row, #add_param_plot {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  font-size: 20px;
+}
+
+.param_column h2 {
+  font-size: 20px;  
+  margin-top: 50px;
+}
+
+.my-row {
+  border: 1px solid #dedede;
+  margin-top: 10px;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.my-row hr {
+  border-color: #dedede;
+  margin-bottom: 5px; 
+  margin-left: -10px;
+  margin-right: -10px;
+}
+
+.my-row .lab {
+  padding-top: 8px;
+  text-align: right;
+}
+
+.my-row .control-label {
+  display: none;
+}
+
+.my-row .hid {
+  padding-top: 6px;
+}
+
+.result_file_column, .coverage_column  {
+  padding: 10px;
 }

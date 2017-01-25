@@ -58,26 +58,24 @@ plotRow <- function(r, input) {
 	oneVar <- length(r$model$varNames) == 1
 	tagList(
 		# Plot header
-		fluidRow(
-			column(1, paste0("Row ", r$id)),				
-			column(2, tooltip(tooltip = Explorer_horizontal_tooltip,
-                selectInput(r$xDimSelect, Explorer_horizontal_label, choices = r$model$varNames, 
+        tags$div(class = "my-row",
+		fluidRow(class = "row-header",
+            column(1, class = "lab", Explorer_horizontal_label),
+            column(2, 
+                selectInput(r$xDimSelect, "", choices = r$model$varNames, 
                     selected = unwrapOr(input[[r$xDimSelect]], r$model$varNames[1])
                 )
-            )),
-            column(2, tooltip(tooltip = Explorer_vertical_tooltip,
-                selectInput(r$yDimSelect, Explorer_vertical_label, choices = r$model$varNames, selected = if (oneVar) { NULL } else { 
-                    unwrapOr(input[[r$yDimSelect]], r$model$varNames[2])
-                })
-            )),
-            column(2, tooltip(tooltip = Explorer_cancel_tooltip,
-            	actionButton(r$remove, "Remove")
-        	)),
-        	column(2, tooltip(tooltip = Explorer_hide_tooltip,
-                checkboxInput(r$hide, Explorer_hide_label)
-            ))
-		),
-		fluidRow(
+            ),
+            column(1, class = "lab", Explorer_vertical_label),
+            column(2, selectInput(r$yDimSelect, "", choices = r$model$varNames, selected = if (oneVar) { NULL } else { 
+                unwrapOr(input[[r$yDimSelect]], r$model$varNames[2])
+            })),
+            column(1, class = "rem", actionButton(r$remove, "Remove")),
+            column(1, class = "hid", checkboxInput(r$hide, Explorer_hide_label, unwrapOr(input[[r$hide]], FALSE)))
+		),        
+        conditionalPanel(condition = paste0("input.", r$hide, " == false"),
+        hr(),
+		fluidRow(class = "row-content",
 			# Vector field controls
             column(2,
             	tooltip(tooltip = Explorer_VF_ApplyToAll_tooltip,
@@ -115,6 +113,6 @@ plotRow <- function(r, input) {
                 r$state$renderSliders(),
                 r$state$renderExact(tooltip = Explorer_SS_HoverTextArea_tooltip)      
             )    
-        )		
+        )))		
 	)		
 }

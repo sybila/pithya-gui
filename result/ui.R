@@ -19,7 +19,7 @@ resultTab <- function() {
 
 resultControlPanel <- function() {
 	fluidRow(
-		column(2,
+		column(2, class = "result_file_column",
 			tooltip(tooltip = Result_Browse_tooltip,
                 fileInput("ps_file", Result_Browse_label,accept=".json")
             ),
@@ -31,7 +31,7 @@ resultControlPanel <- function() {
                 )
             )
 		),
-		column(2,
+		column(2, class = "coverage_column",
 			tooltip(tooltip = Result_showParametersCoverage_tooltip,
                 checkboxInput("coverage_check", Result_showParametersCoverage_label, F)
             ),
@@ -43,30 +43,34 @@ resultControlPanel <- function() {
                     sliderInput("density_coeficient",Result_parameterDensity_label,min=10,max=150,value=50,step=1,ticks=F)
                 )
             )
-		)
+		),
+        column(8, class = "param_column", uiOutput("error_message"))
 	)
 }
 
 resultRow <- function(r, input) {
     varList <- c(r$result$paramNames, r$result$varNames)
     tagList(        
+        tags$div(class = "my-row",
         # Header (formula selector, hide, remove)
-        fluidRow(
-            column(1, paste0("Row ", r$id)),
-            column(4, tooltip(tooltip = Result_chooseFormulaOfInterest_tooltip,
-                selectInput(r$formula, Result_chooseFormulaOfInterest_label, choices = r$result$formulas, 
+        fluidRow(class = "row-header",
+            column(1, class = "lab", Result_chooseFormulaOfInterest_label),
+            column(3, tooltip(tooltip = Result_chooseFormulaOfInterest_tooltip,
+                selectInput(r$formula, "", choices = r$result$formulas, 
                     selected = unwrapOr(input[[r$formula]], r$result$formulas[1])
                 )
             )),        
-            column(2, tooltip(tooltip = Result_cancel_tooltip,
-                actionButton(r$remove, Result_cancel_label)
+            column(1, class = "rem", tooltip(tooltip = Result_cancel_tooltip,
+                actionButton(r$remove, "Remove")
             )),
-            column(2, tooltip(tooltip = Result_hide_tooltip,
+            column(1, class = "hid", tooltip(tooltip = Result_hide_tooltip,
                 checkboxInput(r$hide, Result_hide_label)
             ))
         ),
+        conditionalPanel(condition = paste0("input.", r$hide, " == false"),
+        hr(),
         # Plots
-        fluidRow(
+        fluidRow(class = "row-content",
             # Params field controls
             column(2,
                 r$params$renderUnselectButton(),
@@ -84,7 +88,7 @@ resultRow <- function(r, input) {
                     ))
                 ),
                 "* at least one parameter must be selected",
-                r$params$renderSliders(),
+                advanced(r$params$renderSliders()),
                 r$params$renderExact(tooltip = Result_PS_HoverTextArea_tooltip)
             ),
             # Vector field
@@ -116,6 +120,8 @@ resultRow <- function(r, input) {
                 r$states$renderSliders(),
                 r$states$renderExact(tooltip = Result_SS_HoverTextArea_tooltip)
             )    
+        )
+        )
         )
     )
 }
