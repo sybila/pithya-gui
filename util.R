@@ -35,7 +35,7 @@ myReactivePoll <- function(intervalMillis, session, checkFunc, valueFunc) {
   return(re)
 }
 
-myReactiveFileReaderOld <- function(intervalMillis, session, filePath, readFunc, ...) {
+myReactiveFileReaderOld <- function(intervalMillis, session, filePath, readFunc, ...) {  
   filePath <- myCoerceToFunc(filePath)
   extraArgs <- list(...)
 
@@ -54,15 +54,17 @@ myReactiveFileReaderOld <- function(intervalMillis, session, filePath, readFunc,
 
 # TODO - add extra fixed check interval for progress files.
 myReactiveFileReader <- function(intervalMillis, session, path, action) {
+  clock <- createCounter(1)
+  
   checkFunc <- function() {
     info <- file.info(path)
     return(paste(path, info$mtime, info$size))
   }
-  #rv <- reactiveValues(cookie = checkFunc())
+
   cookie <- checkFunc()
   observe({
     latest <- checkFunc()
-    if (latest != cookie) {
+    if (latest != cookie || clock() %% 10 == 0) {
       cookie <- latest
       action(readLines(path))
     }
