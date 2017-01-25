@@ -30,6 +30,12 @@ explorerServer <- function(input, session, output) {
 		})
 	}
 
+	output$explorer_notification <- renderUI({
+		if (!is.null(session$pithya$approximatedModel$model) && session$pithya$approximatedModel$outdated) {
+			tags$h4(style = "text-align: center; margin: 15px;", "Warning: This model is out of sync with current contents of the model editor.")
+		}
+	})
+
 	# Show parameter numeric inputs when model is loaded
 	output$param_sliders_bio <- renderUI({
 		model <- session$pithya$approximatedModel$model

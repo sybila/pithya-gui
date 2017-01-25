@@ -22,6 +22,12 @@ resultServer <- function(input, session, output) {
 		updateButton(session$shiny, "add_param_plot", disabled = !enabled)
 	})
 
+	output$result_notification <- renderUI({
+		if (!is.null(session$pithya$synthesisResult$result) && session$pithya$synthesisResult$outdated) {
+			tags$h4(style = "text-align: center; margin: 15px;", "Warning: These results are out of sync with the current contents of the model or property editor.")
+		}
+	})
+	
 	# Add plot row on button click 
 	observeEvent(input$add_param_plot, {
 		debug("[result] new plot row")

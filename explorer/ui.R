@@ -6,6 +6,7 @@ explorerTab <- function() {
 	tabPanel(Explorer_label, icon=icons$move,
 		tooltip(tooltip = Explorer_tooltip,
 			fluidPage(theme = "simplex.css",
+                uiOutput("explorer_notification"),
 				explorerControlPanel(),
 				tags$hr(),
         		uiOutput("plots"),

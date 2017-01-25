@@ -6766,7 +6766,6 @@ label {
 .param_column {
   padding-top: 15px;
   padding-bottom: 15px;
-  text-align: center;
 }
 
 #add_plot_row, #add_param_plot {
@@ -6776,6 +6775,7 @@ label {
 }
 
 .param_column h2 {
+  text-align: center;
   font-size: 20px;  
   margin-top: 50px;
 }
