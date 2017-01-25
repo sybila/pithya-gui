@@ -7,7 +7,7 @@ source("plot/state_plot.R")
 
 ## Initializes a plot into the input/output objects and returns a plot
 # plot = list(id = num, outputId = string, destroy = function(), ...)
-createPlotRow <- function(id, model, params, input, session, output, 
+createPlotRow <- function(id, model, originalModel, params, input, session, output, 
 	onApplyAllVector = function(sel) {}, 	# called when apply to all button is clicked next to the vector plot
 	onApplyAllState = function(sel) {},		# called when apply to all button is clicked next to the state plot
 	onRemove = function(row) {}				# called when row is removed
@@ -18,7 +18,7 @@ createPlotRow <- function(id, model, params, input, session, output,
 	row$id <- id
 	row$model <- model
 
-	row$vector <- createVectorPlot(model, NULL, session$pithya$nextId(), input, session, output)
+	row$vector <- createVectorPlot(model, originalModel, session$pithya$nextId(), input, session, output)
 	row$vector$state$params <- params
 	row$state <- createStatePlot(model, session$pithya$nextId(), input, session, output)
 	row$state$state$params <- params

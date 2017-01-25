@@ -24,7 +24,7 @@ editorServer <- function(input, session, output) {
 			debug("[approximationProcess] success")
 			output <- approximationProcess$resultFile
 			if (file.exists(output) && length(readLines(output)) > 0) {
-        		# Approximation success
+        		# Approximation success        		
         		session$pithya$approximatedModel$file <- output
         		session$pithya$approximatedModel$outdated <- FALSE	        		        	
         		printProgress(Approximation_finished)
@@ -233,6 +233,8 @@ editorServer <- function(input, session, output) {
 		approximationProcess$resultFile <- tempfile(pattern = "approximationOutput", fileext = ".bio", tmpdir = sessionDir)
 		writeLines(modelData, approximationProcess$inputFile)
 
+		session$pithya$approximatedModel$original <- parseBioFile(approximationProcess$inputFile)
+
 		approximationProcess$notificationID <- showNotification(
 			tags$div(class = "approx_not",
 				"Approximation running",
@@ -330,8 +332,6 @@ editorServer <- function(input, session, output) {
 		if (!is.null(synthesisProcess$running)) {
 			killRemoteProcess(session, synthesisProcess)
 		}
-
-		# TODO some safety checks about model file, would ya?
 
 		# Run combine to check syntax and semantics
 		synthesisProcess$propertyFile <- tempfile(pattern = "property", fileext = ".ctl", tmpdir = sessionDir)

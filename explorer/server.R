@@ -82,7 +82,8 @@ explorerServer <- function(input, session, output) {
 	observeEvent(input$add_plot_row, {
 		debug("[explorer] new plot row")
 		let(session$pithya$approximatedModel$model, function(model) {
-			row <- createPlotRow(session$pithya$nextId(), model, params(model), input, session, output, 
+			original <- session$pithya$approximatedModel$original
+			row <- createPlotRow(session$pithya$nextId(), model, original, params(model), input, session, output, 
 				onApplyAllVector = function(selection) {
 					for (row in isolate(reactiveValuesToList(plotRows))) {
 						if (!is.null(row)) {

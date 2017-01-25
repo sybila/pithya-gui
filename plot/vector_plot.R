@@ -3,7 +3,7 @@ source("tooltips.R")        # texts
 source("ui_global.R") 
 source("plot/plot.R")      
 
-createVectorPlot <- function(model, modelPWA, id, input, session, output) {
+createVectorPlot <- function(modelPWA, model, id, input, session, output) {
 
 	plot <- createBasePlot(
 		varNames = model$varNames, 
@@ -15,12 +15,22 @@ createVectorPlot <- function(model, modelPWA, id, input, session, output) {
 
 	debug(id, ":vectorPlot create")
 
+	plot$usePWMA <- paste0("plot_use_pwma_", id)
+
 	plot$model <- model
 	plot$modelPWA <- modelPWA
 
 	plot$state$activeModel <- model
 	plot$state$params <- NULL
 	plot$state$flow <- NULL
+
+	observeEvent(input[[plot$usePWMA]], {
+		if (input[[plot$usePWMA]]) {
+			plot$state$activeModel <- modelPWA
+		} else {
+			plot$state$activeModel <- model
+		}
+	})
 
 	# Gather config about plot drawing and debounce it
 	plot$config <- reactive({

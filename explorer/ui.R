@@ -87,12 +87,11 @@ plotRow <- function(r, input) {
                     ),
                     r$vector$renderUnselectButton(),
                     r$vector$renderUnzoomButton()   
-                ),
-            	# TODO add pwma switch
-    			#advanced(tooltip(tooltip = Explorer_VF_UsePWAmodel_tooltip,
-				#	checkboxInput(p$usePWMA, Explorer_VF_UsePWAmodel_label)
-				#)),
+                ),            
                 tags$div(style = "clear: both"),
+                advanced(tooltip(tooltip = Explorer_VF_UsePWAmodel_tooltip,
+                    checkboxInput(r$vector$usePWMA, Explorer_VF_UsePWAmodel_label, unwrapOr(input[[r$vector$usePWMA]], FALSE))
+                )),
                 r$vector$renderSliders(),
                 r$vector$renderExact(tooltip = Explorer_VF_HoverTextArea_tooltip)      
             ),

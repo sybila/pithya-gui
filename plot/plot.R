@@ -47,19 +47,25 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 	plot$setupPlot <- function(config) {
 		par(mar = c(2.5,2.5,2.5,2.5))
 		par(mgp = c(1.5, 0.5, 0))
-		xName <- plot$varNames[config$x]
-		if (xName == emptyVarName) {
-			xName <- ""
+		if (plot$varNames[config$x] == emptyVarName) {
+			plot(
+				x = config$zoom[1,], y = config$zoom[2,],
+				xlab = "", ylab = plot$varNames[config$y],
+				xaxs = "i", yaxs = "i", type = "n", xaxt = "n"
+			)
+		} else if (plot$varNames[config$y] == emptyVarName) {
+			plot(
+				x = config$zoom[1,], y = config$zoom[2,],
+				xlab = plot$varNames[config$x], ylab = "",
+				xaxs = "i", yaxs = "i", type = "n", yaxt = "n"
+			)
+		} else {
+			plot(
+				x = config$zoom[1,], y = config$zoom[2,],
+				xlab = plot$varNames[config$x], ylab = plot$varNames[config$y],
+				xaxs = "i", yaxs = "i", type = "n"
+			)
 		}
-		yName <- plot$varNames[config$y]
-		if (yName == emptyVarName) {
-			yName <- ""
-		}
-		plot(
-			x = config$zoom[1,], y = config$zoom[2,],
-			xlab = xName, ylab = yName,
-			xaxs = "i", yaxs = "i", type = "n"
-		)
 	}
 
 	# Update dimensions based on their names instead of indices
@@ -269,7 +275,10 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 					)
 				)				
 			} else {
-				plot$renderSlider(var)
+				tagList(
+					paste0(if (plot$varContinuous[var]) "Continuous value of " else "Discrete value of ", plot$varNames[var], ": "),
+					plot$renderSlider(var)
+				)				
 			}
 		})
 	})
