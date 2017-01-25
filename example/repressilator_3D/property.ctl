@@ -1,7 +1,7 @@
-﻿##################################################################################
-# This is an example of intersting property for model of 3D repressilator        #
-# Warning: numeric thresholds used in properties should be defined also in model #
-#          if not, tool will do completion automatically                         #
+##################################################################################
+# Formulae representing advanced properties of 3-gene repressilator              #
 ##################################################################################
 
-:?cycle = bind s: EX EF s		# Property standing for all states being in limit cycle
+# HUCTL property standing for all states being in a limit cycle
+#
+:?cycle = bind s: EX EF s
