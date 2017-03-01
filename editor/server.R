@@ -366,9 +366,9 @@ editorServer <- function(input, session, output) {
 		startRemoteProcess(session, synthesisProcess, list(
 			command = "pithyaGUImain",
 			args = c(
-				"-m", session$pithya$approximatedModel$file, 
-				"-p", synthesisProcess$propertyFile, 
-				"-r", "json", "-ro", synthesisProcess$resultFile,
+				"-m", paste0("\"", session$pithya$approximatedModel$file, "\""),
+				"-p", paste0("\"", synthesisProcess$propertyFile, "\""),
+				"-r", "json", "-ro", paste0("\"", synthesisProcess$resultFile, "\""),
 				"--parallelism", input$threads_number 
 			),
 			stdout = synthesisProcess$logFile,

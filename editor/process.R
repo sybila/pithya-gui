@@ -79,7 +79,7 @@ startRemoteProcess <- function(session, process, config) {
 		}
 	})	
 
-	processArgs <- c(process$port, notificationFile, config$args)	
+	processArgs <- c(process$port, paste0("\"", notificationFile, "\""), config$args)	
 	debug(paste(c("[startRemoteProcess] execute: ", "core/bin/", config$command, processArgs), collapse = " "))	
 
 	system2(
