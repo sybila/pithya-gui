@@ -13,7 +13,7 @@ createResultStatePlot <- function(result, id, input, session, output) {
 		id, input, session, output
 	)
 
-	debug(id, ":statePlot create")
+	debug(id, ":resultStatePlot create")
 
 	plot$result <- result
 	plot$state$formulaIndex <- NULL
@@ -44,9 +44,9 @@ createResultStatePlot <- function(result, id, input, session, output) {
 		config <- plot$config()
 		if (is.null(config)) {
 			# TODO some loading
-			debug(id, ":statePlot invalid config")			
+			debug(id, ":resultStatePlot invalid config")			
 		} else {
-			debug(id, ":statePlot render plot")
+			debug(id, ":resultStatePlot render plot")
 
 			xThres <- config$xThres
 			yThres <- config$yThres
@@ -55,7 +55,7 @@ createResultStatePlot <- function(result, id, input, session, output) {
 			# TODO experiment with margins
 			plot$setupPlot(config)
 
-			title(Explorer_SS_label)
+			title(Result_SS_label)
 
 			# Draw threshold lines
 			abline(v = xThres, h = yThres)		
@@ -143,7 +143,7 @@ createResultStatePlot <- function(result, id, input, session, output) {
 
 	plot$destroy <- function() {
 		plot$baseDestroy()
-		debug(id, ":statePlot destroy")
+		debug(id, ":resultStatePlot destroy")
 
 		plot$.selectionUpdate()$destroy()
 
