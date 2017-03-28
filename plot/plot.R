@@ -118,7 +118,8 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 			vars <- lapply(1:plot$varCount, function(i) {
 				if (i == dim$x || i == dim$y) {
 					NULL
-				} else if (plot$useProjections && unwrapOr(input[[plot$project[i]]], TRUE)) {
+				} else if ( !input[["advanced"]] || # setting advanced mode off will omit checkboxes and sliders
+				            (plot$useProjections && unwrapOr(input[[plot$project[i]]], TRUE))) {
 					NULL
 				} else {
 					r <- unwrapOr(input[[plot$sliders[i]]], if(plot$varContinuous[i]) { plot$varRanges[[i]]$min } else { 1 })
@@ -275,7 +276,7 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 					conditionalPanel(condition = paste0("input.", plot$project[var], " == false"),
 						plot$renderSlider(var)
 					)
-				)				
+				)
 			} else {
 				tagList(
 					paste0(if (plot$varContinuous[var]) "Continuous value of " else "Discrete value of ", plot$varNames[var], ": "),
