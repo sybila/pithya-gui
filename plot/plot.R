@@ -151,11 +151,13 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 	# Clear selection on button click
 	plot$.unselect <- observeEvent(input[[plot$buttonUnselect]], {
 		plot$state$selection <- NULL	
+		updateButton(session$shiny, plot$buttonUnselect, disabled=T)
 	})
 
 	# Clear zoom on button click
 	plot$.unzoom <- observeEvent(input[[plot$buttonUnzoom]], {
 		plot$state$zoom <- NULL	
+		updateButton(session$shiny, plot$buttonUnzoom, disabled=T)
 	})
 
 	printContinuousInterval <- function(dim, x, y) {
@@ -291,6 +293,7 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 		event <- input[[plot$eventBrush]]
 		if (!is.null(event$xmin) && !is.null(event$xmax) && !is.null(event$ymin) && !is.null(event$ymax)) {
 			plot$state$zoom <- matrix(c(event$xmin, event$ymin, event$xmax, event$ymax), 2)
+			updateButton(session$shiny, plot$buttonUnzoom, disabled=F)
 		}
 	}) 
 
@@ -300,17 +303,18 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 		event <- input[[plot$eventDoubleClick]]
 		if (!is.null(event$x) && !is.null(event$y)) {
 			plot$state$selection <- list(x = event$x, y = event$y)
+			updateButton(session$shiny, plot$buttonUnselect, disabled=F)
 		}	
 	})
 
 	## UI renderers
 
 	plot$renderUnselectButton <- function(label = "Unselect", tooltip = "Clear selection") {
-		tooltip(tooltip = tooltip, actionButton(plot$buttonUnselect, label))
+		tooltip(tooltip = tooltip, bsButton(plot$buttonUnselect, label, disabled=T))
 	}
 
 	plot$renderUnzoomButton <- function(label = "Unzoom", tooltip = "Clear zoom") {
-		tooltip(tooltip = tooltip, actionButton(plot$buttonUnzoom, label))
+		tooltip(tooltip = tooltip, bsButton(plot$buttonUnzoom, label, disabled=T))
 	}
 
 	plot$renderImage <- function() {
