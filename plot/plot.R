@@ -79,7 +79,7 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 		}
 	}
 
-	# Utility function which return the index of the state to which the vlaue belongs
+	# Utility function which return the index of the state to which the value belongs
 	plot$resolveStateIndex <- function(dim, x) {
 		stateIndexFromValue(plot$varThresholds[[dim]], x)		
 	}
@@ -118,8 +118,8 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 			vars <- lapply(1:plot$varCount, function(i) {
 				if (i == dim$x || i == dim$y) {
 					NULL
-				} else if ( !input[["advanced"]] || # setting advanced mode off will omit checkboxes and sliders
-				            (plot$useProjections && unwrapOr(input[[plot$project[i]]], TRUE))) {
+				} else if (plot$useProjections && ( !input[["advanced"]] || # setting advanced mode off will omit checkboxes and sliders
+				                                    unwrapOr(input[[plot$project[i]]], TRUE))) {
 					NULL
 				} else {
 					r <- unwrapOr(input[[plot$sliders[i]]], if(plot$varContinuous[i]) { plot$varRanges[[i]]$min } else { 1 })
