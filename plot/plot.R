@@ -45,8 +45,10 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 	plot$eventHover <- paste0("plot_hover_", id)				# Plot hovered
 
 	plot$setupPlot <- function(config) {
-		par(mar = c(2.5,2.5,2.5,2.5))
-		par(mgp = c(1.5, 0.5, 0))
+		scale <- 2
+		par(mar = c(scale * 2.5, scale * 2.5, scale * 2.5, scale * 2.5))
+		par(mgp = c(scale * 1.5, scale * 0.5, scale * 0))		
+		par(cex.lab=scale, cex.axis=scale, cex.main=scale, cex.sub=scale)
 		if (plot$varNames[config$x] == emptyVarName) {
 			plot(
 				x = config$zoom[1,], y = config$zoom[2,],
