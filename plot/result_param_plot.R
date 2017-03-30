@@ -23,7 +23,7 @@ createResultParamPlot <- function(result, id, input, session, output) {
 		id, input, session, output
 	)
 
-	debug(id, ":statePlot create")
+	debug(id, ":resultParamPlot create")
 
 	plot$result <- result
 	plot$state$coverage <- NULL
@@ -235,7 +235,7 @@ createResultParamPlot <- function(result, id, input, session, output) {
 			# TODO experiment with margins
 			plot$setupPlot(config)		
 
-			title(main = Explorer_VF_label)	
+			title(main = Result_PS_label)	
 
 			#### HERE WE APPLY ALL STATE SPACE RESTRICTIONS ####
 
@@ -524,7 +524,7 @@ createResultParamPlot <- function(result, id, input, session, output) {
 
 	plot$destroy <- function() {
 		plot$baseDestroy()
-		debug(id, ":statePlot destroy")
+		debug(id, ":resultParamPlot destroy")
 
 		output[[plot$outImage]] <- renderPlot({ "Destroyed" })
 	}	
