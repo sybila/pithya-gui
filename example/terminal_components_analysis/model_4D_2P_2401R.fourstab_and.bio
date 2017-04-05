@@ -1,0 +1,16 @@
+VARS: x,y,z,v
+CONSTS: k1,1; k2,1; k3,1; k4,1; deg_z,0.1; deg_v,0.1
+PARAMS: deg_x,0,1; deg_y,0,1
+
+EQ: x = k1*hillm(y,5,5,1,0)+hillm(z,5,5,1,0)+hillm(v,5,5,1,0) - deg_x*x
+EQ: y = k2*hillm(z,5,5,1,0)+hillm(x,5,5,1,0)+hillm(v,5,5,1,0) - deg_y*y
+EQ: z = k3*hillm(v,5,5,1,0)+hillm(y,5,5,1,0)+hillm(x,5,5,1,0) - deg_z*z
+EQ: v = k4*hillm(x,5,5,1,0)+hillm(y,5,5,1,0)+hillm(z,5,5,1,0) - deg_v*v
+
+VAR_POINTS: x: 1500, 7; y: 1500, 7; z: 1500, 7; v: 1500, 7
+
+THRES: x: 0, 15
+THRES: y: 0, 15
+THRES: z: 0, 15
+THRES: v: 0, 15
+
