@@ -311,11 +311,13 @@ createBasePlot <- function(varNames, varThresholds, varContinuous, useProjection
 	## UI renderers
 
 	plot$renderUnselectButton <- function(label = "Unselect", tooltip = "Clear selection") {
-		tooltip(tooltip = tooltip, bsButton(plot$buttonUnselect, label, disabled=T))
+	    # I'm not sure about using either plot$state$zoom or plot$baseConfig()$zoom
+	    tooltip(tooltip = tooltip, bsButton(plot$buttonUnselect, label, disabled=ifelse(is.null(plot$state$selection), TRUE, FALSE)))
 	}
 
 	plot$renderUnzoomButton <- function(label = "Unzoom", tooltip = "Clear zoom") {
-		tooltip(tooltip = tooltip, bsButton(plot$buttonUnzoom, label, disabled=T))
+	    # I'm not sure about using either plot$state$zoom or plot$baseConfig()$zoom
+	    tooltip(tooltip = tooltip, bsButton(plot$buttonUnzoom, label, disabled=ifelse(is.null(plot$state$zoom), TRUE, FALSE)))
 	}
 
 	plot$renderImage <- function() {
