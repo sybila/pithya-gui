@@ -71,11 +71,11 @@ createResultStatePlot <- function(result, id, input, session, output) {
 				} else {
 					config$vars[[v]]
 				}
-			})			
-
+			})
+			
 			# dimensionMask ensures that all except two dimensions are reduced to trivial
 			projectedValues <- do.call("[", append(list(config$mapping, drop = TRUE), dimensionMask))
-			projection <- projectedValues > 0						
+			projection <- projectedValues > 0
 
 			# If current dimension ordering is reversed, we have to transpose the results
 			if (config$x > config$y) {
@@ -99,6 +99,7 @@ createResultStatePlot <- function(result, id, input, session, output) {
 				if (config$x > config$y) {
 					selectedProjection <- t(selectedProjection)
 				}
+				
 				selectedProjection <- projection & selectedProjection
 				rect(xLow[selectedProjection], yLow[selectedProjection], xHigh[selectedProjection], yHigh[selectedProjection], 
 					col = first_formula_color_clicked, border = "black", lwd = 1.5
@@ -121,22 +122,42 @@ createResultStatePlot <- function(result, id, input, session, output) {
 	# Add/remove to selected items when selection changes
 	plot$.selectionUpdate <- observe({
 		sel <- plot$state$selection
-		config <- isolate(plot$baseConfig())
-		if (is.null(sel) || is.null(config)) {
+		baseConfig <- isolate(plot$baseConfig())
+		plotConfig <- isolate(plot$config())
+		if (is.null(sel) || is.null(baseConfig)) {
 			plot$state$selectedStates <- NULL
 		} else {
+		    
+		    # we need trueness (possible satisfiability) of mapping across all dimensions
+		    projection <- do.call("[", append(list(plotConfig$mapping, drop = TRUE), rep(T,plot$varCount))) > 0
+
+		    # If current dimension ordering is reversed, we have to transpose the results
+		    if (baseConfig$x > baseConfig$y) {
+		        projection <- t(projection)
+		    }
+		    debug("## projection")
+		    debug(projection)
+
 			stateSpaceSizes <- sapply(plot$varThresholds, function(x) length(x) - 1)
 			current <- unwrapOr(isolate(plot$state$selectedStates), array(FALSE, stateSpaceSizes))
-			vars <- config$vars
-			vars[[config$x]] <- plot$resolveStateIndex(config$x, sel$x)
-			vars[[config$y]] <- plot$resolveStateIndex(config$y, sel$y)
+			vars <- baseConfig$vars
+			vars[[baseConfig$x]] <- plot$resolveStateIndex(baseConfig$x, sel$x)
+			vars[[baseConfig$y]] <- plot$resolveStateIndex(baseConfig$y, sel$y)
 
 			currentValue <- do.call("[", append(list(current), vars))
 			newValue <- do.call("[<-", append(list(current), append(vars, !currentValue)))
+			debug("## newValue")
+			debug(newValue)
+			newValue <- newValue & projection
+			
 			if (any(newValue)) {
+			    debug("!!! something has been chosen")
 				plot$state$selectedStates <- newValue
 			} else {
+			    debug("!!! nohing important has been chosen")
 				plot$state$selectedStates <- NULL
+				plot$state$selection <- NULL
+				updateButton(session$shiny, plot$buttonUnselect, disabled=T)
 			}
 		}
 	})
