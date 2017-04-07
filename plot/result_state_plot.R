@@ -135,8 +135,6 @@ createResultStatePlot <- function(result, id, input, session, output) {
 		    if (baseConfig$x > baseConfig$y) {
 		        projection <- t(projection)
 		    }
-		    debug("## projection")
-		    debug(projection)
 
 			stateSpaceSizes <- sapply(plot$varThresholds, function(x) length(x) - 1)
 			current <- unwrapOr(isolate(plot$state$selectedStates), array(FALSE, stateSpaceSizes))
@@ -146,15 +144,11 @@ createResultStatePlot <- function(result, id, input, session, output) {
 
 			currentValue <- do.call("[", append(list(current), vars))
 			newValue <- do.call("[<-", append(list(current), append(vars, !currentValue)))
-			debug("## newValue")
-			debug(newValue)
 			newValue <- newValue & projection
 			
 			if (any(newValue)) {
-			    debug("!!! something has been chosen")
 				plot$state$selectedStates <- newValue
 			} else {
-			    debug("!!! nohing important has been chosen")
 				plot$state$selectedStates <- NULL
 				plot$state$selection <- NULL
 				updateButton(session$shiny, plot$buttonUnselect, disabled=T)
