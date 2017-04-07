@@ -129,7 +129,8 @@ createResultStatePlot <- function(result, id, input, session, output) {
 		} else {
 		    
 		    # we need trueness (possible satisfiability) of mapping across all dimensions
-		    projection <- do.call("[", append(list(plotConfig$mapping, drop = TRUE), rep(T,plot$varCount))) > 0
+		    #projection <- do.call("[", append(list(plotConfig$mapping, drop = TRUE), rep(T,plot$varCount))) > 0
+		    projection <- plotConfig$mapping > 0
 
 		    # If current dimension ordering is reversed, we have to transpose the results
 		    if (baseConfig$x > baseConfig$y) {
