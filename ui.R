@@ -36,15 +36,24 @@ shinyUI(
         useShinyjs(),
         fluidPage(
             fluidRow(
-                column(8, titlePanel(Tool_name)),
-                column(4, class = "advanced_checkbox", 
-                    tooltip(tooltip = Editor_advancedSettings_tooltip,
-                        checkboxInput("advanced", Editor_advancedSettings_label, F)
-                    )
-                )
+                column(10, titlePanel(Tool_name)),
+                # column(2, class = "advanced_checkbox", 
+                #     tooltip(tooltip = Editor_advancedSettings_tooltip,
+                #         checkboxInput("advanced", Editor_advancedSettings_label, F)
+                #     )
+                # ),
+                column(2, a(img(src = "logo_new.png", height = 60, width = 165, style = "float:right"), href = "http://sybila.fi.muni.cz/home"))
             )
         ),
         tags$hr(),
+        fluidRow( 
+            # Area prepared for Experiments management (Prev, Next, Save, Load, etc.)
+            column(2,
+                   tooltip(tooltip = Editor_advancedSettings_tooltip,
+                           checkboxInput("advanced", Editor_advancedSettings_label, F)
+                   ), offset = 0
+            )
+        ),
         tabsetPanel(id = "dimensions",
             editorTab(),
             explorerTab(),
