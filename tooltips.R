@@ -1,5 +1,5 @@
 source("config.R")
-Tool_name <- "PITHYA - Parameter Investigation Tool for HYbrid Analysis"
+Tool_name <- "PITHYA: Parameter Investigation Tool with HYbrid Approach"
 
 #PROGRESS NOTIFICATIONS - in server.R
 Starting_advice <- "" #"Start with button 'generate approximation'.\n"
