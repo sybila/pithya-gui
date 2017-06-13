@@ -1,0 +1,9 @@
+VARS: veloc, phi
+
+EQ: veloc = phi
+EQ: phi = -sin(veloc)
+
+VAR_POINTS: veloc: 1500, 20
+
+THRES: veloc: 0, 1, 2, 3, 4, 5, 6
+THRES: phi: 0, 1, 2, 3, 4, 5, 6

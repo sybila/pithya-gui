@@ -1,0 +1,15 @@
+#################################
+# Predator-Prey (Lotka-Vottera) #
+#################################
+
+VARS: PRED, PREY
+CONSTS: beta,1; delta,0.4; sat,0.4
+PARAMS: alpha,0,10; gamma,0,1
+
+EQ: PREY = alpha*PREY - beta*PRED*hillp(PREY,sat,1,0,1)
+EQ: PRED = gamma*hillp(PREY,sat,1,0,1)*PRED - delta*PRED
+
+VAR_POINTS: PREY:1500,10; PRED:1500,10
+
+THRES: PREY: 0, 0.01, 0.5, 1, 1.5, 1.9, 2, 3, 4, 5,10
+THRES: PRED: 0, 0.01, 0.5, 1, 1.5, 1.9, 2, 3, 4, 5,10
