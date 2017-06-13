@@ -34,21 +34,32 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 shinyUI(
     fluidPage(
         useShinyjs(),
-        fluidPage(
-            fluidRow(
-                column(10, titlePanel(Tool_name)),
-                # column(2, class = "advanced_checkbox", 
-                #     tooltip(tooltip = Editor_advancedSettings_tooltip,
-                #         checkboxInput("advanced", Editor_advancedSettings_label, F)
-                #     )
-                # ),
-                column(2, a(img(src = "logo_new.png", height = 60, width = 165, style = "float:right"), href = "http://sybila.fi.muni.cz/home"))
-            )
+        # loading(file.path(tempdir(), "image.Rmd")),
+        # fluidPage(
+        fluidRow(
+            column(10, titlePanel(Tool_name)),
+            # column(2, class = "advanced_checkbox", 
+            #     tooltip(tooltip = Editor_advancedSettings_tooltip,
+            #         checkboxInput("advanced", Editor_advancedSettings_label, F)
+            #     )
+            # ),
+            column(2, a(img(src = "logo_new.png", height = 60, width = 165, style = "float:right"), href = "http://sybila.fi.muni.cz/home"))
+        # )
         ),
         tags$hr(),
         fluidRow( 
             # Area prepared for Experiments management (Prev, Next, Save, Load, etc.)
+            # column(1,bsButton("btn_prev","Prev")),
+            # column(1,bsButton("btn_next","Next")),
+            # column(1,bsButton("btn_load","Load")),
+            # column(1,bsButton("btn_save","Save")),
+            # column(1,bsButton("btn_remove","Remove")),
+            
+            # column(1,bsButton("btn_test_export","export")),
+            # column(1,bsButton("btn_test_import","import")),
+            
             column(2,
+                   #style = "margin-top:5px;",
                    tooltip(tooltip = Editor_advancedSettings_tooltip,
                            checkboxInput("advanced", Editor_advancedSettings_label, F)
                    ), offset = 0

@@ -58,6 +58,34 @@ shinyServer(function(input,output,session) {
             mySession$pithya$synthesisResult$result <- NULL         
         }
     })
+    
+    # output$btn_test_export <- downloadHandler(
+    #     filename = "report.html",
+    #     content = function(file) {
+    #         tempReport <- file.path(tempdir(), "report.Rmd")
+    #         file.create(tempReport)
+    #         
+    #         params <- list(all = mySession)
+    #         
+    #         rmarkdown::render(tempReport, output_file = file,
+    #                           params = params,
+    #                           envir = new.env(parent = globalenv())
+    #         )
+    #     }
+    # )
+    
+    # observeEvent(input$btn_test_import, {
+    #     tempImage <- file.path(tempdir(), "image.Rmd")
+    #     loading(tempImage)
+    # })
+    # observeEvent(input$btn_test_export, {
+    #     tempImage <- file.path(tempdir(), "image.Rmd")
+    #     saving(tempImage)
+    #     # neco <- toJSON(reactiveValuesToList(mySession$shiny$input))
+    #     # inp <- fromJSON(neco)
+    #     # mySession$shiny$sendInputMessage("arrows_number",35)
+    #     # updateSliderInput(mySession$shiny,"arrows_number",value = 35)
+    # })
 
     editorServer(input, mySession, output)
     explorerServer(input, mySession, output)

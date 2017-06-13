@@ -1,3 +1,11 @@
+# loading <- function(file) {
+#     return(load(file,envir=.GlobalEnv))
+# }
+# saving <- function(file) {
+#     save.image(file)
+# }
+
+
 veloc <- 1000
 colorThres <- 0.05
 plotSize <- 650
