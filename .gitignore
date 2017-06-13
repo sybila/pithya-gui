@@ -34,3 +34,6 @@ vignettes/*.pdf
 
 # Ignore core
 core
+example/tcbb_model/model_indep.2P.properties.results.50x50.json
+image_save_test
+saved_test
