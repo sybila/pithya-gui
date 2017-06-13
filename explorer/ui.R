@@ -42,10 +42,10 @@ explorerControlPanel <- function() {
         advanced(
             column(3, class = "fluid_column",
                 tooltip(tooltip = Explorer_flowPointsCount_tooltip,
-                    numericInput("flow_points_count", Explorer_flowPointsCount_label,min=50,max=NA,step=50,value=500)
+                    numericInput("flow_points_count", Explorer_flowPointsCount_label,min=50,max=NA,step=50,value=1000)
                 ),
                 tooltip(tooltip = Explorer_flowPointsDensity_tooltip,
-                    sliderInput("flow_points_density", Explorer_flowPointsDensity_label,0.01,10,step=0.01,value=1)
+                    sliderInput("flow_points_density", Explorer_flowPointsDensity_label,0.01,10,step=0.01,value=0.1)
                 )
             )
         ),

@@ -97,7 +97,7 @@ createVectorPlot <- function(modelPWA, model, id, input, session, output) {
 				for (v in 1:plot$varCount) {
 					move[v] <- config$equations[[v]](vars, config$params)										
 				}			
-				if (max(abs(move)) > maxMove) {
+				while (max(abs(move)) > maxMove) {
 					move <- move * 10^log10(maxMove)
 				}					
 				new <- vars + config$pointDensity * move	
