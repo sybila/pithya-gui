@@ -3,6 +3,19 @@
 ### observer that depends on reactive poll is unsubscribed.
 ### Therefore we create a simplified custom reactive file reader which needs just one observer and can be safely unsubscribed.
 
+mytempdir <- function() {
+    
+    ## Just for case Windows would need to define specific temporary directory
+    # if (.Platform$OS.type == "windows") {
+    #     personal <- strsplit(tempdir(),"[\\/]")[[1]][length(strsplit(tempdir(),"[\\/]")[[1]])]
+    #     dir <- paste("C://Temp", personal, sep="//")
+    #     if(!dir.exists(dir)) dir.create(dir, recursive=T, mode="0777")
+    #     return(dir)
+    # } else
+        return(tempdir())
+}
+
+
 myCoerceToFunc <- function(x) {
   force(x);
   if (is.function(x))

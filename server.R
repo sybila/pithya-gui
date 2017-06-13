@@ -13,11 +13,14 @@ source("explorer/server.R")
 source("result/server.R")
 
 shinyServer(function(input,output,session) {
+    
+    ## Just for case Windows would need to define specific temporary directory
+    # session$onSessionEnded(function() {unlink(paste0(mytempdir()),recursive = T)})
 
     mySession <- list(shiny=session, pithya=list(
         approximatedModel = reactiveValues(file = NULL, model = NULL, outdated = FALSE),
         synthesisResult = reactiveValues(file = NULL, result = NULL, outdated = FALSE),
-        sessionDir = tempdir(),
+        sessionDir = mytempdir(),
         examplesDir = "example//",
         nextId = createCounter(1)
     ))

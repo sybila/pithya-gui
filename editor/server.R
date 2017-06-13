@@ -116,7 +116,7 @@ editorServer <- function(input, session, output) {
 					)
 				))
 			} else {
-				showModal(modalDialog(title = "Snyhesis error!", e))
+				showModal(modalDialog(title = "Synthesis error!", e))
 			}
 		},
 		onKill = function() {
@@ -139,7 +139,8 @@ editorServer <- function(input, session, output) {
 				file.remove(synthesisProcess$resultFile)
 				synthesisProcess$resultFile <- NULL
 			}
-			synthesisProcess$logReader$destroy()
+		    #if(.Platform$OS.type != "windows")
+			    synthesisProcess$logReader$destroy()
 		}
 	)
 
@@ -337,23 +338,29 @@ editorServer <- function(input, session, output) {
 		synthesisProcess$propertyFile <- tempfile(pattern = "property", fileext = ".ctl", tmpdir = sessionDir)
 		synthesisProcess$resultFile <- tempfile(pattern = "synthesisResult", fileext = ".ctl", tmpdir = sessionDir)
 		synthesisProcess$logFile <- tempfile(pattern = "synthesisLog", fileext = ".txt", tmpdir = sessionDir)
-		synthesisProcess$logReader <- myReactiveFileReader(500, session$shiny, synthesisProcess$logFile, function(progress) {
-			output$synth_log <- renderPrint({
-				cat(paste0(progress, collapse = "\n"))
-			})	
-		})
+		file.create(synthesisProcess$logFile)
+		#if(.Platform$OS.type != "windows") {
+    		synthesisProcess$logReader <- myReactiveFileReader(500, session$shiny, synthesisProcess$logFile, function(progress) {
+    			output$synth_log <- renderPrint({
+    			    if(.Platform$OS.type != "windows")
+    				    cat(paste0(progress, collapse = "\n"))
+    			    else
+    			        cat("Progress log during computation is not supported in Windows")
+    			})	
+    		})
+		#}
 		writeLines(input$prop_input_area, synthesisProcess$propertyFile)
 
 		synthesisProcess$notificationID <- showNotification(
 			tags$div(class = "synth_not",
 				"Parameter synthesis running",
-				verbatimTextOutput("synth_log")	,
+				verbatimTextOutput("synth_log") ,
 				tags$div(
-					downloadButton("save_synth_log", "Download log"),
+					if(.Platform$OS.type != "windows") downloadButton("save_synth_log", "Download log"),
 					actionButton("synthesis_kill", "Cancel", style = "warning")
 				)
 			), 
-			duration = NULL, closeButton = FALSE
+			duration = NULL, closeButton = FALSE#, type = "error"
 		)
 
 		output$save_synth_log <- downloadHandler(
@@ -371,8 +378,9 @@ editorServer <- function(input, session, output) {
 				"-r", "json", "-ro", paste0("\"", synthesisProcess$resultFile, "\""),
 				"--parallelism", input$threads_number 
 			),
-			stdout = synthesisProcess$logFile,
-			stderr = synthesisProcess$logFile,
+			## Following file(..) wrapper is necessary for Windows platform - as it creates blocking files for writing by default
+			stdout = file(synthesisProcess$logFile, open="a+", blocking=F),
+			stderr = file(synthesisProcess$logFile, open="a+", blocking=F),
 			stdin = ""
 		))
 
