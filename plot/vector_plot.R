@@ -23,12 +23,15 @@ createVectorPlot <- function(modelPWA, model, id, input, session, output) {
 	plot$state$activeModel <- model
 	plot$state$params <- NULL
 	plot$state$flow <- NULL
+	plot$state$label <- Explorer_VF_label
 
 	observeEvent(input[[plot$usePWMA]], {
 		if (input[[plot$usePWMA]]) {
 			plot$state$activeModel <- modelPWA
+			plot$state$label <- Explorer_VF_label_pwa
 		} else {
 			plot$state$activeModel <- model
+			plot$state$label <- Explorer_VF_label
 		}
 	})
 
@@ -45,6 +48,7 @@ createVectorPlot <- function(modelPWA, model, id, input, session, output) {
 			baseConfig$flow <- plot$state$flow
 			baseConfig$xEQ <- model$varEQ[[baseConfig$x]]
 			baseConfig$yEQ <- model$varEQ[[baseConfig$y]]
+			baseConfig$label <- plot$state$label
 
 			# Display options
 			baseConfig$arrowCount <- unwrapOr(input$arrows_number, 20)
@@ -113,7 +117,7 @@ createVectorPlot <- function(modelPWA, model, id, input, session, output) {
 			debug(id, ":vectorPlot render plot")
 
 			plot$setupPlot(config)
-			title(Explorer_VF_label)	
+			title(config$label)	
 			
 			one <- replicate(config$arrowCount, replicate(config$arrowCount, 1))
 			range <- config$zoom[,2] - config$zoom[,1]

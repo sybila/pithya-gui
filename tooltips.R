@@ -1,5 +1,5 @@
 source("config.R")
-Tool_name <- "PITHYA: Parameter Investigation Tool with HYbrid Approach"
+Tool_name <- "PITHYA: Parameter Investigation Tool"
 
 #PROGRESS NOTIFICATIONS - in server.R
 Starting_advice <- "" #"Start with button 'generate approximation'.\n"
@@ -136,6 +136,7 @@ Explorer_hide_label <- "Hide"
 Explorer_hide_tooltip <- "Hide/show this plot."
 
 Explorer_VF_label <- "ODE Model Vector Field"
+Explorer_VF_label_pwa <- "PMA Model Vector Field"
 Explorer_VF_tooltip <- ""                                           #TODO: probably remove
 
 Explorer_VF_ApplyToAll_label <- "Apply to All VF" # 
