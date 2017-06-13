@@ -84,9 +84,9 @@ editorControlPanel <- function() {
         ),
         tooltip(tooltip = Editor_runParameterSynthesis_tooltip,
             bsButton("process_run", Editor_runParameterSynthesis_label, disabled=T)
-        ),
-        tooltip(tooltip = Editor_stopParameterSynthesis_tooltip,
-            bsButton("process_stop", Editor_stopParameterSynthesis_label, disabled=T)
+        # ),
+        # tooltip(tooltip = Editor_stopParameterSynthesis_tooltip,
+        #     bsButton("process_stop", Editor_stopParameterSynthesis_label, disabled=T)
         )
     )
 
