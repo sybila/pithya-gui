@@ -1,6 +1,7 @@
 source("config.R")          # global configuration
 source("tooltips.R")        # texts
 source("ui_global.R")
+source("util.R")
 
 # Other parts of the UI
 source("editor/ui.R")
@@ -34,7 +35,7 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 shinyUI(
     fluidPage(
         useShinyjs(),
-        # loading(file.path(tempdir(), "image.Rmd")),
+        # loading(file.path(mytempdir(), "image.Rmd")),
         # fluidPage(
         fluidRow(
             column(10, titlePanel(Tool_name)),
