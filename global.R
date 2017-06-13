@@ -45,6 +45,9 @@ disj <- function(x) apply(x,1,function(i) (T %in% i))
 
 chunk <- function(d,n) split(d, ceiling(seq_along(d)/n))
 
+pow <- function(a,b) a^b
+Pow <- function(a,b) a^b
+
 hillm <- function(s,t,n=1,a=1,b=0) (t^n)/(s^n + t^n)
 Hillm <- function(s,t,n=1,a=1,b=0) (t^n)/(s^n + t^n)
 hillp <- function(s,t,n=1,a=0,b=1) (s^n)/(s^n + t^n)
