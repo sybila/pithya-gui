@@ -34,6 +34,15 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 
 shinyUI(
     fluidPage(
+        ### Working solution for re-loading of fileInput
+        # tags$script('
+        # Shiny.addCustomMessageHandler("loader_reset", function(x) {   
+        #     var el = $("#" + x);
+        #     el.replaceWith(el = el.clone(true));
+        #     var id = "#" + x + "_progress";     
+        #     $(id).css("visibility", "hidden");
+        # });
+        # '),
         useShinyjs(),
         # loading(file.path(mytempdir(), "image.Rmd")),
         # fluidPage(

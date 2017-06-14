@@ -48,6 +48,8 @@ shinyServer(function(input,output,session) {
         if (!is.null(file)) {
             tryCatch({
                 mySession$pithya$synthesisResult$result <- parseResultFile(file)
+                ### Working solution for re-loading of fileInput
+                #mySession$shiny$sendCustomMessage("loader_reset","ps_file")
             }, error = function(e) {
                 debug("[result parser] parsing error: ", e)
                 showNotification("[INTERNAL ERROR] Result parsing failed")
