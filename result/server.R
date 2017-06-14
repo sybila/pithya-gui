@@ -71,6 +71,7 @@ resultServer <- function(input, session, output) {
 			showNotification("Invalid result file")			
 		} else {
 			tryCatch({
+			    session$pithya$synthesisResult$file <- input$ps_file$datapath
 				result <- parseResultFile(input$ps_file$datapath)
 				session$pithya$synthesisResult$result <- result
 				# Always outdates, because it is loaded from file
