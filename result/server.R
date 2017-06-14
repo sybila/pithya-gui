@@ -19,7 +19,7 @@ resultServer <- function(input, session, output) {
 				plotRows[[row$outRow]] <- NULL	
 			}
 		})
-		updateButton(session$shiny, "add_param_plot", disabled = !enabled)
+		updateButton(session$shiny, "add_param_plot", disabled = !enabled, style = "success")
 	})
 
 	output$result_notification <- renderUI({

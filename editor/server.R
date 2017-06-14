@@ -152,14 +152,16 @@ editorServer <- function(input, session, output) {
 	# Enable approximation button when process is not running and result is outdated
 	observeEvent(c(session$pithya$approximatedModel$outdated, approximationProcess$running), {
 		enabled <- is.null(approximationProcess$running) && session$pithya$approximatedModel$outdated
-		updateButton(session$shiny, "generate_abstraction", style = "success", disabled = !enabled)
+		if(enabled) updateButton(session$shiny, "generate_abstraction", style = "success", disabled = !enabled)
+		else        updateButton(session$shiny, "generate_abstraction", style = "default", disabled = !enabled)
 	})
 	
 	# Enable synthesis button when process is not running and model is ready and result is outdated
 	observeEvent(c(input$prop_input_area, session$pithya$synthesisResult$outdated, session$pithya$approximatedModel$outdated, synthesisProcess$running), {
 		# TODO check if the properties are identical to the last synthesised one
 		enabled <- is.null(synthesisProcess$running) && session$pithya$synthesisResult$outdated	&& !session$pithya$approximatedModel$outdated
-		updateButton(session$shiny, "process_run", style = "success", disabled = !enabled)
+		if(enabled) updateButton(session$shiny, "process_run", style = "success", disabled = !enabled)
+		else        updateButton(session$shiny, "process_run", style = "default", disabled = !enabled)
 	})
 
 	# Invalidate approximated model when input changes
@@ -177,7 +179,7 @@ editorServer <- function(input, session, output) {
 	# Load model file into the text editor after upload or reset
 	observeEvent(c(input$model_file, input$reset_model), {
 		if (is.null(input$model_file) || is.null(input$model_file$datapath)) {
-			#data <- readLines(paste0(session$pithya$examplesDir, defaultModel))
+			data <- readLines(paste0(session$pithya$examplesDir, defaultModel))
 			data <- ""
 		} else {
 			data <- readLines(input$model_file$datapath)
@@ -188,7 +190,7 @@ editorServer <- function(input, session, output) {
 	# Load property file into the text editor after upload or reset
 	observeEvent(c(input$prop_file, input$reset_prop), {
 		if (is.null(input$prop_file) || is.null(input$prop_file$datapath)) {
-			#data <- readLines(paste0(session$pithya$examplesDir, defaultProperty))
+			data <- readLines(paste0(session$pithya$examplesDir, defaultProperty))
 			data <- ""
 		} else {
 			data <- readLines(input$prop_file$datapath)
@@ -229,7 +231,7 @@ editorServer <- function(input, session, output) {
 			# Should not happen, but just to be sure...
 			killRemoteProcess(session, approximationProcess)
 		}
-
+		
 		approximationProcess$inputFile <- tempfile(pattern = "approximationInput", fileext = ".bio", tmpdir = sessionDir)
 		approximationProcess$resultFile <- tempfile(pattern = "approximationOutput", fileext = ".bio", tmpdir = sessionDir)
 		writeLines(modelData, approximationProcess$inputFile)

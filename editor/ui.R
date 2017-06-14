@@ -51,7 +51,7 @@ editorControlPanel <- function() {
                 )
             ),
             tooltip(tooltip = Editor_generateApproximation_tooltip,
-                bsButton("generate_abstraction", Editor_generateApproximation_label, disabled=T)
+                bsButton("generate_abstraction", Editor_generateApproximation_label, disabled=T, style="default")
             )
         )
     )    
@@ -79,11 +79,12 @@ editorControlPanel <- function() {
     synthesisControls <- fluidPage(
         advanced(
             tooltip(tooltip = Editor_numberOfThreads_tooltip,
-                sliderInput("threads_number", Editor_numberOfThreads_label, value = detectCores(), min=1, max=detectCores(), step=1)
+                sliderInput("threads_number", Editor_numberOfThreads_label, value = 1, #detectCores(), 
+                            min=1, max=detectCores(), step=1)
             )
         ),
         tooltip(tooltip = Editor_runParameterSynthesis_tooltip,
-            bsButton("process_run", Editor_runParameterSynthesis_label, disabled=T)
+            bsButton("process_run", Editor_runParameterSynthesis_label, disabled=T, style="default")
         # ),
         # tooltip(tooltip = Editor_stopParameterSynthesis_tooltip,
         #     bsButton("process_stop", Editor_stopParameterSynthesis_label, disabled=T)

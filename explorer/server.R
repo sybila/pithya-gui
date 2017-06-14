@@ -82,7 +82,7 @@ explorerServer <- function(input, session, output) {
 				plotRows[[row$outRow]] <- NULL	
 			}
 		})
-		updateButton(session$shiny, "add_plot_row", disabled = !enabled)
+		updateButton(session$shiny, "add_plot_row", disabled = !enabled, style = "success")
 	})
 
 	observeEvent(input$add_plot_row, {

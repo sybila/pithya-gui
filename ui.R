@@ -70,10 +70,12 @@ shinyUI(
             
             column(2,
                    #style = "margin-top:5px;",
+                   style = "visibility: hidden;",
                    tooltip(tooltip = Editor_advancedSettings_tooltip,
                            checkboxInput("advanced", Editor_advancedSettings_label, F)
                    ), offset = 0
-            )
+            ),
+            column(4, a(code(("! Click here for tutorial !")), href = "http://sybila.fi.muni.cz/home"), offset = 3)
         ),
         tabsetPanel(id = "dimensions",
             editorTab(),
