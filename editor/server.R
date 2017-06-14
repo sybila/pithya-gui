@@ -23,7 +23,7 @@ editorServer <- function(input, session, output) {
 		onSuccess = function() {
 			debug("[approximationProcess] success")
 			output <- approximationProcess$resultFile
-			if (file.exists(output) && length(readLines(output)) > 0) {
+			if (file.exists(output) && length(readLines(file(output, open="r", blocking=F))) > 0) {
         		# Approximation success        		
         		session$pithya$approximatedModel$file <- output
         		session$pithya$approximatedModel$outdated <- FALSE	        		        	
@@ -179,8 +179,8 @@ editorServer <- function(input, session, output) {
 	# Load model file into the text editor after upload or reset
 	observeEvent(c(input$model_file, input$reset_model), {
 		if (is.null(input$model_file) || is.null(input$model_file$datapath)) {
-			data <- readLines(paste0(session$pithya$examplesDir, defaultModel))
 			data <- ""
+			data <- readLines(paste0(session$pithya$examplesDir, defaultModel))
 		} else {
 			data <- readLines(input$model_file$datapath)
 		}
@@ -190,8 +190,8 @@ editorServer <- function(input, session, output) {
 	# Load property file into the text editor after upload or reset
 	observeEvent(c(input$prop_file, input$reset_prop), {
 		if (is.null(input$prop_file) || is.null(input$prop_file$datapath)) {
-			data <- readLines(paste0(session$pithya$examplesDir, defaultProperty))
 			data <- ""
+			data <- readLines(paste0(session$pithya$examplesDir, defaultProperty))
 		} else {
 			data <- readLines(input$prop_file$datapath)
 		}
@@ -231,11 +231,11 @@ editorServer <- function(input, session, output) {
 			# Should not happen, but just to be sure...
 			killRemoteProcess(session, approximationProcess)
 		}
-		
+
 		approximationProcess$inputFile <- tempfile(pattern = "approximationInput", fileext = ".bio", tmpdir = sessionDir)
 		approximationProcess$resultFile <- tempfile(pattern = "approximationOutput", fileext = ".bio", tmpdir = sessionDir)
+		
 		writeLines(modelData, approximationProcess$inputFile)
-
 		session$pithya$approximatedModel$original <- parseBioFile(approximationProcess$inputFile)
 
 		approximationProcess$notificationID <- showNotification(
