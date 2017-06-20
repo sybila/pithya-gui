@@ -73,7 +73,8 @@ shinyUI(
                    tooltip(tooltip = Editor_advancedSettings_tooltip,
                            checkboxInput("advanced", Editor_advancedSettings_label, F)
                    ), offset = 0
-            )
+            ),
+            column(4, a(code(("! Click here for tutorial !")), target = "_blank", href = "http://biodivine.fi.muni.cz/docs/pithya/tutorial.pdf"), offset = 3)
         ),
         tabsetPanel(id = "dimensions",
             editorTab(),
