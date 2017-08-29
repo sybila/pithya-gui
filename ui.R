@@ -64,8 +64,8 @@ shinyUI(
             #         checkboxInput("advanced", Editor_advancedSettings_label, F)
             #     )
             # ),
-            column(2, a(img(src = "aec_badge_cav.svg", height = 80, width = 80, style = "float:left; padding: 5px 5px 5px 5px"), href = "http://cavconference.org/2017/accepted-papers/", target="_blank")),
-            column(2, a(img(src = "logo_new.png", height = 80, width = 220, style = "float:right"), href = "http://sybila.fi.muni.cz/home", target="_blank"))
+            column(2, a(img(src = "aec_badge_cav.svg", height = 60, width = 60, style = "float:left; padding: 5px 5px 5px 5px"), href = "http://cavconference.org/2017/accepted-papers/", target="_blank")),
+            column(2, a(img(src = "logo_new.png", height = 60, width = 165, style = "float:right"), href = "http://sybila.fi.muni.cz/home", target="_blank"))
         # )
         ),
         tags$hr(),
