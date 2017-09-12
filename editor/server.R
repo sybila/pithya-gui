@@ -177,8 +177,8 @@ editorServer <- function(input, session, output) {
 	# Load model file into the text editor after upload or reset
 	observeEvent(c(input$model_file, input$reset_model), {
 		if (is.null(input$model_file) || is.null(input$model_file$datapath)) {
-			#data <- readLines(paste0(session$pithya$examplesDir, defaultModel))
-			data <- ""
+		    data <- ""
+			data <- readLines(paste0(session$pithya$examplesDir, defaultModel))
 		} else {
 			data <- readLines(input$model_file$datapath)
 		}
@@ -188,8 +188,8 @@ editorServer <- function(input, session, output) {
 	# Load property file into the text editor after upload or reset
 	observeEvent(c(input$prop_file, input$reset_prop), {
 		if (is.null(input$prop_file) || is.null(input$prop_file$datapath)) {
-			#data <- readLines(paste0(session$pithya$examplesDir, defaultProperty))
-			data <- ""
+		    data <- ""
+			data <- readLines(paste0(session$pithya$examplesDir, defaultProperty))
 		} else {
 			data <- readLines(input$prop_file$datapath)
 		}
