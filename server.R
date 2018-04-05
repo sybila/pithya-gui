@@ -20,6 +20,7 @@ shinyServer(function(input,output,session) {
     mySession <- list(shiny=session, pithya=list(
         approximatedModel = reactiveValues(file = NULL, model = NULL, outdated = FALSE),
         synthesisResult = reactiveValues(file = NULL, result = NULL, outdated = FALSE),
+        TSanalysisResult = reactiveValues(file = NULL, result = NULL, outdated = FALSE),
         sessionDir = mytempdir(),
         examplesDir = "example//",
         nextId = createCounter(1)
@@ -41,24 +42,43 @@ shinyServer(function(input,output,session) {
             mySession$pithya$approximatedModel$model <- NULL
         }
     })
-
+    
     # Parse result .json files when synthesis finished
     observeEvent(mySession$pithya$synthesisResult$file, {
-        file <- mySession$pithya$synthesisResult$file
-        if (!is.null(file)) {
-            tryCatch({
-                mySession$pithya$synthesisResult$result <- parseResultFile(file)
-                ### Working solution for re-loading of fileInput
-                #mySession$shiny$sendCustomMessage("loader_reset","ps_file")
-            }, error = function(e) {
-                debug("[result parser] parsing error: ", e)
-                showNotification("[INTERNAL ERROR] Result parsing failed")
-                mySession$pithya$synthesisResult$file <- NULL
-                mySession$pithya$synthesisResult$result <- NULL
-            })
-        } else {
-            mySession$pithya$synthesisResult$result <- NULL         
-        }
+      file <- mySession$pithya$synthesisResult$file
+      if (!is.null(file)) {
+        tryCatch({
+          mySession$pithya$synthesisResult$result <- parseResultFile(file)
+          ### Working solution for re-loading of fileInput
+          #mySession$shiny$sendCustomMessage("loader_reset","ps_file")
+        }, error = function(e) {
+          debug("[result parser] parsing error: ", e)
+          showNotification("[INTERNAL ERROR] Result parsing failed")
+          mySession$pithya$synthesisResult$file <- NULL
+          mySession$pithya$synthesisResult$result <- NULL
+        })
+      } else {
+        mySession$pithya$synthesisResult$result <- NULL         
+      }
+    })
+    
+    # Parse result .json files when TS analysis finished
+    observeEvent(mySession$pithya$TSanalysisResult$file, {
+      file <- mySession$pithya$TSanalysisResult$file
+      if (!is.null(file)) {
+        tryCatch({
+          mySession$pithya$TSanalysisResult$result <- parseResultFile(file)
+          ### Working solution for re-loading of fileInput
+          #mySession$shiny$sendCustomMessage("loader_reset","ps_file")
+        }, error = function(e) {
+          debug("[result parser] parsing error: ", e)
+          showNotification("[INTERNAL ERROR] Result parsing failed")
+          mySession$pithya$TSanalysisResult$file <- NULL
+          mySession$pithya$TSanalysisResult$result <- NULL
+        })
+      } else {
+        mySession$pithya$TSanalysisResult$result <- NULL         
+      }
     })
     
     # output$btn_test_export <- downloadHandler(

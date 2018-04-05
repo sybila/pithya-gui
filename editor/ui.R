@@ -2,6 +2,7 @@ source("config.R")          # global configuration
 source("tooltips.R")        # texts
 source("ui_global.R")       # UI utilities
 
+
 editorTab <- function() {
     tabPanel(Editor_label, icon=icons$bug,
         tooltip(tooltip = Editor_tooltip,            
@@ -87,6 +88,20 @@ editorControlPanel <- function() {
         # ),
         # tooltip(tooltip = Editor_stopParameterSynthesis_tooltip,
         #     bsButton("process_stop", Editor_stopParameterSynthesis_label, disabled=T)
+        ),
+        advanced(
+          tooltip(tooltip = Editor_algorithmType_tooltip,
+                  radioButtons("algorithm_type",Editor_algorithmType_label,list(local="local",dist="dist"),"local",inline=T)
+          ),
+          tooltip(tooltip = Editor_disableHeuristic_tooltip,
+                  checkboxInput("disable_heuristic", Editor_disableHeuristic_label, value=F)
+          ),
+          tooltip(tooltip = Editor_disableSelfloops_tooltip,
+                  checkboxInput("disable_selfloops", Editor_disableSelfloops_label, value=F)
+          )
+        ),
+        tooltip(tooltip = Editor_runTCAnalysis_tooltip,
+                bsButton("TC_analysis_run", Editor_runTCAnalysis_label, disabled=T)
         )
     )
 

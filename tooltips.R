@@ -12,6 +12,9 @@ Approximation_error <- "Some error occured during approximation.\n"
 Parameter_synthesis_started <- "Parameter synthesis has started.\n"
 Parameter_synthesis_stopped <- "Parameter synthesis process was stopped.\n"
 
+TC_analysis_started <- "TC analysis has started.\n"
+TC_analysis_stopped <- "TC analysis process was stopped.\n"
+
 Waiting_for_state_space <- "Updating plots." #comment both in adding plot and delteing
 
 
@@ -53,7 +56,7 @@ Editor_cutTresholds_tooltip <- "Do not allow automatic adding of thresholds exce
 Editor_fastApproximation_label <- "Fast Approximation"
 Editor_fastApproximation_tooltip <- "Enable coarser and less precise approximation method." # "Two versions of The-PWA-approximation are available. Slower one - more precise and computationally more demanding - and fast one - much faster but also less precise."
 
-Editor_process_controlPanel_label <- "Parameter Synthesis"
+Editor_process_controlPanel_label <- "Analyses Control Panel" # "Parameter Synthesis"
 
 Editor_numberOfThreads_label <- "Number of Threads"
 Editor_numberOfThreads_tooltip <- "Set number of threads computing parameter synthesis."
@@ -73,6 +76,18 @@ Editor_modelTextEditor_tooltip <- ""
 Editor_propertyTextEditor_label <- "Properties Editor"
 Editor_propertyTextEditor_tooltip <- "" 
 
+#TODO: check and fill
+Editor_algorithmType_label    <- "Algorithm Type"
+Editor_algorithmType_tooltip  <- "Specify the type of algorithm used in TC analysis procedure."
+
+Editor_disableHeuristic_label   <- "Disable Heuristic"
+Editor_disableHeuristic_tooltip <- "Use to disable the set size state choosing heuristic."
+
+Editor_disableSelfloops_label   <- "Disable Self-Loops"
+Editor_disableSelfloops_tooltip <- "Use to disable self-loop creation in transition system."
+
+Editor_runTCAnalysis_label    <- "Run Terminal-Component Analysis"
+Editor_runTCAnalysis_tooltip  <- "Run Terminal-Component analysis procedure."
 
 
 #EXPLORER
