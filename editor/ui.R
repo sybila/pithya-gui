@@ -2,7 +2,6 @@ source("config.R")          # global configuration
 source("tooltips.R")        # texts
 source("ui_global.R")       # UI utilities
 
-
 editorTab <- function() {
     tabPanel(Editor_label, icon=icons$bug,
         tooltip(tooltip = Editor_tooltip,            

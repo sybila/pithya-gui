@@ -124,12 +124,13 @@ resultServer <- function(input, session, output) {
 		})
 	})
 
-	# not needed any more
-	# output$result_notification <- renderUI({
-	# 	if (!is.null(session$pithya$currentResult$result) && session$pithya$currentResult$outdated) {
-	# 		tags$h3(style = "text-align: center; margin: 15px;", "Warning: Shown results are out of sync with the loaded ones or with the current contents of the model or property editor.")
-	# 	}
-	# })
+	output$result_notification <- renderUI({
+		if (!is.null(session$pithya$synthesisResult$result) && session$pithya$currentResult$loaded == Result_synthResults_tag && session$pithya$synthesisResult$outdated) {
+			tags$h3(style = "text-align: center; margin: 15px;", "Warning: Shown PS results are out of sync with the current contents of the model or property editor.")
+		} else if (!is.null(session$pithya$TSanalysisResult$result) && session$pithya$currentResult$loaded == Result_TCAResults_tag && session$pithya$TSanalysisResult$outdated) {
+	    tags$h3(style = "text-align: center; margin: 15px;", "Warning: Shown TCA results are out of sync with the current content of the model editor.")
+	  }
+	})
 	
 	# Add plot row on button click 
 	observeEvent(input$add_param_plot, {
