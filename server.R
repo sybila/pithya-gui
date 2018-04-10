@@ -21,6 +21,8 @@ shinyServer(function(input,output,session) {
         approximatedModel = reactiveValues(file = NULL, model = NULL, outdated = FALSE),
         synthesisResult = reactiveValues(file = NULL, result = NULL, outdated = FALSE),
         TSanalysisResult = reactiveValues(file = NULL, result = NULL, outdated = FALSE),
+        importedResult = reactiveValues(file = NULL, result = NULL, outdated = FALSE),
+        currentResult = reactiveValues(file = NULL, result = NULL, loaded = NULL),
         sessionDir = mytempdir(),
         examplesDir = "example//",
         nextId = createCounter(1)

@@ -212,14 +212,26 @@ Result_tooltip <- ""
 #Result_deleteExperiment_tooltip <- ""
 
 Result_Browse_label <- "" # "choose result '.json' file"
-Result_Browse_tooltip <- "Load parameter synthesis result .json file."
+Result_Browse_tooltip <- "Import parameter synthesis result .json file."
 
 #Deleted with experiments
 #Result_BrowseReload_label <- "reload"
 #Result_BrowseReload_tooltip <- ""
 
-Result_saveResults_label <- "Save Results"
-Result_saveResults_tooltip <- "Save parameter synthesis results as .json file."
+Result_loadImportedResults_label    <- "Imported Results"
+Result_loadImportedResults_tooltip  <- "Load imported results as current one to display and examine. Green color means new results have been imported."
+Result_importedResults_tag          <- "importedResult"
+
+Result_loadSynthResults_label   <- "PS Results"
+Result_loadSynthResults_tooltip <- "Load parameter synthesis results as current one to display and examine. Green color means new results have been produced."
+Result_synthResults_tag          <- "synthesisResult"
+
+Result_loadTCAResults_label   <- "TCA Results"
+Result_loadTCAResults_tooltip <- "Load terminal-components analysis results as current one to display and examine. Green color means new results have been produced."
+Result_TCAResults_tag          <- "TCanalResult"
+
+Result_saveResults_label <- "Save Loaded Results"
+Result_saveResults_tooltip <- "Save currently loaded results as .json file."
 
 Result_showParametersCoverage_label <- "Show Parameters Coverage"
 Result_showParametersCoverage_tooltip <- "Enable/disable parameters coverage" #"Show Scaling factor for density of shown rectangles in parameter space."

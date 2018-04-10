@@ -151,7 +151,6 @@ editorServer <- function(input, session, output) {
 	  resultFile = NULL,
 	  logFile = NULL,
 	  notificationID = NULL,
-	  missingThresholds = NULL,
 	  onSuccess = function() {
 	    debug("[TCAnalysisProcess] success")	
 	    
@@ -179,25 +178,7 @@ editorServer <- function(input, session, output) {
 	  onError = function(e) {
 	    debug(paste0("[TCAnalysisProcess] error ", e))
 	    TCAnalysisProcess$finalize(FALSE)
-	    if (grepl("Missing thresholds: .*", e)) {
-	      # Note: This message has a fixed syntax and therefore this matching should not fail!
-	      thresholdList <- sub("Missing thresholds: ", "", e)
-	      thresholds <- strsplit(thresholdList, split = "; ", fixed = TRUE)
-	      thresholds <- lapply(thresholds, function(t) {
-	        list(name = sub(": .+", "", t), thresholds = strsplit(sub(".+: ", "", t), split = ", ", fixed = FALSE))
-	      })
-	      TCAnalysisProcess$missingThresholds <- thresholds[[1]]
-	      # We have missing thresholds!
-	      showModal(modalDialog(title = "Missing thresholds!",
-	                            paste0("Variable thresholds ", thresholdList, " are missing in the model. Click `Add` to add them to the model and recompute approximation."), 
-	                            footer = tagList(
-	                              modalButton("Cancel"),
-	                              actionButton("add_thresholds", "Add")
-	                            )
-	      ))
-	    } else {
-	      showModal(modalDialog(title = "TC analysis error!", e))
-	    }
+	    showModal(modalDialog(title = "TC analysis error!", e))
 	  },
 	  onKill = function() {
 	    debug("[TCAnalysisProcess] killed")
@@ -224,7 +205,7 @@ editorServer <- function(input, session, output) {
 	## These two observers have to be set up BEFORE the file upload observers, so that the 
 	## default examples are properly observed 
 
-	# Enable approximation button when process is not running and result is outdated
+	# Enable approximation button when process is not running and model is outdated
 	observeEvent(c(session$pithya$approximatedModel$outdated, approximationProcess$running), {
 		enabled <- is.null(approximationProcess$running) && session$pithya$approximatedModel$outdated
 		updateButton(session$shiny, "generate_abstraction", style = "success", disabled = !enabled)
@@ -237,7 +218,7 @@ editorServer <- function(input, session, output) {
 	  updateButton(session$shiny, "process_run", style = "success", disabled = !enabled)
 	})
 	
-	# Enable TC analysis button when process is not running and model is ready
+	# Enable TC analysis button when process is not running and model is outdated
 	observeEvent(c(session$pithya$TSanalysisResult$outdated, session$pithya$approximatedModel$outdated, TCAnalysisProcess$running), {
 	  enabled <- is.null(TCAnalysisProcess$running) && session$pithya$TSanalysisResult$outdated	&& !session$pithya$approximatedModel$outdated
 	  updateButton(session$shiny, "TC_analysis_run", style = "success", disabled = !enabled)
@@ -444,7 +425,7 @@ editorServer <- function(input, session, output) {
 	             verbatimTextOutput("synth_log") ,
 	             tags$div(
 	               if(.Platform$OS.type != "windows") downloadButton("save_synth_log", "Download log"),
-	               actionButton("TCAnalysis_kill", "Cancel", style = "warning")
+	               actionButton("synthesis_kill", "Cancel", style = "warning")
 	             )
 	    ), 
 	    duration = NULL, closeButton = FALSE#, type = "error"
@@ -504,7 +485,7 @@ editorServer <- function(input, session, output) {
 	             verbatimTextOutput("synth_log") ,
 	             tags$div(
 	               if(.Platform$OS.type != "windows") downloadButton("save_TSanal_log", "Download log"),
-	               actionButton("synthesis_kill", "Cancel", style = "warning")
+	               actionButton("TCAnalysis_kill", "Cancel", style = "warning")
 	             )
 	    ), 
 	    duration = NULL, closeButton = FALSE#, type = "error"
@@ -518,14 +499,14 @@ editorServer <- function(input, session, output) {
 	  
 	  # TODO thread count
 	  startRemoteProcess(session, TCAnalysisProcess, list(
-	    command = "terminal-components",
+	    command = "pithyaGUIcomponents",
 	    args = c(
 	      "-m", paste0("\"", session$pithya$approximatedModel$file, "\""),
 	      "-r", "json", "-ro", paste0("\"", TCAnalysisProcess$resultFile, "\""),
 	      "--parallelism", input$threads_number,
 	      "--algorithm-type", input$algorithm_type,
-	      "--disable-heuristic", input$disable_heuristic,
-	      "--disable-self-loops", input$disable_selfloops
+	      ifelse(input$disable_heuristic,"--disable-heuristic",""),
+	      ifelse(input$disable_selfloops,"--disable-self-loops","")
 	    ),
 	    ## Following file(..) wrapper is necessary for Windows platform - as it creates blocking files for writing by default
 	    stdout = file(TCAnalysisProcess$logFile, open="a+", blocking=F),
