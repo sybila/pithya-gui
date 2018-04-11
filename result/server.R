@@ -114,21 +114,24 @@ resultServer <- function(input, session, output) {
 		# enable button
 		updateButton(session$shiny, "add_param_plot", disabled = !enabled)
 		# reset out of sync information (if any)
-		if(enabled) output$error_message <- renderUI({
-		  tags$h3(style = "text-align: center; margin: 15px; color: black;", 
-		          paste0("Shown results come from ",
-		                 ifelse(session$pithya$currentResult$loaded == Result_synthResults_tag, "parameter synthesis procedure",
-		                        ifelse(session$pithya$currentResult$loaded == Result_importedResults_tag, "imported file",
-		                               ifelse(session$pithya$currentResult$loaded == Result_TCAResults_tag, "terminal-components analysis"))),
-		                 "."))
-		})
+		if(enabled) {
+		  closeAlert(session$shiny,"result_notification")
+		  output$error_message <- renderUI({
+  		  tags$h3(style = "text-align: center; margin: 15px; color: black;", 
+  		          paste0("Shown results come from ",
+  		                 ifelse(session$pithya$currentResult$loaded == Result_synthResults_tag, "parameter synthesis procedure",
+  		                        ifelse(session$pithya$currentResult$loaded == Result_importedResults_tag, "imported file",
+  		                               ifelse(session$pithya$currentResult$loaded == Result_TCAResults_tag, "terminal-components analysis"))),
+  		                 "."))
+  		})
+		}
 	})
 
 	output$result_notification <- renderUI({
 		if (!is.null(session$pithya$synthesisResult$result) && session$pithya$currentResult$loaded == Result_synthResults_tag && session$pithya$synthesisResult$outdated) {
-			tags$h3(style = "text-align: center; margin: 15px;", "Warning: Shown PS results are out of sync with the current contents of the model or property editor.")
+		  tags$h3(style = "text-align: center; margin: 15px; color: red", "Warning: Shown PS results are out of sync with the current contents of the model or property editor.")
 		} else if (!is.null(session$pithya$TSanalysisResult$result) && session$pithya$currentResult$loaded == Result_TCAResults_tag && session$pithya$TSanalysisResult$outdated) {
-	    tags$h3(style = "text-align: center; margin: 15px;", "Warning: Shown TCA results are out of sync with the current content of the model editor.")
+		  tags$h3(style = "text-align: center; margin: 15px; color: red", "Warning: Shown TCA results are out of sync with the current content of the model editor.")
 	  }
 	})
 	
@@ -191,7 +194,8 @@ resultServer <- function(input, session, output) {
 		filename = "results.json",
 		content = function(file) {
 			content <- isolate(session$pithya$currentResult$file)
-			writeLines(readLines(content), file)
+			if(!is.null(content))
+			  writeLines(readLines(content), file)
 		}
 	)
 

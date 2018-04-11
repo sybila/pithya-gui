@@ -6,7 +6,7 @@ resultTab <- function() {
 	tabPanel(Result_label, icon=icons$barcode,
     	tooltip(tooltip = Result_tooltip,            
     		fluidPage(theme = "simplex.css",
-            uiOutput("result_notification"),
+    		    uiOutput("result_notification"),
         		resultControlPanel(),
         		tags$hr(),
         		uiOutput("param_plots"),
