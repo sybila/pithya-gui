@@ -185,9 +185,12 @@ resultServer <- function(input, session, output) {
 
 	# Download synthesis result file (if available)
 	output$save_result_file <- downloadHandler(
-		filename = ifelse(session$pithya$currentResult$loaded == Result_synthResults_tag, "PS_results.json",
-		                  ifelse(session$pithya$currentResult$loaded == Result_importedResults_tag, "imported results.json",
-		                         ifelse(session$pithya$currentResult$loaded == Result_TCAResults_tag, "AA_results.json"))),
+		filename = function(loaded = session$pithya$currentResult$loaded) {
+		  if(loaded == Result_synthResults_tag) return("PS_results.json")
+		  if(loaded == Result_importedResults_tag) return("imported results.json")
+		  if(loaded == Result_TCAResults_tag) return("AA_results.json")
+		  else return ("results.json")
+	  },
 		content = function(file) {
 			content <- isolate(session$pithya$currentResult$file)
 			if(!is.null(content))
