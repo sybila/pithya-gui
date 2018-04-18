@@ -238,6 +238,9 @@ Result_cancel_tooltip <- "Delete this plot."
 Result_hide_label <- "Hide"
 Result_hide_tooltip <- "Hide/show this plot."
 
+Result_grid_label <- "Show grid"
+Result_grid_tooltip <- "Show/hide grid in this plot."
+
 Result_noParameterSelected_error <- "Please select at least one parameter."
 
 Result_PS_label <- "Parameter Space"

@@ -66,7 +66,10 @@ resultRow <- function(r, input) {
             )),
             column(1, class = "hid", tooltip(tooltip = Result_hide_tooltip,
                 checkboxInput(r$hide, Result_hide_label, unwrapOr(input[[r$hide]], FALSE))
-            ))
+            )),
+            column(1, class = "grid", advanced(tooltip(tooltip = Result_grid_tooltip,
+                checkboxInput(r$grid, Result_grid_label, unwrapOr(input[[r$grid]], TRUE))
+            )))
         ),
         conditionalPanel(condition = paste0("input.", r$hide, " == false"),
         hr(),

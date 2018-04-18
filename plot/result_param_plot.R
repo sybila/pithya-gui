@@ -3,7 +3,7 @@ source("tooltips.R")        # texts
 source("ui_global.R") 
 source("plot/plot.R")      
 
-createResultParamPlot <- function(result, id, input, session, output) {
+createResultParamPlot <- function(result, id, row, input, session, output) {
 
 	varNames <- c(result$varNames, result$paramNames)
 	varThresholds <- result$varThresholds
@@ -127,6 +127,8 @@ createResultParamPlot <- function(result, id, input, session, output) {
 			baseConfig$coverageEnabled <- unwrapOr(input$coverage_check, FALSE)
 			baseConfig$coverageAlpha <- unwrapOr(input$color_alpha_coeficient, 0.9)
 
+			baseConfig$showGrid <- unwrapOr(input[[row$grid]], TRUE)
+
 			needsCoverage <- plot$result$type == "smt" || baseConfig$coverageEnabled
 
 			if (needsCoverage) {
@@ -198,10 +200,10 @@ createResultParamPlot <- function(result, id, input, session, output) {
 			list()
 		} else {
 
-			validRectangles <- Reduce(function(x, y) unique(append(x, y)), lapply(pValues, function(p) {
+			validRectangles <- unique(Reduce(function(x, y) append(x, y), lapply(pValues, function(p) {
 				# list of rectangles
 				plot$result$paramValues[[p]]	
-			}))
+			})))
 
 			# Apply parameter space cuts (assuming projection is off)
 			for (p in 1:plot$result$paramCount) {
@@ -317,7 +319,7 @@ createResultParamPlot <- function(result, id, input, session, output) {
 						reducedMapping <- rowProjection(mapping, iVar, iT)
 
 						# Compute 1D validity
-						validity <- computeCoverageValidity(config, mapping, c(iParam))
+						validity <- computeCoverageValidity(config, reducedMapping, c(iParam))
 
 						if (length(validity) > 0) {
 							if (config$coverageEnabled) {
@@ -361,8 +363,6 @@ createResultParamPlot <- function(result, id, input, session, output) {
 				
 				## Coverage is null, that means we have rectangle results and can use simplified rendering.
 
-				debug("render rectangles")
-
 				if (plot$varContinuous[config$x] && plot$varContinuous[config$y]) {
 					# We have two parameters!
 
@@ -398,7 +398,7 @@ createResultParamPlot <- function(result, id, input, session, output) {
 						reducedMapping <- rowProjection(mapping, iVar, iT)
 
 						# Compute 1D rectangles
-						intervals <- computeRectangularValidity(config, mapping, c(iParam))
+						intervals <- computeRectangularValidity(config, reducedMapping, c(iParam))
 
 						varLow <- plot$varThresholds[[iVar]][iT]
 						varHigh <- plot$varThresholds[[iVar]][iT+1]	
@@ -419,7 +419,7 @@ createResultParamPlot <- function(result, id, input, session, output) {
 								sapply(intervals, function(r) varHigh),
 								col = "forestgreen", border = NA
 							)
-						}						
+						}
 					}
 					
 				}
@@ -443,7 +443,9 @@ createResultParamPlot <- function(result, id, input, session, output) {
 
 			# Draw threshold lines
 			# Draw last to ensure they are visible above parameter space
-			abline(v = xThres, h = yThres)		
+			if (config$showGrid) {
+				abline(v = xThres, h = yThres)
+			}
 		}
 	}, height = function() { session$shiny$clientData[[paste0("output_",plot$outImage,"_width")]] })	
 

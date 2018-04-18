@@ -6803,7 +6803,7 @@ label {
   display: none;
 }
 
-.my-row .hid {
+.my-row .hid, .my-row .grid {
   padding-top: 6px;
 }
 
