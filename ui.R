@@ -54,7 +54,7 @@ shinyUI(
             #     )
             # ),
             column(4,
-                   a(img(src = "logo_new.png", height = 60, width = 165, style = "float:right"), href = "http://sybila.fi.muni.cz/home", target="_blank"),
+                   a(img(src = "logo_new.png", height = 60, width = 165, style = "float:right"), href = "http://sybila.fi.muni.cz", target="_blank"),
                    a(img(src = "aec_badge_cav.svg", height = 60, width = 60, style = "float:right; padding: 5px 5px 5px 5px"), 
                      href = "http://cavconference.org/2017/accepted-papers/", target="_blank"))
         # )

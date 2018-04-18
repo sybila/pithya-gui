@@ -160,7 +160,7 @@ editorServer <- function(input, session, output) {
 	    
 	    showNotification(
 	      tags$div(class = "synth_done",
-	               "TC analysis finished",
+	               "Attractor analysis finished",
 	               tags$div(
 	                 downloadButton("save_TSanal_log_after", "Download log")
 	               )
@@ -178,7 +178,7 @@ editorServer <- function(input, session, output) {
 	  onError = function(e) {
 	    debug(paste0("[TCAnalysisProcess] error ", e))
 	    TCAnalysisProcess$finalize(FALSE)
-	    showModal(modalDialog(title = "TC analysis error!", e))
+	    showModal(modalDialog(title = "Attractor analysis error!", e))
 	  },
 	  onKill = function() {
 	    debug("[TCAnalysisProcess] killed")
@@ -457,7 +457,7 @@ editorServer <- function(input, session, output) {
 	## TC analysis runner
 	
 	observeEvent(input$TC_analysis_run, {
-	  debug("[performTCAnalysis] start")	
+	  debug("[performAttractorAnalysis] start")	
 	  printProgress(TC_analysis_started)
 	  
 	  if (!is.null(TCAnalysisProcess$running)) {
@@ -481,7 +481,7 @@ editorServer <- function(input, session, output) {
 	  
 	  TCAnalysisProcess$notificationID <- showNotification(
 	    tags$div(class = "synth_not",
-	             "TC analysis running",
+	             "Attractor analysis running",
 	             verbatimTextOutput("synth_log") ,
 	             tags$div(
 	               if(.Platform$OS.type != "windows") downloadButton("save_TSanal_log", "Download log"),

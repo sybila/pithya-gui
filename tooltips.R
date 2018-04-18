@@ -12,8 +12,8 @@ Approximation_error <- "Some error occured during approximation.\n"
 Parameter_synthesis_started <- "Parameter synthesis has started.\n"
 Parameter_synthesis_stopped <- "Parameter synthesis process was stopped.\n"
 
-TC_analysis_started <- "TC analysis has started.\n"
-TC_analysis_stopped <- "TC analysis process was stopped.\n"
+TC_analysis_started <- "Attractor analysis has started.\n"
+TC_analysis_stopped <- "Attractor analysis process was stopped.\n"
 
 Waiting_for_state_space <- "Updating plots." #comment both in adding plot and delteing
 
@@ -78,7 +78,7 @@ Editor_propertyTextEditor_tooltip <- ""
 
 #TODO: check and fill
 Editor_algorithmType_label    <- "Algorithm Type"
-Editor_algorithmType_tooltip  <- "Specify the type of algorithm used in TC analysis procedure."
+Editor_algorithmType_tooltip  <- "Specify the type of algorithm used in attractor analysis."
 
 Editor_disableHeuristic_label   <- "Disable Heuristic"
 Editor_disableHeuristic_tooltip <- "Use to disable the set size state choosing heuristic."
@@ -86,8 +86,8 @@ Editor_disableHeuristic_tooltip <- "Use to disable the set size state choosing h
 Editor_disableSelfloops_label   <- "Disable Self-Loops"
 Editor_disableSelfloops_tooltip <- "Use to disable self-loop creation in transition system."
 
-Editor_runTCAnalysis_label    <- "Run Terminal-Component Analysis"
-Editor_runTCAnalysis_tooltip  <- "Run Terminal-Component analysis procedure."
+Editor_runTCAnalysis_label    <- "Run Attractor Analysis"
+Editor_runTCAnalysis_tooltip  <- "Run Attractor analysis procedure."
 
 
 #EXPLORER
@@ -222,13 +222,13 @@ Result_loadImportedResults_label    <- "Imported Results"
 Result_loadImportedResults_tooltip  <- "Load imported results as current one to display and examine. Green color means new results have been imported."
 Result_importedResults_tag          <- "importedResult"
 
-Result_loadSynthResults_label   <- "PS Results"
+Result_loadSynthResults_label   <- "Synthesis Results"
 Result_loadSynthResults_tooltip <- "Load parameter synthesis results as current one to display and examine. Green color means new results have been produced."
 Result_synthResults_tag          <- "synthesisResult"
 
-Result_loadTCAResults_label   <- "TCA Results"
-Result_loadTCAResults_tooltip <- "Load terminal-components analysis results as current one to display and examine. Green color means new results have been produced."
-Result_TCAResults_tag          <- "TCanalResult"
+Result_loadTCAResults_label   <- "Attractor Results"
+Result_loadTCAResults_tooltip <- "Load attractor analysis results as current one to display and examine. Green color means new results have been produced."
+Result_TCAResults_tag          <- "attractorResult"
 
 Result_saveResults_label <- "Save Loaded Results"
 Result_saveResults_tooltip <- "Save currently loaded results as .json file."
@@ -248,10 +248,10 @@ Result_addPlot_tooltip <- "Add new plot for parameter space and the correspondin
 #WARNING: these are in server.R
 #Result_experiment_label <- "Experiment no. "
 
-Result_chooseFormulaOfInterest_label <- "Select Formula:"
-Result_chooseFormulaOfInterest_tooltip <- "Select formula for which to display the results."
+Result_chooseFormulaOfInterest_label <- "Show results for:"
+Result_chooseFormulaOfInterest_tooltip <- "Select the results which should be displayed."
 
-Result_chooseFormulaOfInterest_error <- "Parameter synthesis has to be run or a results file loaded before results can be shown."
+Result_chooseFormulaOfInterest_error <- "An analysis has to be run or a results file imported before results can be shown."
 
 Result_horizontal_label <- "Horizontal Axis"
 Result_horizontal_tooltip <- "Set the variable to show on horizontal axis."

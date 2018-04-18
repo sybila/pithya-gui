@@ -33,7 +33,7 @@ explorerControlPanel <- function() {
         ),
         column(3, class = "arrow_column_2",
             tooltip(tooltip = Explorer_lengthOfDirectionArrows_tooltip,
-                sliderInput("arrowSize",Explorer_lengthOfDirectionArrows_label,0.01,10,step=0.05,value=0.3)
+                numericInput("arrowSize",Explorer_lengthOfDirectionArrows_label,min=0.001,max=100,step=0.05,value=1)
             ),
             tooltip(tooltip = Explorer_widthOfAllArrows_tooltip,
                 sliderInput("transWidth",Explorer_widthOfAllArrows_label,1,5,step=0.5,value=1.5)

@@ -56,7 +56,7 @@ resultServer <- function(input, session, output) {
 	# Activates and/or turns button green after new result is ready
 	observeEvent(session$pithya$TSanalysisResult$result, {
 	  enabled <- !is.null(session$pithya$TSanalysisResult$result)
-	  debug("[result] TS analysis results changed. result tab enabled: ", enabled)
+	  debug("[result] Attractor analysis results changed. result tab enabled: ", enabled)
 	  
 	  if(enabled) {
 	    if(is.null(session$pithya$currentResult$result)) {
@@ -69,7 +69,7 @@ resultServer <- function(input, session, output) {
 	      # if laoded results come from this source, it's important to inform user about being out of date now
 	      if(session$pithya$currentResult$loaded == Result_TCAResults_tag) {
 	        output$error_message <- renderUI({
-	          tags$h3(style = "text-align: center; margin: 15px; color: red;", "Warning: Shown TCA results are out of date.")
+	          tags$h3(style = "text-align: center; margin: 15px; color: red;", "Warning: Shown AA results are out of date.")
 	        })
 	      }
 	      updateButton(session$shiny, "load_tca_results", disabled = !enabled, style = "success")
@@ -115,15 +115,17 @@ resultServer <- function(input, session, output) {
 		updateButton(session$shiny, "add_param_plot", disabled = !enabled)
 		# reset out of sync information (if any)
 		if(enabled) {
-		  closeAlert(session$shiny,"result_notification")
+		  #closeAlert(session$shiny,"result_notification")
 		  output$error_message <- renderUI({
   		  tags$h3(style = "text-align: center; margin: 15px; color: black;", 
-  		          paste0("Shown results come from ",
+  		          paste0("Loaded results come from ",
   		                 ifelse(session$pithya$currentResult$loaded == Result_synthResults_tag, "parameter synthesis procedure",
   		                        ifelse(session$pithya$currentResult$loaded == Result_importedResults_tag, "imported file",
-  		                               ifelse(session$pithya$currentResult$loaded == Result_TCAResults_tag, "terminal-components analysis"))),
+  		                               ifelse(session$pithya$currentResult$loaded == Result_TCAResults_tag, "attractor analysis"))),
   		                 "."))
   		})
+		  # prepare first row of plots
+		  prepareOnePlotRow(session, input, output, plotRows)
 		}
 	})
 
@@ -131,27 +133,19 @@ resultServer <- function(input, session, output) {
 		if (!is.null(session$pithya$synthesisResult$result) && session$pithya$currentResult$loaded == Result_synthResults_tag && session$pithya$synthesisResult$outdated) {
 		  tags$h3(style = "text-align: center; margin: 15px; color: red", "Warning: Shown PS results are out of sync with the current contents of the model or property editor.")
 		} else if (!is.null(session$pithya$TSanalysisResult$result) && session$pithya$currentResult$loaded == Result_TCAResults_tag && session$pithya$TSanalysisResult$outdated) {
-		  tags$h3(style = "text-align: center; margin: 15px; color: red", "Warning: Shown TCA results are out of sync with the current content of the model editor.")
+		  tags$h3(style = "text-align: center; margin: 15px; color: red", "Warning: Shown AA results are out of sync with the current content of the model editor.")
 	  }
 	})
 	
 	# Add plot row on button click 
 	observeEvent(input$add_param_plot, {
-		debug("[result] new plot row")
-		let(session$pithya$currentResult$result, function(result) {
-			row <- createResultPlotRow(session$pithya$nextId(), result, input, session, output, 
-				onRemove = function(row) {
-					row$destroy()
-					plotRows[[row$outRow]] <- NULL
-				}
-			)			
-			plotRows[[row$outRow]] <- row			
-		})			
+	  # prepare another row of plots
+	  prepareOnePlotRow(session, input, output, plotRows)
 	})	
 
 	output$error_message <- renderUI({
 		if (is.null(session$pithya$currentResult$result)) {
-			titlePanel("No results loaded. Compute parameter synthesis, terminal-component analysis or import saved results.")
+			titlePanel("No results loaded. Compute parameter synthesis, attractor analysis or import saved results.")
 		} else ""
 	})
 
@@ -191,7 +185,9 @@ resultServer <- function(input, session, output) {
 
 	# Download synthesis result file (if available)
 	output$save_result_file <- downloadHandler(
-		filename = "results.json",
+		filename = ifelse(session$pithya$currentResult$loaded == Result_synthResults_tag, "PS_results.json",
+		                  ifelse(session$pithya$currentResult$loaded == Result_importedResults_tag, "imported results.json",
+		                         ifelse(session$pithya$currentResult$loaded == Result_TCAResults_tag, "AA_results.json"))),
 		content = function(file) {
 			content <- isolate(session$pithya$currentResult$file)
 			if(!is.null(content))
