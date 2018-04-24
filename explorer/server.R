@@ -29,6 +29,36 @@ explorerServer <- function(input, session, output) {
 			}
 		})
 	}
+	
+	
+	prepareOnePlotRow <- function(session, input, output, plotRows) {
+	  # prepare first row of plots
+	  debug("[explorer] new plot row")
+	  let(session$pithya$approximatedModel$model, function(model) {
+	    original <- session$pithya$approximatedModel$original
+	    row <- createPlotRow(session$pithya$nextId(), model, original, params(model), input, session, output, 
+	                         onApplyAllVector = function(selection) {
+	                           for (row in isolate(reactiveValuesToList(plotRows))) {
+	                             if (!is.null(row)) {
+	                               row$vector$state$selection <- selection
+	                             }
+	                           }
+	                         },
+	                         onApplyAllState = function(selection) {
+	                           for (row in isolate(reactiveValuesToList(plotRows))) {
+	                             if (!is.null(row)) {
+	                               row$state$state$selection <- selection
+	                             }
+	                           }
+	                         },
+	                         onRemove = function(row) {
+	                           row$destroy()
+	                           plotRows[[row$outRow]] <- NULL
+	                         }
+	    )
+	    plotRows[[row$outRow]] <- row			
+	  })	
+	}
 
 	output$explorer_notification <- renderUI({
 		if (!is.null(session$pithya$approximatedModel$model) && session$pithya$approximatedModel$outdated) {
@@ -83,34 +113,40 @@ explorerServer <- function(input, session, output) {
 			}
 		})
 		updateButton(session$shiny, "add_plot_row", disabled = !enabled)
+		if(enabled) {
+  		# prepare another row of plots
+  		prepareOnePlotRow(session, input, output, plotRows)
+		}
 	})
 
 	observeEvent(input$add_plot_row, {
-		debug("[explorer] new plot row")
-		let(session$pithya$approximatedModel$model, function(model) {
-			original <- session$pithya$approximatedModel$original
-			row <- createPlotRow(session$pithya$nextId(), model, original, params(model), input, session, output, 
-				onApplyAllVector = function(selection) {
-					for (row in isolate(reactiveValuesToList(plotRows))) {
-						if (!is.null(row)) {
-							row$vector$state$selection <- selection
-						}
-					}
-				},
-				onApplyAllState = function(selection) {
-					for (row in isolate(reactiveValuesToList(plotRows))) {
-						if (!is.null(row)) {
-							row$state$state$selection <- selection
-						}
-					}
-				},
-				onRemove = function(row) {
-					row$destroy()
-					plotRows[[row$outRow]] <- NULL
-				}
-			)
-			plotRows[[row$outRow]] <- row			
-		})			
+	  # prepare another row of plots
+	  prepareOnePlotRow(session, input, output, plotRows)
+		# debug("[explorer] new plot row")
+		# let(session$pithya$approximatedModel$model, function(model) {
+		# 	original <- session$pithya$approximatedModel$original
+		# 	row <- createPlotRow(session$pithya$nextId(), model, original, params(model), input, session, output, 
+		# 		onApplyAllVector = function(selection) {
+		# 			for (row in isolate(reactiveValuesToList(plotRows))) {
+		# 				if (!is.null(row)) {
+		# 					row$vector$state$selection <- selection
+		# 				}
+		# 			}
+		# 		},
+		# 		onApplyAllState = function(selection) {
+		# 			for (row in isolate(reactiveValuesToList(plotRows))) {
+		# 				if (!is.null(row)) {
+		# 					row$state$state$selection <- selection
+		# 				}
+		# 			}
+		# 		},
+		# 		onRemove = function(row) {
+		# 			row$destroy()
+		# 			plotRows[[row$outRow]] <- NULL
+		# 		}
+		# 	)
+		# 	plotRows[[row$outRow]] <- row			
+		# })			
 	})	
 
 	output$plots <- renderUI({

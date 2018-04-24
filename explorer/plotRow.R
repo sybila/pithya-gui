@@ -5,6 +5,7 @@ source("explorer/ui.R")
 source("plot/vector_plot.R")
 source("plot/state_plot.R")
 
+
 ## Initializes a plot into the input/output objects and returns a plot
 # plot = list(id = num, outputId = string, destroy = function(), ...)
 createPlotRow <- function(id, model, originalModel, params, input, session, output, 
