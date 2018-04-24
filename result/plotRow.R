@@ -6,7 +6,7 @@ source("plot/result_state_plot.R")
 source("plot/result_param_plot.R")
 
 
-prepareOnePlotRow <- function(session, input, output, plotRows) {
+prepareOneResultPlotRow <- function(session, input, output, plotRows) {
   # prepare first row of plots
   debug("[result] new plot row")
   let(session$pithya$currentResult$result, function(result) {

@@ -154,8 +154,8 @@ editorServer <- function(input, session, output) {
 	  onSuccess = function() {
 	    debug("[TCAnalysisProcess] success")	
 	    
-	    session$pithya$TSanalysisResult$file <- TCAnalysisProcess$resultFile
-	    session$pithya$TSanalysisResult$outdated <- FALSE			
+	    session$pithya$TCanalysisResult$file <- TCAnalysisProcess$resultFile
+	    session$pithya$TCanalysisResult$outdated <- FALSE			
 	    TCAnalysisProcess$finalize(TRUE)
 	    
 	    showNotification(
@@ -219,8 +219,8 @@ editorServer <- function(input, session, output) {
 	})
 	
 	# Enable TC analysis button when process is not running and model is outdated
-	observeEvent(c(session$pithya$TSanalysisResult$outdated, session$pithya$approximatedModel$outdated, TCAnalysisProcess$running), {
-	  enabled <- is.null(TCAnalysisProcess$running) && session$pithya$TSanalysisResult$outdated	&& !session$pithya$approximatedModel$outdated
+	observeEvent(c(session$pithya$TCanalysisResult$outdated, session$pithya$approximatedModel$outdated, TCAnalysisProcess$running), {
+	  enabled <- is.null(TCAnalysisProcess$running) && session$pithya$TCanalysisResult$outdated	&& !session$pithya$approximatedModel$outdated
 	  updateButton(session$shiny, "TC_analysis_run", style = "success", disabled = !enabled)
 	})
 	
@@ -229,7 +229,7 @@ editorServer <- function(input, session, output) {
 	  # TODO check if the model is identical to the last approximated one		
 	  session$pithya$approximatedModel$outdated = TRUE
 	  session$pithya$synthesisResult$outdated = TRUE
-	  session$pithya$TSanalysisResult$outdated = TRUE	
+	  session$pithya$TCanalysisResult$outdated = TRUE	
 	})
 	
 	# Invalidate synthesis result when property changes
@@ -465,7 +465,7 @@ editorServer <- function(input, session, output) {
 	  }
 	  
 	  # Run combine to check syntax and semantics
-	  TCAnalysisProcess$resultFile <- tempfile(pattern = "TSanalysisResult", fileext = ".json", tmpdir = sessionDir)
+	  TCAnalysisProcess$resultFile <- tempfile(pattern = "TCanalysisResult", fileext = ".json", tmpdir = sessionDir)
 	  TCAnalysisProcess$logFile <- tempfile(pattern = "TCAnalysisLog", fileext = ".txt", tmpdir = sessionDir)
 	  file.create(TCAnalysisProcess$logFile)
 	  #if(.Platform$OS.type != "windows") {

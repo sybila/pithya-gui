@@ -20,7 +20,7 @@ shinyServer(function(input,output,session) {
     mySession <- list(shiny=session, pithya=list(
         approximatedModel = reactiveValues(file = NULL, model = NULL, outdated = FALSE),
         synthesisResult = reactiveValues(file = NULL, result = NULL, outdated = FALSE),
-        TSanalysisResult = reactiveValues(file = NULL, result = NULL, outdated = FALSE),
+        TCanalysisResult = reactiveValues(file = NULL, result = NULL, outdated = FALSE),
         importedResult = reactiveValues(file = NULL, result = NULL, outdated = FALSE),
         currentResult = reactiveValues(file = NULL, result = NULL, loaded = NULL),
         sessionDir = mytempdir(),
@@ -65,21 +65,21 @@ shinyServer(function(input,output,session) {
     })
     
     # Parse result .json files when attractor analysis finished
-    observeEvent(mySession$pithya$TSanalysisResult$file, {
-      file <- mySession$pithya$TSanalysisResult$file
+    observeEvent(mySession$pithya$TCanalysisResult$file, {
+      file <- mySession$pithya$TCanalysisResult$file
       if (!is.null(file)) {
         tryCatch({
-          mySession$pithya$TSanalysisResult$result <- parseResultFile(file)
+          mySession$pithya$TCanalysisResult$result <- parseResultFile(file)
           ### Working solution for re-loading of fileInput
           #mySession$shiny$sendCustomMessage("loader_reset","ps_file")
         }, error = function(e) {
           debug("[result parser] parsing error: ", e)
           showNotification("[INTERNAL ERROR] AA result parsing failed")
-          mySession$pithya$TSanalysisResult$file <- NULL
-          mySession$pithya$TSanalysisResult$result <- NULL
+          mySession$pithya$TCanalysisResult$file <- NULL
+          mySession$pithya$TCanalysisResult$result <- NULL
         })
       } else {
-        mySession$pithya$TSanalysisResult$result <- NULL         
+        mySession$pithya$TCanalysisResult$result <- NULL         
       }
     })
     

@@ -17,8 +17,8 @@ resultServer <- function(input, session, output) {
 	})
 	# Load TC analysis results as current one
 	observeEvent(input$load_tca_results, {
-	  session$pithya$currentResult$file   <- session$pithya$TSanalysisResult$file
-	  session$pithya$currentResult$result <- session$pithya$TSanalysisResult$result
+	  session$pithya$currentResult$file   <- session$pithya$TCanalysisResult$file
+	  session$pithya$currentResult$result <- session$pithya$TCanalysisResult$result
 	  session$pithya$currentResult$loaded <- Result_TCAResults_tag
 	  updateButton(session$shiny, "load_tca_results", style = "default")
 	})
@@ -54,15 +54,15 @@ resultServer <- function(input, session, output) {
 	  }
 	})
 	# Activates and/or turns button green after new result is ready
-	observeEvent(session$pithya$TSanalysisResult$result, {
-	  enabled <- !is.null(session$pithya$TSanalysisResult$result)
+	observeEvent(session$pithya$TCanalysisResult$result, {
+	  enabled <- !is.null(session$pithya$TCanalysisResult$result)
 	  debug("[result] Attractor analysis results changed. result tab enabled: ", enabled)
 	  
 	  if(enabled) {
 	    if(is.null(session$pithya$currentResult$result)) {
 	      # if no previous results were loaded then automaticaly load this one
-	      session$pithya$currentResult$file   <- session$pithya$TSanalysisResult$file
-	      session$pithya$currentResult$result <- session$pithya$TSanalysisResult$result
+	      session$pithya$currentResult$file   <- session$pithya$TCanalysisResult$file
+	      session$pithya$currentResult$result <- session$pithya$TCanalysisResult$result
 	      session$pithya$currentResult$loaded <- Result_TCAResults_tag
 	      updateButton(session$shiny, "load_tca_results", disabled = !enabled, style = "default")
 	    } else {
@@ -125,14 +125,14 @@ resultServer <- function(input, session, output) {
   		                 "."))
   		})
 		  # prepare first row of plots
-		  prepareOnePlotRow(session, input, output, plotRows)
+		  prepareOneResultPlotRow(session, input, output, plotRows)
 		}
 	})
 
 	output$result_notification <- renderUI({
 		if (!is.null(session$pithya$synthesisResult$result) && session$pithya$currentResult$loaded == Result_synthResults_tag && session$pithya$synthesisResult$outdated) {
 		  tags$h3(style = "text-align: center; margin: 15px; color: red", "Warning: Shown PS results are out of sync with the current contents of the model or property editor.")
-		} else if (!is.null(session$pithya$TSanalysisResult$result) && session$pithya$currentResult$loaded == Result_TCAResults_tag && session$pithya$TSanalysisResult$outdated) {
+		} else if (!is.null(session$pithya$TCanalysisResult$result) && session$pithya$currentResult$loaded == Result_TCAResults_tag && session$pithya$TCanalysisResult$outdated) {
 		  tags$h3(style = "text-align: center; margin: 15px; color: red", "Warning: Shown AA results are out of sync with the current content of the model editor.")
 	  }
 	})
@@ -140,7 +140,7 @@ resultServer <- function(input, session, output) {
 	# Add plot row on button click 
 	observeEvent(input$add_param_plot, {
 	  # prepare another row of plots
-	  prepareOnePlotRow(session, input, output, plotRows)
+	  prepareOneResultPlotRow(session, input, output, plotRows)
 	})	
 
 	output$error_message <- renderUI({
