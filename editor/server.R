@@ -62,86 +62,142 @@ editorServer <- function(input, session, output) {
 			}						
 		}
 	)
-
+	
 	synthesisProcess <- reactiveValues(
-		running = NULL,
-		port = 9998,
-		observer = NULL,
-		propertyFile = NULL,
-		resultFile = NULL,
-		logFile = NULL,
-		notificationID = NULL,
-		missingThresholds = NULL,
-		onSuccess = function() {
-			debug("[synthesisProcess] success")	
-
-			session$pithya$synthesisResult$file <- synthesisProcess$resultFile
-			session$pithya$synthesisResult$outdated <- FALSE			
-			synthesisProcess$finalize(TRUE)
-
-			showNotification(
-				tags$div(class = "synth_done",
-					"Parameter synthesis finished",
-					tags$div(
-						downloadButton("save_synth_log_after", "Download log")
-					)
-				), 
-				duration = NULL, closeButton = TRUE, type = "message"
-			)
-
-			output$save_synth_log_after <- downloadHandler(
-				filename = "log.txt",
-				content = function(file) {
-					debug("download")
-					writeLines(readLines(synthesisProcess$logFile), file)
-			})
-		},
-		onError = function(e) {
-			debug(paste0("[synthesisProcess] error ", e))
-			synthesisProcess$finalize(FALSE)
-			if (grepl("Missing thresholds: .*", e)) {
-				# Note: This message has a fixed syntax and therefore this matching should not fail!
-				thresholdList <- sub("Missing thresholds: ", "", e)
-				thresholds <- strsplit(thresholdList, split = "; ", fixed = TRUE)
-				thresholds <- lapply(thresholds, function(t) {
-					list(name = sub(": .+", "", t), thresholds = strsplit(sub(".+: ", "", t), split = ", ", fixed = FALSE))
-				})
-				synthesisProcess$missingThresholds <- thresholds[[1]]
-				# We have missing thresholds!
-				showModal(modalDialog(title = "Missing thresholds!",
-					paste0("Variable thresholds ", thresholdList, " are missing in the model. Click `Add` to add them to the model and recompute approximation."), 
-					footer = tagList(
-						modalButton("Cancel"),
-						actionButton("add_thresholds", "Add")
-					)
-				))
-			} else {
-				showModal(modalDialog(title = "Synthesis error!", e))
-			}
-		},
-		onKill = function() {
-			debug("[synthesisProcess] killed")
-			synthesisProcess$finalize(FALSE)
-		},
-		finalize = function(success) {
-			# remove property file
-			if (!is.null(synthesisProcess$propertyFile)) {
-				file.remove(synthesisProcess$propertyFile)
-				synthesisProcess$propertyFile <- NULL
-			}
-			# hide progress notification
-			if (!is.null(synthesisProcess$notificationID)) {
-				removeNotification(synthesisProcess$notificationID)
-				approximationProcess$notificationID <- NULL
-			}
-			# remove result if not successful
-			if (!success && !is.null(synthesisProcess$resultFile)) {
-				file.remove(synthesisProcess$resultFile)
-				synthesisProcess$resultFile <- NULL
-			}
-		    #if(.Platform$OS.type != "windows")
-			    synthesisProcess$logReader$destroy()
-		}
+	  running = NULL,
+	  port = 9998,
+	  observer = NULL,
+	  propertyFile = NULL,
+	  resultFile = NULL,
+	  logFile = NULL,
+	  notificationID = NULL,
+	  missingThresholds = NULL,
+	  onSuccess = function() {
+	    debug("[synthesisProcess] success")	
+	    
+	    session$pithya$synthesisResult$file <- synthesisProcess$resultFile
+	    session$pithya$synthesisResult$outdated <- FALSE			
+	    synthesisProcess$finalize(TRUE)
+	    
+	    showNotification(
+	      tags$div(class = "synth_done",
+	               "Parameter synthesis finished",
+	               tags$div(
+	                 downloadButton("save_synth_log_after", "Download log")
+	               )
+	      ), 
+	      duration = NULL, closeButton = TRUE, type = "message"
+	    )
+	    
+	    output$save_synth_log_after <- downloadHandler(
+	      filename = "log.txt",
+	      content = function(file) {
+	        debug("download")
+	        writeLines(readLines(synthesisProcess$logFile), file)
+	      })
+	  },
+	  onError = function(e) {
+	    debug(paste0("[synthesisProcess] error ", e))
+	    synthesisProcess$finalize(FALSE)
+	    if (grepl("Missing thresholds: .*", e)) {
+	      # Note: This message has a fixed syntax and therefore this matching should not fail!
+	      thresholdList <- sub("Missing thresholds: ", "", e)
+	      thresholds <- strsplit(thresholdList, split = "; ", fixed = TRUE)
+	      thresholds <- lapply(thresholds, function(t) {
+	        list(name = sub(": .+", "", t), thresholds = strsplit(sub(".+: ", "", t), split = ", ", fixed = FALSE))
+	      })
+	      synthesisProcess$missingThresholds <- thresholds[[1]]
+	      # We have missing thresholds!
+	      showModal(modalDialog(title = "Missing thresholds!",
+	                            paste0("Variable thresholds ", thresholdList, " are missing in the model. Click `Add` to add them to the model and recompute approximation."), 
+	                            footer = tagList(
+	                              modalButton("Cancel"),
+	                              actionButton("add_thresholds", "Add")
+	                            )
+	      ))
+	    } else {
+	      showModal(modalDialog(title = "Synthesis error!", e))
+	    }
+	  },
+	  onKill = function() {
+	    debug("[synthesisProcess] killed")
+	    synthesisProcess$finalize(FALSE)
+	  },
+	  finalize = function(success) {
+	    # remove property file
+	    if (!is.null(synthesisProcess$propertyFile)) {
+	      file.remove(synthesisProcess$propertyFile)
+	      synthesisProcess$propertyFile <- NULL
+	    }
+	    # hide progress notification
+	    if (!is.null(synthesisProcess$notificationID)) {
+	      removeNotification(synthesisProcess$notificationID)
+	      approximationProcess$notificationID <- NULL
+	    }
+	    # remove result if not successful
+	    if (!success && !is.null(synthesisProcess$resultFile)) {
+	      file.remove(synthesisProcess$resultFile)
+	      synthesisProcess$resultFile <- NULL
+	    }
+	    #if(.Platform$OS.type != "windows")
+	    synthesisProcess$logReader$destroy()
+	  }
+	)
+	
+	TCAnalysisProcess <- reactiveValues(
+	  running = NULL,
+	  port = 9997,
+	  observer = NULL,
+	  resultFile = NULL,
+	  logFile = NULL,
+	  notificationID = NULL,
+	  onSuccess = function() {
+	    debug("[TCAnalysisProcess] success")	
+	    
+	    session$pithya$TCanalysisResult$file <- TCAnalysisProcess$resultFile
+	    session$pithya$TCanalysisResult$outdated <- FALSE			
+	    TCAnalysisProcess$finalize(TRUE)
+	    
+	    showNotification(
+	      tags$div(class = "synth_done",
+	               "Attractor analysis finished",
+	               tags$div(
+	                 downloadButton("save_TSanal_log_after", "Download log")
+	               )
+	      ), 
+	      duration = NULL, closeButton = TRUE, type = "message"
+	    )
+	    
+	    output$save_TSanal_log_after <- downloadHandler(
+	      filename = "log.txt",
+	      content = function(file) {
+	        debug("download")
+	        writeLines(readLines(TCAnalysisProcess$logFile), file)
+	      })
+	  },
+	  onError = function(e) {
+	    debug(paste0("[TCAnalysisProcess] error ", e))
+	    TCAnalysisProcess$finalize(FALSE)
+	    showModal(modalDialog(title = "Attractor analysis error!", e))
+	  },
+	  onKill = function() {
+	    debug("[TCAnalysisProcess] killed")
+	    TCAnalysisProcess$finalize(FALSE)
+	  },
+	  finalize = function(success) {
+	    # hide progress notification
+	    if (!is.null(TCAnalysisProcess$notificationID)) {
+	      removeNotification(TCAnalysisProcess$notificationID)
+	      approximationProcess$notificationID <- NULL
+	    }
+	    # remove result if not successful
+	    if (!success && !is.null(TCAnalysisProcess$resultFile)) {
+	      file.remove(TCAnalysisProcess$resultFile)
+	      TCAnalysisProcess$resultFile <- NULL
+	    }
+	    #if(.Platform$OS.type != "windows")
+	    TCAnalysisProcess$logReader$destroy()
+	  }
 	)
 
 	## Basic reactive interactions between the elements
@@ -149,7 +205,7 @@ editorServer <- function(input, session, output) {
 	## These two observers have to be set up BEFORE the file upload observers, so that the 
 	## default examples are properly observed 
 
-	# Enable approximation button when process is not running and result is outdated
+	# Enable approximation button when process is not running and model is outdated
 	observeEvent(c(session$pithya$approximatedModel$outdated, approximationProcess$running), {
 		enabled <- is.null(approximationProcess$running) && session$pithya$approximatedModel$outdated
 		updateButton(session$shiny, "generate_abstraction", style = "success", disabled = !enabled)
@@ -157,21 +213,28 @@ editorServer <- function(input, session, output) {
 	
 	# Enable synthesis button when process is not running and model is ready and result is outdated
 	observeEvent(c(input$prop_input_area, session$pithya$synthesisResult$outdated, session$pithya$approximatedModel$outdated, synthesisProcess$running), {
-		# TODO check if the properties are identical to the last synthesised one
-		enabled <- is.null(synthesisProcess$running) && session$pithya$synthesisResult$outdated	&& !session$pithya$approximatedModel$outdated
-		updateButton(session$shiny, "process_run", style = "success", disabled = !enabled)
+	  # TODO check if the properties are identical to the last synthesised one
+	  enabled <- is.null(synthesisProcess$running) && session$pithya$synthesisResult$outdated	&& !session$pithya$approximatedModel$outdated
+	  updateButton(session$shiny, "process_run", style = "success", disabled = !enabled)
 	})
-
+	
+	# Enable TC analysis button when process is not running and model is outdated
+	observeEvent(c(session$pithya$TCanalysisResult$outdated, session$pithya$approximatedModel$outdated, TCAnalysisProcess$running), {
+	  enabled <- is.null(TCAnalysisProcess$running) && session$pithya$TCanalysisResult$outdated	&& !session$pithya$approximatedModel$outdated
+	  updateButton(session$shiny, "TC_analysis_run", style = "success", disabled = !enabled)
+	})
+	
 	# Invalidate approximated model when input changes
 	observeEvent(input$model_input_area, {
-		# TODO check if the model is identical to the last approximated one		
-		session$pithya$approximatedModel$outdated = TRUE
-		session$pithya$synthesisResult$outdated = TRUE
+	  # TODO check if the model is identical to the last approximated one		
+	  session$pithya$approximatedModel$outdated = TRUE
+	  session$pithya$synthesisResult$outdated = TRUE
+	  session$pithya$TCanalysisResult$outdated = TRUE	
 	})
-
+	
 	# Invalidate synthesis result when property changes
 	observeEvent(input$prop_input_area, {
-		session$pithya$synthesisResult$outdated = TRUE	
+	  session$pithya$synthesisResult$outdated = TRUE	
 	})
 
 	# Load model file into the text editor after upload or reset
@@ -276,10 +339,15 @@ editorServer <- function(input, session, output) {
 		debug("[killApproximation] kill requested")	
 		killRemoteProcess(session, approximationProcess)
 	})
-
+	
 	observeEvent(input$synthesis_kill, {
-		debug("[killSynthesis] kill requested")	
-		killRemoteProcess(session, synthesisProcess)
+	  debug("[killSynthesis] kill requested")	
+	  killRemoteProcess(session, synthesisProcess)
+	})
+	
+	observeEvent(input$TCAnalysis_kill, {
+	  debug("[killTCAnalysis] kill requested")	
+	  killRemoteProcess(session, TCAnalysisProcess)
 	})
 
 	observeEvent(input$add_thresholds, {
@@ -323,67 +391,129 @@ editorServer <- function(input, session, output) {
 			))
 		})
 	})
-
+	
 	## Parameter synthesis runner
-
+	
 	observeEvent(input$process_run, {
-		debug("[performSynthesis] start")	
-		printProgress(Parameter_synthesis_started)
-
-		if (!is.null(synthesisProcess$running)) {
-			killRemoteProcess(session, synthesisProcess)
-		}
-
-		# Run combine to check syntax and semantics
-		synthesisProcess$propertyFile <- tempfile(pattern = "property", fileext = ".ctl", tmpdir = sessionDir)
-		synthesisProcess$resultFile <- tempfile(pattern = "synthesisResult", fileext = ".ctl", tmpdir = sessionDir)
-		synthesisProcess$logFile <- tempfile(pattern = "synthesisLog", fileext = ".txt", tmpdir = sessionDir)
-		file.create(synthesisProcess$logFile)
-		#if(.Platform$OS.type != "windows") {
-    		synthesisProcess$logReader <- myReactiveFileReader(500, session$shiny, synthesisProcess$logFile, function(progress) {
-    			output$synth_log <- renderPrint({
-    			    if(.Platform$OS.type != "windows")
-    				    cat(paste0(progress, collapse = "\n"))
-    			    else
-    			        cat("Progress log during computation is not supported in Windows")
-    			})	
-    		})
-		#}
-		writeLines(input$prop_input_area, synthesisProcess$propertyFile)
-
-		synthesisProcess$notificationID <- showNotification(
-			tags$div(class = "synth_not",
-				"Parameter synthesis running",
-				verbatimTextOutput("synth_log") ,
-				tags$div(
-					if(.Platform$OS.type != "windows") downloadButton("save_synth_log", "Download log"),
-					actionButton("synthesis_kill", "Cancel", style = "warning")
-				)
-			), 
-			duration = NULL, closeButton = FALSE#, type = "error"
-		)
-
-		output$save_synth_log <- downloadHandler(
-			filename = "log.txt",
-			content = function(file) {
-				writeLines(readLines(synthesisProcess$logFile), file)
-		})
-
-		# TODO thread count
-		startRemoteProcess(session, synthesisProcess, list(
-			command = "pithyaGUImain",
-			args = c(
-				"-m", paste0("\"", session$pithya$approximatedModel$file, "\""),
-				"-p", paste0("\"", synthesisProcess$propertyFile, "\""),
-				"-r", "json", "-ro", paste0("\"", synthesisProcess$resultFile, "\""),
-				"--parallelism", input$threads_number 
-			),
-			## Following file(..) wrapper is necessary for Windows platform - as it creates blocking files for writing by default
-			stdout = file(synthesisProcess$logFile, open="a+", blocking=F),
-			stderr = file(synthesisProcess$logFile, open="a+", blocking=F),
-			stdin = ""
-		))
-
+	  debug("[performSynthesis] start")	
+	  printProgress(Parameter_synthesis_started)
+	  
+	  if (!is.null(synthesisProcess$running)) {
+	    killRemoteProcess(session, synthesisProcess)
+	  }
+	  
+	  # Run combine to check syntax and semantics
+	  synthesisProcess$propertyFile <- tempfile(pattern = "property", fileext = ".ctl", tmpdir = sessionDir)
+	  synthesisProcess$resultFile <- tempfile(pattern = "synthesisResult", fileext = ".json", tmpdir = sessionDir)
+	  synthesisProcess$logFile <- tempfile(pattern = "synthesisLog", fileext = ".txt", tmpdir = sessionDir)
+	  file.create(synthesisProcess$logFile)
+	  #if(.Platform$OS.type != "windows") {
+	  synthesisProcess$logReader <- myReactiveFileReader(500, session$shiny, synthesisProcess$logFile, function(progress) {
+	    output$synth_log <- renderPrint({
+	      if(.Platform$OS.type != "windows")
+	        cat(paste0(progress, collapse = "\n"))
+	      else
+	        cat("Progress log during computation is not supported in Windows")
+	    })	
+	  })
+	  #}
+	  writeLines(input$prop_input_area, synthesisProcess$propertyFile)
+	  
+	  synthesisProcess$notificationID <- showNotification(
+	    tags$div(class = "synth_not",
+	             "Parameter synthesis running",
+	             verbatimTextOutput("synth_log") ,
+	             tags$div(
+	               if(.Platform$OS.type != "windows") downloadButton("save_synth_log", "Download log"),
+	               actionButton("synthesis_kill", "Cancel", style = "warning")
+	             )
+	    ), 
+	    duration = NULL, closeButton = FALSE#, type = "error"
+	  )
+	  
+	  output$save_synth_log <- downloadHandler(
+	    filename = "log.txt",
+	    content = function(file) {
+	      writeLines(readLines(synthesisProcess$logFile), file)
+	    })
+	  
+	  # TODO thread count
+	  startRemoteProcess(session, synthesisProcess, list(
+	    command = "pithyaGUImain",
+	    args = c(
+	      "-m", paste0("\"", session$pithya$approximatedModel$file, "\""),
+	      "-p", paste0("\"", synthesisProcess$propertyFile, "\""),
+	      "-r", "json", "-ro", paste0("\"", synthesisProcess$resultFile, "\""),
+	      "--parallelism", input$threads_number 
+	    ),
+	    ## Following file(..) wrapper is necessary for Windows platform - as it creates blocking files for writing by default
+	    stdout = file(synthesisProcess$logFile, open="a+", blocking=F),
+	    stderr = file(synthesisProcess$logFile, open="a+", blocking=F),
+	    stdin = ""
+	  ))
+	  
+	})
+	
+	## TC analysis runner
+	
+	observeEvent(input$TC_analysis_run, {
+	  debug("[performAttractorAnalysis] start")	
+	  printProgress(TC_analysis_started)
+	  
+	  if (!is.null(TCAnalysisProcess$running)) {
+	    killRemoteProcess(session, TCAnalysisProcess)
+	  }
+	  
+	  # Run combine to check syntax and semantics
+	  TCAnalysisProcess$resultFile <- tempfile(pattern = "TCanalysisResult", fileext = ".json", tmpdir = sessionDir)
+	  TCAnalysisProcess$logFile <- tempfile(pattern = "TCAnalysisLog", fileext = ".txt", tmpdir = sessionDir)
+	  file.create(TCAnalysisProcess$logFile)
+	  #if(.Platform$OS.type != "windows") {
+	  TCAnalysisProcess$logReader <- myReactiveFileReader(500, session$shiny, TCAnalysisProcess$logFile, function(progress) {
+	    output$synth_log <- renderPrint({
+	      if(.Platform$OS.type != "windows")
+	        cat(paste0(progress, collapse = "\n"))
+	      else
+	        cat("Progress log during computation is not supported in Windows")
+	    })	
+	  })
+	  #}
+	  
+	  TCAnalysisProcess$notificationID <- showNotification(
+	    tags$div(class = "synth_not",
+	             "Attractor analysis running",
+	             verbatimTextOutput("synth_log") ,
+	             tags$div(
+	               if(.Platform$OS.type != "windows") downloadButton("save_TSanal_log", "Download log"),
+	               actionButton("TCAnalysis_kill", "Cancel", style = "warning")
+	             )
+	    ), 
+	    duration = NULL, closeButton = FALSE#, type = "error"
+	  )
+	  
+	  output$save_TSanal_log <- downloadHandler(
+	    filename = "log.txt",
+	    content = function(file) {
+	      writeLines(readLines(TCAnalysisProcess$logFile), file)
+	    })
+	  
+	  # TODO thread count
+	  startRemoteProcess(session, TCAnalysisProcess, list(
+	    command = "pithyaGUIcomponents",
+	    args = c(
+	      "-m", paste0("\"", session$pithya$approximatedModel$file, "\""),
+	      "-r", "json", "-ro", paste0("\"", TCAnalysisProcess$resultFile, "\""),
+	      "--parallelism", input$threads_number,
+	      "--algorithm-type", input$algorithm_type,
+	      ifelse(input$disable_heuristic,"--disable-heuristic",""),
+	      ifelse(input$disable_selfloops,"--disable-self-loops","")
+	    ),
+	    ## Following file(..) wrapper is necessary for Windows platform - as it creates blocking files for writing by default
+	    stdout = file(TCAnalysisProcess$logFile, open="a+", blocking=F),
+	    stderr = file(TCAnalysisProcess$logFile, open="a+", blocking=F),
+	    stdin = ""
+	  ))
+	  
 	})
 
 }

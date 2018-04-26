@@ -5,6 +5,21 @@ source("result/ui.R")
 source("plot/result_state_plot.R")
 source("plot/result_param_plot.R")
 
+
+prepareOneResultPlotRow <- function(session, input, output, plotRows) {
+  # prepare first row of plots
+  debug("[result] new plot row")
+  let(session$pithya$currentResult$result, function(result) {
+    row <- createResultPlotRow(session$pithya$nextId(), result, input, session, output, 
+                               onRemove = function(row) {
+                                 row$destroy()
+                                 plotRows[[row$outRow]] <- NULL
+                               }
+    )			
+    plotRows[[row$outRow]] <- row			
+  })
+}
+
 createResultPlotRow <- function(id, result, input, session, output,
 	onRemove = function(row) {}		# called when row remove button is clicked
 ) {

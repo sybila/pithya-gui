@@ -61,6 +61,11 @@ Hillm <- function(s,t,n=1,a=1,b=0) (t^n)/(s^n + t^n)
 hillp <- function(s,t,n=1,a=0,b=1) (s^n)/(s^n + t^n)
 Hillp <- function(s,t,n=1,a=0,b=1) (s^n)/(s^n + t^n)
 
+Hp <- function(s,t,a=0,b=1) if(s < t) return(min(a,b)) else return(max(a,b))
+hp <- function(s,t,a=0,b=1) if(s < t) return(min(a,b)) else return(max(a,b))
+Hm <- function(s,t,a=1,b=0) if(s < t) return(max(a,b)) else return(min(a,b))
+hm <- function(s,t,a=1,b=0) if(s < t) return(max(a,b)) else return(min(a,b))
+
 # Approx <- function(m,l) {
 #     apply(m,c(1,2),function(s)
 #     ifelse(s <= l[[1]][1], l[[1]][2],

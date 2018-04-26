@@ -12,6 +12,9 @@ Approximation_error <- "Some error occured during approximation.\n"
 Parameter_synthesis_started <- "Parameter synthesis has started.\n"
 Parameter_synthesis_stopped <- "Parameter synthesis process was stopped.\n"
 
+TC_analysis_started <- "Attractor analysis has started.\n"
+TC_analysis_stopped <- "Attractor analysis process was stopped.\n"
+
 Waiting_for_state_space <- "Updating plots." #comment both in adding plot and delteing
 
 
@@ -53,7 +56,7 @@ Editor_cutTresholds_tooltip <- "Do not allow automatic adding of thresholds exce
 Editor_fastApproximation_label <- "Fast Approximation"
 Editor_fastApproximation_tooltip <- "Enable coarser and less precise approximation method." # "Two versions of The-PWA-approximation are available. Slower one - more precise and computationally more demanding - and fast one - much faster but also less precise."
 
-Editor_process_controlPanel_label <- "Parameter Synthesis"
+Editor_process_controlPanel_label <- "Analyses Control Panel" # "Parameter Synthesis"
 
 Editor_numberOfThreads_label <- "Number of Threads"
 Editor_numberOfThreads_tooltip <- "Set number of threads computing parameter synthesis."
@@ -73,6 +76,18 @@ Editor_modelTextEditor_tooltip <- ""
 Editor_propertyTextEditor_label <- "Properties Editor"
 Editor_propertyTextEditor_tooltip <- "" 
 
+#TODO: check and fill
+Editor_algorithmType_label    <- "Algorithm Type"
+Editor_algorithmType_tooltip  <- "Specify the type of algorithm used in attractor analysis."
+
+Editor_disableHeuristic_label   <- "Disable Heuristic"
+Editor_disableHeuristic_tooltip <- "Use to disable the set size state choosing heuristic."
+
+Editor_disableSelfloops_label   <- "Disable Self-Loops"
+Editor_disableSelfloops_tooltip <- "Use to disable self-loop creation in transition system."
+
+Editor_runTCAnalysis_label    <- "Run Attractor Analysis"
+Editor_runTCAnalysis_tooltip  <- "Run Attractor analysis procedure."
 
 
 #EXPLORER
@@ -197,14 +212,26 @@ Result_tooltip <- ""
 #Result_deleteExperiment_tooltip <- ""
 
 Result_Browse_label <- "" # "choose result '.json' file"
-Result_Browse_tooltip <- "Load parameter synthesis result .json file."
+Result_Browse_tooltip <- "Import parameter synthesis result .json file."
 
 #Deleted with experiments
 #Result_BrowseReload_label <- "reload"
 #Result_BrowseReload_tooltip <- ""
 
-Result_saveResults_label <- "Save Results"
-Result_saveResults_tooltip <- "Save parameter synthesis results as .json file."
+Result_loadImportedResults_label    <- "Imported Results"
+Result_loadImportedResults_tooltip  <- "Load imported results as current one to display and examine. Green color means new results have been imported."
+Result_importedResults_tag          <- "importedResult"
+
+Result_loadSynthResults_label   <- "Synthesis Results"
+Result_loadSynthResults_tooltip <- "Load parameter synthesis results as current one to display and examine. Green color means new results have been produced."
+Result_synthResults_tag          <- "synthesisResult"
+
+Result_loadTCAResults_label   <- "Attractor Results"
+Result_loadTCAResults_tooltip <- "Load attractor analysis results as current one to display and examine. Green color means new results have been produced."
+Result_TCAResults_tag          <- "attractorResult"
+
+Result_saveResults_label <- "Save Loaded Results"
+Result_saveResults_tooltip <- "Save currently loaded results as .json file."
 
 Result_showParametersCoverage_label <- "Show Parameters Coverage"
 Result_showParametersCoverage_tooltip <- "Enable/disable parameters coverage" #"Show Scaling factor for density of shown rectangles in parameter space."
@@ -221,10 +248,10 @@ Result_addPlot_tooltip <- "Add new plot for parameter space and the correspondin
 #WARNING: these are in server.R
 #Result_experiment_label <- "Experiment no. "
 
-Result_chooseFormulaOfInterest_label <- "Select Formula:"
-Result_chooseFormulaOfInterest_tooltip <- "Select formula for which to display the results."
+Result_chooseFormulaOfInterest_label <- "Show results for:"
+Result_chooseFormulaOfInterest_tooltip <- "Select the results which should be displayed."
 
-Result_chooseFormulaOfInterest_error <- "Parameter synthesis has to be run or a results file loaded before results can be shown."
+Result_chooseFormulaOfInterest_error <- "An analysis has to be run or a results file imported before results can be shown."
 
 Result_horizontal_label <- "Horizontal Axis"
 Result_horizontal_tooltip <- "Set the variable to show on horizontal axis."
