@@ -42,16 +42,16 @@ editorControlPanel <- function() {
             )  
         ),
         column(4, class = "model_approx_column",
-            advanced(
-                tooltip(tooltip = Editor_cutTresholds_tooltip,
-                    checkboxInput("thresholds_cut", Editor_cutTresholds_label,F)
-                ),
-                tooltip(tooltip = Editor_fastApproximation_tooltip,
-                    checkboxInput("fast_approximation", Editor_fastApproximation_label,F)
-                )
-            ),
             tooltip(tooltip = Editor_generateApproximation_tooltip,
                 bsButton("generate_abstraction", Editor_generateApproximation_label, disabled=T)
+            ),
+            advanced(
+              tooltip(tooltip = Editor_cutTresholds_tooltip,
+                      checkboxInput("thresholds_cut", Editor_cutTresholds_label,F)
+              ),
+              tooltip(tooltip = Editor_fastApproximation_tooltip,
+                      checkboxInput("fast_approximation", Editor_fastApproximation_label,F)
+              )
             )
         )
     )    
@@ -77,11 +77,6 @@ editorControlPanel <- function() {
 
     # Synthesis control panel - start and stop
     synthesisControls <- fluidPage(
-        advanced(
-            tooltip(tooltip = Editor_numberOfThreads_tooltip,
-                sliderInput("threads_number", Editor_numberOfThreads_label, value = detectCores(), min=1, max=detectCores(), step=1)
-            )
-        ),
         tooltip(tooltip = Editor_runParameterSynthesis_tooltip,
             bsButton("process_run", Editor_runParameterSynthesis_label, disabled=T)
         # ),
@@ -89,11 +84,8 @@ editorControlPanel <- function() {
         #     bsButton("process_stop", Editor_stopParameterSynthesis_label, disabled=T)
         ),
         advanced(
-          tooltip(tooltip = Editor_algorithmType_tooltip,
-                  radioButtons("algorithm_type",Editor_algorithmType_label,list(local="local",dist="dist"),"local",inline=T)
-          ),
-          tooltip(tooltip = Editor_disableHeuristic_tooltip,
-                  checkboxInput("disable_heuristic", Editor_disableHeuristic_label, value=F)
+          tooltip(tooltip = Editor_numberOfThreads_tooltip,
+                  sliderInput("threads_number", Editor_numberOfThreads_label, value = detectCores(), min=1, max=detectCores(), step=1)
           ),
           tooltip(tooltip = Editor_disableSelfloops_tooltip,
                   checkboxInput("disable_selfloops", Editor_disableSelfloops_label, value=F)
@@ -101,6 +93,14 @@ editorControlPanel <- function() {
         ),
         tooltip(tooltip = Editor_runTCAnalysis_tooltip,
                 bsButton("TC_analysis_run", Editor_runTCAnalysis_label, disabled=T)
+        ),
+        advanced(
+          tooltip(tooltip = Editor_algorithmType_tooltip,
+                  radioButtons("algorithm_type",Editor_algorithmType_label,list(local="local",dist="dist"),"local",inline=T)
+          ),
+          tooltip(tooltip = Editor_disableHeuristic_tooltip,
+                  checkboxInput("disable_heuristic", Editor_disableHeuristic_label, value=F)
+          )
         )
     )
 
