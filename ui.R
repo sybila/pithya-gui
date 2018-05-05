@@ -70,14 +70,18 @@ shinyUI(
             
             # column(1,bsButton("btn_test_export","export")),
             # column(1,bsButton("btn_test_import","import")),
-            
-            column(2,
-                   #style = "margin-top:5px;",
-                   tooltip(tooltip = Editor_advancedSettings_tooltip,
-                           checkboxInput("advanced", Editor_advancedSettings_label, F)
-                   ), offset = 0
-            ),
-            column(4, a(code(("! Click here for tutorial !")), target = "_blank", href = "http://biodivine.fi.muni.cz/docs/pithya/tutorial.pdf"), offset = 3)
+          
+          column(3,
+                 #style = "margin-top:5px;",
+                 tooltip(tooltip = Editor_advancedSettings_tooltip,
+                         checkboxInput("advanced", Editor_advancedSettings_label, F)
+                 ), offset = 0
+          ),
+          column(7, 
+                 a(code("Click here for tutorial "), target = "_blank", href = "http://biodivine.fi.muni.cz/docs/pithya/tutorial.pdf"),
+                 "or ",
+                 a(code(("here for complete manual")), target = "_blank", href = "http://biodivine.fi.muni.cz/docs/pithya/manual.pdf"),
+                 offset = 2)
         ),
         tabsetPanel(id = "dimensions",
             editorTab(),
