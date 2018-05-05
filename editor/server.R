@@ -502,7 +502,7 @@ editorServer <- function(input, session, output) {
 	    command = "pithyaGUIcomponents",
 	    args = c(
 	      "-m", paste0("\"", session$pithya$approximatedModel$file, "\""),
-	      "-r", "json", "-ro", paste0("\"", TCAnalysisProcess$resultFile, "\""),
+	      "-ro", paste0("\"", TCAnalysisProcess$resultFile, "\""),
 	      "--parallelism", input$threads_number,
 	      "--algorithm-type", input$algorithm_type,
 	      ifelse(input$disable_heuristic,"--disable-heuristic",""),
