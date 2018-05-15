@@ -80,8 +80,10 @@ shinyUI(
           column(7, 
                  a(code("Click here for tutorial "), target = "_blank", href = "http://biodivine.fi.muni.cz/docs/pithya/tutorial.pdf"),
                  "or ",
-                 a(code(("here for complete manual")), target = "_blank", href = "http://biodivine.fi.muni.cz/docs/pithya/manual.pdf"),
-                 offset = 2)
+                 a(code("here for complete manual"), target = "_blank", href = "http://biodivine.fi.muni.cz/docs/pithya/manual.pdf"),
+                 "or ",
+                 a(code("watch video slides on YouTube"), target = "_blank", href = "https://www.youtube.com/watch?v=xnLWmuvDBcI"),
+                 offset = 1)
         ),
         tabsetPanel(id = "dimensions",
             editorTab(),
