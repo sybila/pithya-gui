@@ -226,22 +226,34 @@ editorServer <- function(input, session, output) {
 	
 	# Invalidate approximated model when input changes
 	observeEvent(input$model_input_area, {
-	  # TODO check if the model is identical to the last approximated one		
+	  
+	  # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	  # TODO check if the model is identical to the last approximated one
+	  # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	  
 	  session$pithya$approximatedModel$outdated = TRUE
-	  session$pithya$synthesisResult$outdated = TRUE
-	  session$pithya$TCanalysisResult$outdated = TRUE	
+	  if(!session$pithya$selectedExample$model_new) {
+  	  session$pithya$synthesisResult$outdated = TRUE
+  	  session$pithya$TCanalysisResult$outdated = TRUE
+	  } else {
+	    session$pithya$selectedExample$model_new <- FALSE
+	  }
 	})
 	
 	# Invalidate synthesis result when property changes
 	observeEvent(input$prop_input_area, {
-	  session$pithya$synthesisResult$outdated = TRUE	
+	  if(!session$pithya$selectedExample$prop_new) {
+	    session$pithya$synthesisResult$outdated = TRUE	
+	  } else {
+	    session$pithya$selectedExample$prop_new <- FALSE
+	  }
 	})
 
 	# Load model file into the text editor after upload or reset
 	observeEvent(c(input$model_file, input$reset_model), {
 		if (is.null(input$model_file) || is.null(input$model_file$datapath)) {
-		    data <- ""
-			data <- readLines(paste0(session$pithya$examplesDir, defaultModel))
+		  data <- ""
+			# data <- readLines(paste0(session$pithya$examplesDir, defaultModel))
 		} else {
 			data <- readLines(input$model_file$datapath)
 		}
@@ -251,8 +263,8 @@ editorServer <- function(input, session, output) {
 	# Load property file into the text editor after upload or reset
 	observeEvent(c(input$prop_file, input$reset_prop), {
 		if (is.null(input$prop_file) || is.null(input$prop_file$datapath)) {
-		    data <- ""
-			data <- readLines(paste0(session$pithya$examplesDir, defaultProperty))
+		  data <- ""
+			# data <- readLines(paste0(session$pithya$examplesDir, defaultProperty))
 		} else {
 			data <- readLines(input$prop_file$datapath)
 		}

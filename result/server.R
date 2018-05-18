@@ -51,8 +51,10 @@ resultServer <- function(input, session, output) {
 	      }
 	      updateButton(session$shiny, "load_synth_results", disabled = !enabled, style = "success")
 	    }
+	  } else {
+	    updateButton(session$shiny, "load_synth_results", disabled = !enabled, style = "default")
 	  }
-	})
+	}, ignoreNULL = FALSE, ignoreInit = TRUE)
 	# Activates and/or turns button green after new result is ready
 	observeEvent(session$pithya$TCanalysisResult$result, {
 	  enabled <- !is.null(session$pithya$TCanalysisResult$result)
@@ -74,8 +76,10 @@ resultServer <- function(input, session, output) {
 	      }
 	      updateButton(session$shiny, "load_tca_results", disabled = !enabled, style = "success")
 	    }
+	  } else {
+	    updateButton(session$shiny, "load_tca_results", disabled = !enabled, style = "default")
 	  }
-	})
+	}, ignoreNULL = FALSE, ignoreInit = TRUE)
 	# Activates and/or turns button green after new result is ready
 	observeEvent(session$pithya$importedResult$result, {
 	  enabled <- !is.null(session$pithya$importedResult$result)
@@ -116,24 +120,31 @@ resultServer <- function(input, session, output) {
 		# reset out of sync information (if any)
 		if(enabled) {
 		  #closeAlert(session$shiny,"result_notification")
-		  output$error_message <- renderUI({
-  		  tags$h3(style = "text-align: center; margin: 15px; color: black;", 
-  		          paste0("Loaded results come from ",
-  		                 ifelse(session$pithya$currentResult$loaded == Result_synthResults_tag, "parameter synthesis procedure",
-  		                        ifelse(session$pithya$currentResult$loaded == Result_importedResults_tag, "imported file",
-  		                               ifelse(session$pithya$currentResult$loaded == Result_TCAResults_tag, "attractor analysis"))),
-  		                 "."))
-  		})
+		  if(session$pithya$currentResult$loaded %in% c(Result_synthResults_tag, Result_importedResults_tag, Result_TCAResults_tag)) {
+  		  output$error_message <- renderUI({
+    		  tags$h3(style = "text-align: center; margin: 15px; color: black;", 
+    		          paste0("Loaded results come from ",
+    		                 ifelse(session$pithya$currentResult$loaded == Result_synthResults_tag, "parameter synthesis procedure",
+    		                        ifelse(session$pithya$currentResult$loaded == Result_importedResults_tag, "imported file",
+    		                               ifelse(session$pithya$currentResult$loaded == Result_TCAResults_tag, "attractor analysis"))),
+    		                 "."))
+    		})
+		  }
 		  # prepare first row of plots
 		  prepareOneResultPlotRow(session, input, output, plotRows)
 		}
-	})
+	}, ignoreNULL = FALSE, ignoreInit = TRUE)
 
 	output$result_notification <- renderUI({
-		if (!is.null(session$pithya$synthesisResult$result) && session$pithya$currentResult$loaded == Result_synthResults_tag && session$pithya$synthesisResult$outdated) {
+		if (!is.null(session$pithya$synthesisResult$result) && !is.null(session$pithya$currentResult$loaded) && 
+		    session$pithya$currentResult$loaded == Result_synthResults_tag && session$pithya$synthesisResult$outdated) {
 		  tags$h3(style = "text-align: center; margin: 15px; color: red", "Warning: Shown PS results are out of sync with the current contents of the model or property editor.")
-		} else if (!is.null(session$pithya$TCanalysisResult$result) && session$pithya$currentResult$loaded == Result_TCAResults_tag && session$pithya$TCanalysisResult$outdated) {
+		} else if (!is.null(session$pithya$TCanalysisResult$result) && !is.null(session$pithya$currentResult$loaded) && 
+		           session$pithya$currentResult$loaded == Result_TCAResults_tag && session$pithya$TCanalysisResult$outdated) {
 		  tags$h3(style = "text-align: center; margin: 15px; color: red", "Warning: Shown AA results are out of sync with the current content of the model editor.")
+	  } else if (!is.null(session$pithya$importedResult$result) && !is.null(session$pithya$currentResult$loaded) && 
+	             session$pithya$currentResult$loaded == Result_importedResults_tag && session$pithya$importedResult$outdated) {
+	    tags$h3(style = "text-align: center; margin: 15px; color: red", "Warning: Shown imported results don't have to be related to the current model and/or property.")
 	  }
 	})
 	

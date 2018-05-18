@@ -28,7 +28,7 @@ killRemoteProcess <- function(session, process) {
 			showModal(modalDialog(title = "Process is not responding!",
 				footer = modalButton("Ok"),
 				paste0("Pithya could not kill process ", config$command, ". The process might have died unexpectedly. In case it is still running, please try to kill it manually. Normal functionality will now resume.")
-			), session = session$shiny)			
+			), session = session$shiny)
 		}, finally = {
 			process$running <- NULL
 			safeDestroyObserver(process$observer)

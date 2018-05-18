@@ -32,6 +32,15 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 );
 "
 
+# shiny ACE editor reloader
+shinyAce_resize <- "
+shinyjs.shinyAce_resize = function() {
+  //param = shinyjs.getParams(what);
+  ace.edit('model_input_area').resize();
+  ace.edit('prop_input_area').resize();
+};
+"
+
 shinyUI(
     fluidPage(
         ### Working solution for re-loading of fileInput
@@ -44,6 +53,7 @@ shinyUI(
         # });
         # '),
         useShinyjs(),
+        extendShinyjs(text = shinyAce_resize, functions = c("shinyAce_resize")),
         # loading(file.path(mytempdir(), "image.Rmd")),
         # fluidPage(
         fluidRow(
@@ -71,11 +81,19 @@ shinyUI(
             # column(1,bsButton("btn_test_export","export")),
             # column(1,bsButton("btn_test_import","import")),
           
-          column(3,
+          column(2,
+                 #"Select predefined example",
+                 tooltip(tooltip = Editor_selectExample_tooltip,
+                         selectInput("select_example", Editor_selectExample_label,
+                                     selected = "none",
+                                     choices = examples_list)),
+                 offset = 0
+          ),
+          column(1,
                  #style = "margin-top:5px;",
                  tooltip(tooltip = Editor_advancedSettings_tooltip,
-                         checkboxInput("advanced", Editor_advancedSettings_label, F)
-                 ), offset = 0
+                         checkboxInput("advanced", Editor_advancedSettings_label, F)), 
+                 offset = 0
           ),
           column(7, 
                  a(code("Click here for tutorial "), target = "_blank", href = "http://biodivine.fi.muni.cz/docs/pithya/tutorial.pdf"),
@@ -89,7 +107,13 @@ shinyUI(
             editorTab(),
             explorerTab(),
             resultTab()
-        )
+        ),
+        hr(),
+        em("If you find a bug or have a comment let us know, please, via an e-mail:  "),
+        a("sybila-supp@fi.muni.cz", target = "_blank", href = "mailto:sybila-supp@fi.muni.cz"),
+        em(" or add an issue on  "),
+        a("github", target = "_blank", href = "https://github.com/sybila/pithya-gui/issues"),
+        em(".")
     )
 )
               

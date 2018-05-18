@@ -27,11 +27,14 @@ Editor_model_controlPanel_label <- "Model Editor Control Panel"
 Editor_advancedSettings_label <- "Advanced Settings"
 Editor_advancedSettings_tooltip <- "show/hide settings allowing advanced features" #"show/hide advanced settings"
 
+Editor_selectExample_label <- "Select predefined example"
+Editor_selectExample_tooltip <- "Select an example to investigate its model, the properties (if any) and the particular results (if any)"
+
 Editor_model_Browse_label <- ""
 Editor_model_Browse_tooltip <- "Load .bio model file."
 
 Editor_model_resetChangesInModel_label <- "Reload Model"
-Editor_model_resetChangesInModel_tooltip <- "reload selected model file"
+Editor_model_resetChangesInModel_tooltip <- "Reload uploaded model file."
 
 Editor_model_saveModel_label <- "Save Model"
 Editor_model_saveModel_tooltip <- "Save model as .bio file."
@@ -45,7 +48,7 @@ Editor_property_Browse_label <- ""
 Editor_property_Browse_tooltip <- "Load .ctl file containing properties."
 
 Editor_property_resetChangesInProperties_label <- "Reload Properties"
-Editor_property_resetChangesInProperties_tooltip <- "reload selected properties file"
+Editor_property_resetChangesInProperties_tooltip <- "Reload uploaded properties file."
 
 Editor_property_saveProperties_label <- "Save Properties"
 Editor_property_saveProperties_tooltip <- "Save properties as .ctl file."
