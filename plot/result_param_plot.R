@@ -193,7 +193,7 @@ createResultParamPlot <- function(result, id, row, input, session, output) {
 	# dimensions of these rectangles.
 	computeRectangularValidity <- function(config, mapping, dimMask) {
 
-		pValues <- unique(Reduce(c, mapping))
+		pValues <- unlist(mapping)
 		pValues <- pValues[!pValues==0]
 
 		if (length(pValues) == 0) {
