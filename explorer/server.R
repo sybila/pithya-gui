@@ -62,7 +62,7 @@ explorerServer <- function(input, session, output) {
 
 	output$explorer_notification <- renderUI({
 		if (!is.null(session$pithya$approximatedModel$model) && session$pithya$approximatedModel$outdated) {
-			tags$h4(style = "text-align: center; margin: 15px;", "Warning: This model is out of sync with current contents of the model editor.")
+			tags$h3(style = "text-align: center; margin: 15px; color: red;", "Warning: This model is out of sync with current contents of the model editor.")
 		}
 	})
 
@@ -117,7 +117,7 @@ explorerServer <- function(input, session, output) {
   		# prepare another row of plots
   		prepareOnePlotRow(session, input, output, plotRows)
 		}
-	})
+	}, ignoreNULL = FALSE, ignoreInit = TRUE)
 
 	observeEvent(input$add_plot_row, {
 	  # prepare another row of plots
