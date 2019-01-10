@@ -5,6 +5,21 @@ source("result/ui.R")
 source("plot/result_state_plot.R")
 source("plot/result_param_plot.R")
 
+
+prepareOneResultPlotRow <- function(session, input, output, plotRows) {
+  # prepare first row of plots
+  debug("[result] new plot row")
+  let(session$pithya$currentResult$result, function(result) {
+    row <- createResultPlotRow(session$pithya$nextId(), result, input, session, output, 
+                               onRemove = function(row) {
+                                 row$destroy()
+                                 plotRows[[row$outRow]] <- NULL
+                               }
+    )			
+    plotRows[[row$outRow]] <- row			
+  })
+}
+
 createResultPlotRow <- function(id, result, input, session, output,
 	onRemove = function(row) {}		# called when row remove button is clicked
 ) {
@@ -13,12 +28,13 @@ createResultPlotRow <- function(id, result, input, session, output,
 	row$id <- id
 	row$result <- result
 
-	row$params <- createResultParamPlot(result, session$pithya$nextId(), input, session, output)
-	row$states <- createResultStatePlot(result, session$pithya$nextId(), input, session, output)
+	row$params <- createResultParamPlot(result, session$pithya$nextId(), row, input, session, output)
+	row$states <- createResultStatePlot(result, session$pithya$nextId(), row, input, session, output)
 	row$states$state$formulaIndex <- 1
 
 	row$remove <- paste0("row_remove_", id)
 	row$hide <- paste0("row_hide_", id)
+	row$grid <- paste0("req_grid_", id)
 	row$formula <- paste0("row_formula_", id)
 	row$xDimParams <- paste0("row_x_dim_params_", id)
 	row$yDimParams <- paste0("row_y_dim_params_", id)

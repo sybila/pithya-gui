@@ -3,7 +3,7 @@ source("tooltips.R")        # texts
 source("ui_global.R") 
 source("plot/plot.R")      
 
-createResultStatePlot <- function(result, id, input, session, output) {
+createResultStatePlot <- function(result, id, row, input, session, output) {
 
 	plot <- createBasePlot(
 		varNames = result$varNames, 
@@ -32,6 +32,8 @@ createResultStatePlot <- function(result, id, input, session, output) {
 			baseConfig$selectedStates <- plot$state$selectedStates
 			baseConfig$selectedParams <- plot$state$selectedParams
 
+			baseConfig$showGrid <- unwrapOr(input[[row$grid]], TRUE)
+
 			baseConfig$xThres <- plot$result$varThresholds[[baseConfig$x]]
 			baseConfig$yThres <- plot$result$varThresholds[[baseConfig$y]]
 			
@@ -58,7 +60,9 @@ createResultStatePlot <- function(result, id, input, session, output) {
 			title(Result_SS_label)
 
 			# Draw threshold lines
-			abline(v = xThres, h = yThres)		
+			if (config$showGrid) {
+				abline(v = xThres, h = yThres)
+			}
 
 			xThresholdCount <- length(xThres)
 			yThresholdCount <- length(yThres)

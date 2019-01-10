@@ -6,13 +6,13 @@ resultTab <- function() {
 	tabPanel(Result_label, icon=icons$barcode,
     	tooltip(tooltip = Result_tooltip,            
     		fluidPage(theme = "simplex.css",
-                uiOutput("result_notification"),
+    		    uiOutput("result_notification"),
         		resultControlPanel(),
         		tags$hr(),
         		uiOutput("param_plots"),
-                tooltip(tooltip = Result_addPlot_tooltip,
-                    bsButton("add_param_plot", Result_addPlot_label, icon=icons$picture, disabled=T)
-                )
+            tooltip(tooltip = Result_addPlot_tooltip,
+                bsButton("add_param_plot", Result_addPlot_label, icon=icons$picture, disabled=T)
+            )
     		)
 		)
 	)
@@ -20,14 +20,32 @@ resultTab <- function() {
 
 resultControlPanel <- function() {
 	fluidRow(
-		column(2, class = "result_file_column",
-			tooltip(tooltip = Result_Browse_tooltip,
+		column(4, class = "result_file_column",
+		        tooltip(tooltip = Result_Browse_tooltip,
                 fileInput("ps_file", Result_Browse_label,accept=".json")
             ),
+		        fluidRow(
+  		          column(4,
+  		                 tooltip(tooltip = Result_loadSynthResults_tooltip,
+  		                         bsButton("load_synth_results", Result_loadSynthResults_label, disabled = T, block =T)
+  		                 )
+  		          ),
+  		          column(4,
+  		                 tooltip(tooltip = Result_loadTCAResults_tooltip,
+  		                         bsButton("load_tca_results", Result_loadTCAResults_label, disabled = T, block =T)
+  		                 )
+  		          ),
+  		          column(4,
+  		                 tooltip(tooltip = Result_loadImportedResults_tooltip,
+  		                         bsButton("load_imported_results", Result_loadImportedResults_label, disabled = T, block =T)
+  		                 )
+  		          )
+		        ),
+		        tags$br(),
             fluidRow(
                 column(6,
                     tooltip(tooltip = Result_saveResults_tooltip,
-                        downloadButton("save_result_file",Result_saveResults_label)
+                        downloadButton("save_result_file", Result_saveResults_label)
                     )
                 )
             )
@@ -45,7 +63,7 @@ resultControlPanel <- function() {
                 )
             )
 		),
-        column(8, class = "param_column", uiOutput("error_message"))
+    column(6, class = "param_column", uiOutput("error_message"))
 	)
 }
 
@@ -66,7 +84,10 @@ resultRow <- function(r, input) {
             )),
             column(1, class = "hid", tooltip(tooltip = Result_hide_tooltip,
                 checkboxInput(r$hide, Result_hide_label, unwrapOr(input[[r$hide]], FALSE))
-            ))
+            )),
+            column(1, class = "grid", advanced(tooltip(tooltip = Result_grid_tooltip,
+                checkboxInput(r$grid, Result_grid_label, unwrapOr(input[[r$grid]], TRUE))
+            )))
         ),
         conditionalPanel(condition = paste0("input.", r$hide, " == false"),
         hr(),

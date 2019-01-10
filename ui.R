@@ -32,6 +32,15 @@ Shiny.addCustomMessageHandler('scaleSliderHandler',
 );
 "
 
+# shiny ACE editor reloader
+shinyAce_resize <- "
+shinyjs.shinyAce_resize = function() {
+  //param = shinyjs.getParams(what);
+  ace.edit('model_input_area').resize();
+  ace.edit('prop_input_area').resize();
+};
+"
+
 shinyUI(
     fluidPage(
         ### Working solution for re-loading of fileInput
@@ -44,6 +53,7 @@ shinyUI(
         # });
         # '),
         useShinyjs(),
+        extendShinyjs(text = shinyAce_resize, functions = c("shinyAce_resize")),
         # loading(file.path(mytempdir(), "image.Rmd")),
         # fluidPage(
         fluidRow(
@@ -54,7 +64,7 @@ shinyUI(
             #     )
             # ),
             column(4,
-                   a(img(src = "logo_new.png", height = 60, width = 165, style = "float:right"), href = "http://sybila.fi.muni.cz/home", target="_blank"),
+                   a(img(src = "logo_new.png", height = 60, width = 165, style = "float:right"), href = "http://sybila.fi.muni.cz", target="_blank"),
                    a(img(src = "aec_badge_cav.svg", height = 60, width = 60, style = "float:right; padding: 5px 5px 5px 5px"), 
                      href = "http://cavconference.org/2017/accepted-papers/", target="_blank"))
         # )
@@ -70,20 +80,40 @@ shinyUI(
             
             # column(1,bsButton("btn_test_export","export")),
             # column(1,bsButton("btn_test_import","import")),
-            
-            column(2,
-                   #style = "margin-top:5px;",
-                   tooltip(tooltip = Editor_advancedSettings_tooltip,
-                           checkboxInput("advanced", Editor_advancedSettings_label, F)
-                   ), offset = 0
-            ),
-            column(4, a(code(("! Click here for tutorial !")), target = "_blank", href = "http://biodivine.fi.muni.cz/docs/pithya/tutorial.pdf"), offset = 3)
+          
+          column(2,
+                 #"Select predefined example",
+                 tooltip(tooltip = Editor_selectExample_tooltip,
+                         selectInput("select_example", Editor_selectExample_label,
+                                     selected = "none",
+                                     choices = examples_list)),
+                 offset = 0
+          ),
+          column(1,
+                 #style = "margin-top:5px;",
+                 tooltip(tooltip = Editor_advancedSettings_tooltip,
+                         checkboxInput("advanced", Editor_advancedSettings_label, F)), 
+                 offset = 0
+          ),
+          column(7, 
+                 a(code("Click here for tutorial "), target = "_blank", href = "http://biodivine.fi.muni.cz/docs/pithya/tutorial.pdf"),
+                 "or ",
+                 a(code("here for complete manual"), target = "_blank", href = "http://biodivine.fi.muni.cz/docs/pithya/manual.pdf"),
+                 "or ",
+                 a(code("watch video slides on YouTube"), target = "_blank", href = "https://www.youtube.com/watch?v=xnLWmuvDBcI"),
+                 offset = 1)
         ),
         tabsetPanel(id = "dimensions",
             editorTab(),
             explorerTab(),
             resultTab()
-        )
+        ),
+        hr(),
+        em("If you find a bug or have a comment let us know, please, via an e-mail:  "),
+        a("sybila-supp@fi.muni.cz", target = "_blank", href = "mailto:sybila-supp@fi.muni.cz"),
+        em(" or add an issue on  "),
+        a("github", target = "_blank", href = "https://github.com/sybila/pithya-gui/issues"),
+        em(".")
     )
 )
               
