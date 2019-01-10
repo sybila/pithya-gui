@@ -56,10 +56,21 @@ chunk <- function(d,n) split(d, ceiling(seq_along(d)/n))
 pow <- function(a,b) a^b
 Pow <- function(a,b) a^b
 
-hillm <- function(s,t,n=1,a=1,b=0) (t^n)/(s^n + t^n)
-Hillm <- function(s,t,n=1,a=1,b=0) (t^n)/(s^n + t^n)
-hillp <- function(s,t,n=1,a=0,b=1) (s^n)/(s^n + t^n)
-Hillp <- function(s,t,n=1,a=0,b=1) (s^n)/(s^n + t^n)
+hillm <- function(s,t,n=1,a=1,b=0) b+(a-b)*(t^n)/(s^n + t^n)
+Hillm <- function(s,t,n=1,a=1,b=0) b+(a-b)*(t^n)/(s^n + t^n)
+hillp <- function(s,t,n=1,a=0,b=1) a+(b-a)*(s^n)/(s^n + t^n)
+Hillp <- function(s,t,n=1,a=0,b=1) a+(b-a)*(s^n)/(s^n + t^n)
+
+Hp <- function(inp,t,a=0,b=1) sapply(inp, function(s) if(s < t) return(min(a,b)) else return(max(a,b)))
+hp <- function(inp,t,a=0,b=1) sapply(inp, function(s) if(s < t) return(min(a,b)) else return(max(a,b)))
+Hm <- function(inp,t,a=1,b=0) sapply(inp, function(s) if(s < t) return(max(a,b)) else return(min(a,b)))
+hm <- function(inp,t,a=1,b=0) sapply(inp, function(s) if(s < t) return(max(a,b)) else return(min(a,b)))
+
+## Can't work with vector of values
+#Hp <- function(s,t,a=0,b=1) if(s < t) return(min(a,b)) else return(max(a,b))
+#hp <- function(s,t,a=0,b=1) if(s < t) return(min(a,b)) else return(max(a,b))
+#Hm <- function(s,t,a=1,b=0) if(s < t) return(max(a,b)) else return(min(a,b))
+#hm <- function(s,t,a=1,b=0) if(s < t) return(max(a,b)) else return(min(a,b))
 
 # Approx <- function(m,l) {
 #     apply(m,c(1,2),function(s)
@@ -123,30 +134,80 @@ Approx <- function(m,l) {
 #     }
 # }
 
-ramp <- function(value,min,max,a,b) {
-    if(a < b) {
-        #positive
-        if(value < min) return(0)
-        if(value > max) return(0)
-        return(a+(value-min)/(max-min)*(b-a))
-    } else {
-        #negative
-        if(value < min) return(0)
-        if(value > max) return(0)
-        return((a-(value-min)/(max-min))*(a-b))
-    }
+# ramp <- function(value,min,max,a,b) {
+#     if(a < b) {
+#         #positive
+#         if(value < min) return(0)
+#         if(value > max) return(1)
+#         return(a+(value-min)/(max-min)*(b-a))
+#     } else {
+#         #negative
+#         if(value < min) return(1)
+#         if(value > max) return(0)
+#         return((a-(value-min)/(max-min))*(a-b))
+#     }
+# }
+
+
+## not working properly, but not able to understand why
+#ramp2 <- function(x,x1,x2,y1,y2) return(ifelse(x <= x1, y1, ifelse(x >= x2, y2, ifelse(y1 < y2, y1+abs(y2-y1)*(x-x1)/(x2-x1), y1-abs(y2-y1)*(x-x1)/(x2-x1)))))
+## working but slow
+#ramp3 <- function(v,x1,x2,y1,y2) {
+#   sapply(v, function(x) {
+#     ifelse(x <= x1, y1, ifelse(x >= x2, y2, ifelse(y1 <= y2, y1+abs(y2-y1)*(x-x1)/(x2-x1), y1-abs(y2-y1)*(x-x1)/(x2-x1))))
+#   })
+# }
+
+Ramp <- function(x,x1,x2,y1,y2) {
+  sapply(x, function(p) {
+    if(p <= x1) return(y1)
+    if(p >= x2) return(y2)
+    ratio <- (p-x1)/(x2-x1)
+    if(y1<=y2)  return(y1+abs(y2-y1)*ratio)
+    else        return(y1-abs(y2-y1)*ratio)
+  })
+}
+rp = Rp = rm = Rm = Ramp
+
+Monod <- function(x,t,y) {
+  return(x/(y*(x+t)))
+}
+monod = Monod
+
+Moser <- function(x,t,n) {
+  return (pow(x,n)/(pow(x,n)+t))
+}
+moser = Moser
+
+Tessier <- function(x,t) {
+  return (1 - exp(-x/t))
+}
+tessier = Tessier
+
+Haldane <- function(x,t,k) {
+  return(x/(x+t+(pow(x,2)/k)))
+}
+haldane = Haldane
+
+Aiba <- function(x,t,k) {
+  return((x*exp(-x/k))/(t+x))
+}
+aiba = Aiba
+
+Tessier_type <- function(x,t,k) {
+  return(exp(-x/k)-exp(-x/t))
+}
+tessier_type = Tessier_type
+
+Andrews <- function(x,t,k) {
+  return(1/((1+t/x)*(1+x/k)))
+}
+andrews = Andrews
+
+Sin <- function(x) {
+  return(sin(x))
 }
 
-# if (value <= thresholds.first()) return values.first()
-# if (value >= thresholds.last()) return values.last()
-# val position = Arrays.binarySearch(thresholds, value)
-# if (position >= 0) {    //evaluated value is one of the thresholds
-#                         return values[position]
-# } else {                //position points to -1 * (upper threshold)
-#                         val iH = -position-1  //note that this must be a valid index, otherwise some conditions above would fire
-#                         val iL = iH-1
-#                         return values[iL] + (value - thresholds[iL]) / (thresholds[iH] - thresholds[iL]) * (values[iH] - values[iL])
-# }
 
 ######## RESULT PART ##########
 

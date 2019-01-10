@@ -94,6 +94,6 @@ editorControlPanel <- function() {
     fluidPage(
         column(6, class = "model_control_panel", tags$div(class = "border", titlePanel(Editor_model_controlPanel_label), hr(), modelControls)),
         column(4, class = "property_control_panel", tags$div(class = "border", titlePanel(Editor_property_controlPanel_label), hr(), propertyControls)),
-        column(2, class = "synth_control_panel", tags$div(class = "border", titlePanel(Editor_process_controlPanel_label), hr(), synthesisControls))
+        column(1, class = "synth_control_panel", tags$div(class = "border", titlePanel(Editor_process_controlPanel_label), hr(), synthesisControls))
     )
 }
