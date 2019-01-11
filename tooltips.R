@@ -174,7 +174,7 @@ Explorer_VF_UsePWAmodel_label <- "Use PMA Model"
 Explorer_VF_UsePWAmodel_tooltip <- "Switch the vector field to approximation of the original ODE model."
 
 #HIDDEN - for more at least 3 VARS model
-Explorer_VF_ScaleSlider_label <- "Continuous Value of " 
+Explorer_VF_ScaleSlider_label <- "Value of " 
 Explorer_VF_ScaleSlider_tooltip <- "Set the respective variable value to which the plot is projected."
 
 Explorer_VF_HoverTextArea_label <- "" #TODO: probably remove
@@ -193,7 +193,7 @@ Explorer_SS_ClearPlot_tooltip <- "Clear this transition-state space plot."
 Explorer_SS_Unzoom_label <- "Unzoom"
 Explorer_SS_Unzoom_tooltip <- "Unzoom this transition-state space plot."
 
-Explorer_SS_ScaleSlider_label <- "Discrete Value of " #TODO
+Explorer_SS_ScaleSlider_label <- "Interval of " #TODO
 Explorer_SS_ScaleSlider_tooltip <- "Set the respective variable value to which the plot is projected."
 
 Explorer_SS_HoverTextArea_label <- "" #TODO: probably remove
