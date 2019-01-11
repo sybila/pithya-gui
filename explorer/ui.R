@@ -98,7 +98,7 @@ plotRow <- function(r, input) {
             ),
             # Vector field
             column(4,
-                    r$vector$renderImage()                	
+                    r$vector$renderImage()
             ),
             # State field
             column(4,
