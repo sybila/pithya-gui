@@ -72,16 +72,6 @@ hm <- function(inp,t,a=1,b=0) sapply(inp, function(s) if(s < t) return(max(a,b))
 #Hm <- function(s,t,a=1,b=0) if(s < t) return(max(a,b)) else return(min(a,b))
 #hm <- function(s,t,a=1,b=0) if(s < t) return(max(a,b)) else return(min(a,b))
 
-Hp <- function(inp,t,a=0,b=1) sapply(inp, function(s) if(s < t) return(min(a,b)) else return(max(a,b)))
-hp <- function(inp,t,a=0,b=1) sapply(inp, function(s) if(s < t) return(min(a,b)) else return(max(a,b)))
-Hm <- function(inp,t,a=1,b=0) sapply(inp, function(s) if(s < t) return(max(a,b)) else return(min(a,b)))
-hm <- function(inp,t,a=1,b=0) sapply(inp, function(s) if(s < t) return(max(a,b)) else return(min(a,b)))
-
-#Hp <- function(s,t,a=0,b=1) if(s < t) return(min(a,b)) else return(max(a,b))
-#hp <- function(s,t,a=0,b=1) if(s < t) return(min(a,b)) else return(max(a,b))
-#Hm <- function(s,t,a=1,b=0) if(s < t) return(max(a,b)) else return(min(a,b))
-#hm <- function(s,t,a=1,b=0) if(s < t) return(max(a,b)) else return(min(a,b))
-
 # Approx <- function(m,l) {
 #     apply(m,c(1,2),function(s)
 #     ifelse(s <= l[[1]][1], l[[1]][2],
