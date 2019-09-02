@@ -95,7 +95,7 @@ shinyServer(function(input,output,session) {
       } else {
         mySession$pithya$synthesisResult$file <- NULL
         mySession$pithya$synthesisResult$result <- NULL
-        mySession$pithya$synthesisResult$outdated <- FALSE
+        mySession$pithya$synthesisResult$outdated <- TRUE
       }
       # AA results loader
       if(nchar(example$aa_res) != 0) {
@@ -111,7 +111,7 @@ shinyServer(function(input,output,session) {
         debug("no example AA results")
         mySession$pithya$TCanalysisResult$file <- NULL
         mySession$pithya$TCanalysisResult$result <- NULL
-        mySession$pithya$TCanalysisResult$outdated <- FALSE
+        mySession$pithya$TCanalysisResult$outdated <- TRUE
       }
     })
     # Reaction of selected example when upload/reload model file from outside
